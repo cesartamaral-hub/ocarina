@@ -24,6 +24,9 @@ export const getLanguageTemplate = (name?: string) =>
 
 export const getParsers = () => fetch(`${API}/languages/parsers`).then((r) => json<{ type: string; name: string }[]>(r))
 
+export const addPredefinedLanguages = (names: string[], books: boolean) =>
+  send<{ added: { id: number; name: string }[]; skipped: string[] }>('POST', `${API}/languages/predefined`, { names, books })
+
 export const saveLanguage = (l: LanguageSettings) =>
   l.id === null ? send<LanguageSettings>('POST', `${API}/languages`, l) : send<LanguageSettings>('PUT', `${API}/languages/${l.id}`, l)
 

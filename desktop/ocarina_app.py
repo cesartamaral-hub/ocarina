@@ -12,8 +12,8 @@ import urllib.request
 import webview
 from waitress import create_server
 
-from lute.app_factory import create_app, data_initialization
-from lute.db import db
+from lute.app_factory import create_app
+from ocarina.startup import prepare_library
 
 APP_DIR = os.environ.get("OCARINA_APP_DIR") or os.path.expanduser(
     "~/Library/Application Support/Ocarina"
@@ -55,8 +55,7 @@ class Bridge:
 
 def main():
     app = create_app(_write_config(), output_func=lambda s: None)
-    with app.app_context():
-        data_initialization(db.session, lambda s: None)
+    prepare_library(app)
 
     port = _free_port()
     server = create_server(app, host="127.0.0.1", port=port)

@@ -100,3 +100,14 @@ def test_stats_count_words_of_finished_pages(app, client):
     assert dutch["counts"]["day"] > 0 and dutch["counts"]["total"] == dutch["counts"]["day"]
     assert stats["streak"] == 1
     assert stats["chart"]["Dutch"][-1]["runningTotal"] == dutch["counts"]["total"]
+
+
+def test_no_automatic_backup_is_due_for_an_empty_library(client, tmp_path, monkeypatch):
+    "A new library has nothing to lose: no automatic backup is asked for until it holds a book or a term."
+    import ocarina.api.backups as backups  # pylint: disable=import-outside-toplevel
+
+    _configure(client, tmp_path)
+    monkeypatch.setattr(backups, "_has_data", lambda: False)
+    assert client.get(BACKUPS).json["dueNow"] is False
+    monkeypatch.setattr(backups, "_has_data", lambda: True)
+    assert client.get(BACKUPS).json["dueNow"] is True

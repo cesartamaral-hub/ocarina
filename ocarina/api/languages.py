@@ -9,6 +9,8 @@ JSON API for languages and their settings (dictionaries, parser, word characters
     GET    /ocarina/api/languages/template         defaults for a new language, or a predefined one
                                                    (?name=Dutch); predefined names are listed too
     GET    /ocarina/api/languages/parsers          parser types that can be chosen
+    POST   /ocarina/api/languages/predefined       add predefined languages by name ({"names": [...],
+                                                   "books": true to also add their sample stories})
 """
 
 from flask import Blueprint, jsonify, request
@@ -137,6 +139,32 @@ def template():
     body = _language_settings(chosen)
     body["id"] = None
     return jsonify({"language": body, "predefined": sorted(p.name for p in available)})
+
+
+@bp.route("/languages/predefined", methods=["POST"])
+def add_predefined():
+    "Add predefined languages (the first-run screen); names already in use are skipped."
+    body = request.get_json(silent=True) or {}
+    names = body.get("names")
+    if not isinstance(names, list) or not names:
+        return jsonify({"error": "Choose at least one language"}), 400
+    service = LanguageService(db.session)
+    available = {p.name for p in service.supported_predefined_languages()}
+    taken = {n for (n,) in db.session.execute(sql("select LgName from languages"))}
+    added, skipped = [], []
+    for name in names:
+        if name not in available or name in taken:
+            skipped.append(name)
+            continue
+        if body.get("books"):
+            language_id = service.load_language_def(name)
+        else:
+            language = service.get_language_def(name).language
+            db.session.add(language)
+            db.session.commit()
+            language_id = language.id
+        added.append({"id": language_id, "name": name})
+    return jsonify({"added": added, "skipped": skipped}), 201 if added else 400
 
 
 @bp.route("/languages/<int:language_id>", methods=["GET"])

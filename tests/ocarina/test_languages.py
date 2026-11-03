@@ -95,3 +95,20 @@ def test_delete_needs_force_when_the_language_has_books(app, client):
     assert forced.status_code == 200
     assert client.get(f"{URL}/{dutch_id}").status_code == 404
     assert client.delete(f"{URL}/{dutch_id}").status_code == 404
+
+
+def test_first_run_adds_predefined_languages_with_or_without_stories(client):
+    "Picking languages adds them (and optionally Lute's sample stories); names that don't exist or are taken are skipped."
+    names = client.get(f"{URL}/template").json["predefined"]
+    first, second = names[0], names[1]
+    plain = client.post(f"{URL}/predefined", json={"names": [first, "Klingon"]})
+    assert plain.status_code == 201 and [a["name"] for a in plain.json["added"]] == [first]
+    assert plain.json["skipped"] == ["Klingon"]
+    row = next(r for r in client.get(URL).json if r["name"] == first)
+    assert row["books"] == 0
+    with_books = client.post(f"{URL}/predefined", json={"names": [second, first], "books": True})
+    assert [a["name"] for a in with_books.json["added"]] == [second] and with_books.json["skipped"] == [first]
+    assert next(r for r in client.get(URL).json if r["name"] == second)["books"] >= 1
+    assert first not in client.get(f"{URL}/template").json["predefined"]
+    assert client.post(f"{URL}/predefined", json={"names": []}).status_code == 400
+    assert client.post(f"{URL}/predefined", json={"names": ["Klingon"]}).status_code == 400

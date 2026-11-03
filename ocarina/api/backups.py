@@ -16,6 +16,7 @@ import re
 import time
 
 from flask import Blueprint, current_app, jsonify, request, send_file
+from sqlalchemy import text as sql
 
 from lute.backup.service import BackupException, Service as BackupService
 from lute.db import db
@@ -41,6 +42,11 @@ def _file_json(f):
     }
 
 
+def _has_data():
+    "True once the library holds a book or a term; an empty one is not worth backing up."
+    return bool(db.session.execute(sql("select exists(select 1 from books) or exists(select 1 from words)")).scalar())
+
+
 def _state():
     settings = _settings()
     service = BackupService(db.session)
@@ -57,7 +63,7 @@ def _state():
             "lastBackup": settings.last_backup_datetime,
         },
         "warning": service.backup_warning(settings),
-        "dueNow": service.should_run_auto_backup(settings),
+        "dueNow": service.should_run_auto_backup(settings) and _has_data(),
         "backups": [_file_json(f) for f in files],
     }
 

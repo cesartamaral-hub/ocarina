@@ -9,8 +9,8 @@ import sys
 
 from waitress import serve
 
-from lute.app_factory import create_app, data_initialization
-from lute.db import db
+from lute.app_factory import create_app
+from ocarina.startup import prepare_library
 
 app_dir = os.path.abspath(sys.argv[1])
 port = int(sys.argv[2]) if len(sys.argv) > 2 else 5001
@@ -21,7 +21,6 @@ with open(config, "w", encoding="utf-8") as f:
     f.write(f"ENV: prod\nDBNAME: ocarina.db\nDATAPATH: {app_dir}\n")
 
 app = create_app(config, output_func=lambda s: None)
-with app.app_context():
-    data_initialization(db.session, lambda s: None)
+prepare_library(app)
 print(f"Backend on http://127.0.0.1:{port}  (data: {app_dir})", flush=True)
 serve(app, host="127.0.0.1", port=port)

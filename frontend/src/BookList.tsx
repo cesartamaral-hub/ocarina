@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { changeBook, deleteBook, getBackupsAfterStartup, getBooks, type Book } from './api'
+import { changeBook, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, type Book } from './api'
+import { Welcome } from './Welcome'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
   const [title, setTitle] = useState(book.title)
@@ -51,6 +52,7 @@ export function BookList() {
   const [editing, setEditing] = useState<number | null>(null)
   const [tag, setTag] = useState('')
   const [error, setError] = useState('')
+  const [firstRun, setFirstRun] = useState(false)
   const [backupWarning, setBackupWarning] = useState('')
 
   const load = useCallback(
@@ -60,6 +62,10 @@ export function BookList() {
   useEffect(() => {
     load()
   }, [load])
+  // A library without languages is new: show the first-run screen (it stays until its steps are done).
+  useEffect(() => {
+    getLanguages().then((l) => l.length === 0 && setFirstRun(true), () => undefined)
+  }, [])
   useEffect(() => {
     getBackupsAfterStartup().then((b) => setBackupWarning(b.warning), () => undefined)
   }, [])
@@ -81,6 +87,15 @@ export function BookList() {
 
   if (error && !books) return <p className="error">{error}</p>
   if (!books) return <p className="muted">Loading…</p>
+  if (firstRun)
+    return (
+      <Welcome
+        onFinish={() => {
+          setFirstRun(false)
+          load()
+        }}
+      />
+    )
 
   const allTags = [...new Set(books.flatMap((b) => b.tags))].sort()
   const shown = tag ? books.filter((b) => b.tags.includes(tag)) : books
