@@ -13,12 +13,14 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
+from ocarina import prefs
 from ocarina.api import jobs
 from ocarina.tts import models as model_files
 from ocarina.tts.book_audio import (
     generate_book_audio,
     is_ocarina_audio,
     timings_path,
+    tts_lang,
 )
 from ocarina.tts.cache import SentenceCache
 from ocarina.tts.service import DEFAULT_VOICE
@@ -36,7 +38,7 @@ def _run_job(app, job, book_id, model, voice, pause):
     "Background thread: generate and attach the audio."
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
-    supervisor = Supervisor(engine)
+    supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
     cache = SentenceCache(os.path.join(cfg.datapath, "tts_cache"))
 
     def progress(done, total):
@@ -87,7 +89,12 @@ def start_audio(book_id):
                 ),
                 409,
             )
-    model = model_files.find_model(body.get("model", model_files.load_catalog()[0]["id"]))
+    saved = prefs.load(prefs.path_for(cfg.datapath))
+    try:
+        preferred = saved.get(f"model.{tts_lang(book.language)}")
+    except ValueError:
+        preferred = None
+    model = model_files.choose_model(body.get("model"), preferred)
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
     # pylint: disable=protected-access

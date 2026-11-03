@@ -5,7 +5,7 @@ Runs the model in its own process so a crash or out-of-memory kill
 only takes down this worker. Speaks line-delimited JSON on the
 original stdout; anything the model libraries print goes to stderr.
 
-Requests:  {"id": 1, "op": "load", "engine": "mlx-chatterbox"}
+Requests:  {"id": 1, "op": "load", "engine": "mlx-chatterbox", "repo": "owner/name" or null}
            {"id": 2, "op": "synth", "text": ..., "lang": ..., "voice": path, "out": path}
            {"id": 3, "op": "quit"}
 Responses: {"id": 1, "ok": true, ...} or {"id": 1, "ok": false, "error": "..."}
@@ -27,6 +27,9 @@ class FakeEngine:
 
     sample_rate = 24000
 
+    def __init__(self, repo=None):
+        self.repo = repo
+
     def synth(self, text, lang, voice, out):  # pylint: disable=unused-argument
         "Write a tone whose length depends on the text length."
         n = int(self.sample_rate * 0.02 * max(len(text), 1))
@@ -45,11 +48,11 @@ class FakeEngine:
 class MlxChatterboxEngine:
     "Chatterbox Multilingual v3 via mlx-audio."
 
-    def __init__(self):
+    def __init__(self, repo=None):
         # pylint: disable=import-outside-toplevel
         from mlx_audio.tts.utils import load_model
 
-        self.model = load_model(MLX_CHATTERBOX_REPO)
+        self.model = load_model(repo or MLX_CHATTERBOX_REPO)
         self.sample_rate = self.model.sample_rate
 
     def synth(self, text, lang, voice, out):
@@ -74,7 +77,7 @@ def _handle(engine, req):
     "Run one request; returns (response fields, engine)."
     op = req["op"]
     if op == "load":
-        engine = ENGINES[req["engine"]]()
+        engine = ENGINES[req["engine"]](req.get("repo"))
         return {"sample_rate": engine.sample_rate}, engine
     if op == "synth":
         if engine is None:

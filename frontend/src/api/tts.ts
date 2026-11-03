@@ -28,6 +28,19 @@ export const downloadModel = (id: string) =>
 export const deleteModel = (id: string) =>
   fetch(`${API}/tts/models/${id}`, { method: 'DELETE' }).then((r) => json<{ ok: boolean }>(r))
 
+export const importModel = (id: string, folder: string) =>
+  fetch(`${API}/tts/models/${id}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder }),
+  }).then((r) => json<Job>(r))
+
+// Native folder dialog; only exists inside the desktop app (the dev browser has none).
+type Bridge = { pick_folder: () => Promise<string | null> }
+export const canPickFolder = () => Boolean((window as { pywebview?: { api?: Bridge } }).pywebview?.api)
+export const pickFolder = () =>
+  (window as unknown as { pywebview: { api: Bridge } }).pywebview.api.pick_folder()
+
 export const getJob = (id: string) => fetch(`${API}/jobs/${id}`).then((r) => json<Job>(r))
 
 export const startAudio = (id: number, opts: { replace?: boolean; pause?: number }) =>

@@ -46,8 +46,9 @@ class TtsError(Exception):
 class Supervisor:
     "One worker, one loaded engine, one request at a time."
 
-    def __init__(self, engine, timeout=600):
+    def __init__(self, engine, timeout=600, repo=None):
         self.engine = engine
+        self.repo = repo  # Hugging Face repo of the model to load; None = the engine's default
         self.timeout = timeout
         self._proc = None
         self._next_id = 0
@@ -58,7 +59,7 @@ class Supervisor:
         self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env
         )
-        self._request({"op": "load", "engine": self.engine})
+        self._request({"op": "load", "engine": self.engine, "repo": self.repo})
 
     def _alive(self):
         return self._proc is not None and self._proc.poll() is None

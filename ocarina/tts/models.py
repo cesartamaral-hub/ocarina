@@ -10,6 +10,7 @@ never fetches anything on its own.
 import json
 import os
 import shutil
+import tempfile
 
 from huggingface_hub import constants, snapshot_download
 from tqdm.auto import tqdm
@@ -26,6 +27,20 @@ def load_catalog():
 def find_model(model_id):
     "The catalog entry with this id, or None."
     return next((m for m in load_catalog() if m["id"] == model_id), None)
+
+
+def choose_model(requested_id=None, preferred_id=None):
+    """
+    The model to voice a book with: the one asked for, else the user's choice
+    for the book's language, else the first installed one, else the first in the catalog.
+    """
+    if requested_id:
+        return find_model(requested_id)  # None for an unknown id: the caller reports it
+    preferred = find_model(preferred_id) if preferred_id else None
+    if preferred:
+        return preferred
+    catalog = load_catalog()
+    return next((m for m in catalog if is_installed(m)), catalog[0])
 
 
 def total_bytes(model):
@@ -92,3 +107,65 @@ def delete(model):
     "Remove the model's files from the cache (blobs shared with nothing else go too)."
     for repo in model["repositories"]:
         shutil.rmtree(_repo_dir(repo["id"]), ignore_errors=True)
+
+
+class FolderError(Exception):
+    "The folder does not contain every file of the model."
+
+
+def _index_folder(folder):
+    "Map (file name, size) to a path for every file below the folder."
+    found = {}
+    for root, _dirs, names in os.walk(folder, followlinks=True):
+        for name in names:
+            path = os.path.join(root, name)
+            try:
+                found.setdefault((name, os.path.getsize(path)), path)
+            except OSError:
+                continue
+    return found
+
+
+def find_import_files(model, folder):
+    """
+    Match the model's files to files in a folder by name and exact size, however
+    the folder is laid out (flat, per-repo subfolders, or a Hugging Face cache).
+    Returns [(repo, name, source path)]; raises FolderError listing what is missing.
+    """
+    if not os.path.isdir(folder):
+        raise FolderError("That folder does not exist.")
+    index = _index_folder(folder)
+    matches, missing = [], []
+    for repo in model["repositories"]:
+        for name, size in repo["files"].items():
+            path = index.get((name, size))
+            if path:
+                matches.append((repo, name, path))
+            else:
+                missing.append(f"{name} ({size} bytes, from {repo['id']})")
+    if missing:
+        raise FolderError("The folder is missing: " + "; ".join(missing))
+    return matches
+
+
+def import_from_folder(model, folder, on_progress=None):
+    "Copy the model's files from a folder into the cache; on_progress(done_bytes, total_bytes)."
+    matches = find_import_files(model, folder)
+    total, done = total_bytes(model), 0
+    cb = on_progress or (lambda done, total: None)
+    for repo, name, src in matches:
+        snap = os.path.join(_repo_dir(repo["id"]), "snapshots", repo["revision"])
+        os.makedirs(snap, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=snap, suffix=".part")
+        os.close(fd)
+        shutil.copyfile(src, tmp)
+        os.replace(tmp, os.path.join(snap, name))  # never leaves a half-copied file
+        done += repo["files"][name]
+        cb(done, total)
+    for repo in model["repositories"]:
+        refs = os.path.join(_repo_dir(repo["id"]), "refs")
+        os.makedirs(refs, exist_ok=True)
+        with open(os.path.join(refs, "main"), "w", encoding="utf-8") as f:
+            f.write(repo["revision"])
+    if not is_installed(model):
+        raise RuntimeError("Copy finished but some files are missing or the wrong size.")

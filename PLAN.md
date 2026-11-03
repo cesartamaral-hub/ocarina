@@ -12,10 +12,11 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 | TTS service (`ocarina/tts`) | Done: MLX Chatterbox, worker process, sentence cache, CLI, model downloads. |
 | Book audio API | Done: whole-book jobs, sentence timings, never overwrites your recordings without `replace`. |
 | React app: books, book view, Settings (models), reader | Working. Reader: word panel, statuses, hover card, phrases, bulk status, audio following, page text edit, pictures, other examples, dictionaries (frame shown blank in preview, unverified). |
+| Model management | Download, import from folder, delete; voice per language (Settings). |
 | Packaged `Ocarina.app` | Builds and ran an audio job. Window itself and double-click not checked; unsigned. |
 
 ## Next (rough order)
-1. Commit the current work in small commits (a large pile is uncommitted).
+1. Model choice: per-language voice pref and import from folder are done; custom catalog entries (`models.json` in the data folder, then a Hugging Face form) wait for a second engine.
 2. Port remaining Lute screens to React: term list and bulk edit, term tags, language settings, book import (text, epub, pdf, URL), backups, stats.
 3. Audio: early playback while a book is still being voiced, cancel/queue jobs, voice preview and reference-voice picker, a slower learner voice, a second engine (CosyVoice2 or Parkiet).
 4. Reader polish: remember current page on leaving, Bing image search, flash messages, keyboard help.

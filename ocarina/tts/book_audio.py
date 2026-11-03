@@ -75,7 +75,7 @@ def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-position
     sentences = book_sentences(book)
     if not sentences:
         raise ValueError("Book has no text to voice.")
-    lang = _tts_lang(book.language)
+    lang = tts_lang(book.language)
     paths = synthesize_text_sentences(
         supervisor,
         cache,
@@ -102,7 +102,7 @@ def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-position
     return filename
 
 
-def _tts_lang(language):
+def tts_lang(language):
     "Two-letter TTS code for a Lute language, by its name or parser settings."
     names = {
         "dutch": "nl",

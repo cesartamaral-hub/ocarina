@@ -19,7 +19,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `terms.py` | `GET /terms/<id>`, `POST /terms`, `GET /terms/lookup`, `PATCH /terms/<id>/status`, `POST /terms/bulk-status`, `GET /terms/<id>/popup`, `GET /terms/<id>/references`, `POST/DELETE /terms/<id>/image` |
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
 | `jobs.py` | `GET /jobs/<id>`; one job at a time, in memory (audio and downloads share it) |
-| `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `DELETE /tts/models/<id>` |
+| `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |
 | `web.py` | serves the built frontend at `/ocarina/app/` (any sub-path gets `index.html`) |
 
@@ -34,7 +34,7 @@ same order. If the counts differ the text was edited since, and following switch
 ## TTS process model
 `Supervisor` owns one worker (`python -m ocarina.tts.worker`, JSON lines over stdin/stdout). A dead
 worker is restarted once per request; `unload()` kills it so memory returns to the OS. The worker
-sees `HF_HUB_OFFLINE=1`; model files are installed by `tts/models.py` (pinned revision, file sizes
+sees `HF_HUB_OFFLINE=1`; the model for a book is `choose_model`: request, then pref `model.<nl|pl|fr>`, then first installed; model files are installed by `tts/models.py` (pinned revision, file sizes
 checked, `refs/main` pointed at the pinned revision).
 
 ## Frontend

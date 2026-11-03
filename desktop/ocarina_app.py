@@ -44,6 +44,15 @@ def _wait_until_up(url, tries=100):
     return False
 
 
+class Bridge:
+    "Native things the web page cannot do itself; reached as window.pywebview.api."
+
+    def pick_folder(self):
+        "Ask for a folder with the system dialog; returns its path or None."
+        picked = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+        return picked[0] if picked else None
+
+
 def main():
     app = create_app(_write_config(), output_func=lambda s: None)
     with app.app_context():
@@ -56,7 +65,7 @@ def main():
     if not _wait_until_up(url):
         sys.exit("Backend did not start")
 
-    webview.create_window("Ocarina", url, width=1280, height=860)
+    webview.create_window("Ocarina", url, width=1280, height=860, js_api=Bridge())
     webview.start()
     server.close()
 

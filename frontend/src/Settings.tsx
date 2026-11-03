@@ -1,5 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
-import { deleteModel, downloadModel, getJob, getModels, type Job, type Model } from './api'
+import {
+  canPickFolder,
+  deleteModel,
+  downloadModel,
+  getJob,
+  getModels,
+  getPref,
+  importModel,
+  pickFolder,
+  setPref,
+  type Job,
+  type Model,
+} from './api'
+
+const LANGUAGES: Record<string, string> = { nl: 'Dutch', pl: 'Polish', fr: 'French' }
 
 function formatBytes(n: number): string {
   return n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`
@@ -9,6 +23,7 @@ export function Settings() {
   const [models, setModels] = useState<Model[] | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
+  const [chosen, setChosen] = useState<Record<string, string>>({})
 
   const load = useCallback(
     () =>
@@ -45,6 +60,24 @@ export function Settings() {
     } catch (e) {
       setError((e as Error).message)
     }
+  }
+
+  async function importFrom(m: Model) {
+    setError('')
+    try {
+      // The desktop app has a native folder dialog; the browser used in development asks for a path.
+      const folder = canPickFolder()
+        ? await pickFolder()
+        : window.prompt('Path of the folder with the downloaded model files')
+      if (folder) setJob(await importModel(m.id, folder))
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  function choose(code: string, modelId: string) {
+    setPref(`model.${code}`, modelId)
+    setChosen((cur) => ({ ...cur, [code]: modelId }))
   }
 
   async function remove(m: Model) {
@@ -92,9 +125,14 @@ export function Settings() {
                       </button>
                     </>
                   ) : (
-                    <button disabled={busy} onClick={() => download(m.id)}>
-                      Download
-                    </button>
+                    <>
+                      <button className="secondary" disabled={busy} onClick={() => importFrom(m)}>
+                        Import from folder…
+                      </button>
+                      <button disabled={busy} onClick={() => download(m.id)}>
+                        Download
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -107,6 +145,30 @@ export function Settings() {
                 </div>
               )}
               {job?.state === 'error' && job.id === m.downloadJob && <p className="error">{job.error}</p>}
+            </li>
+          )
+        })}
+      </ul>
+
+      <h2>Voice per language</h2>
+      <p className="muted">Which installed model voices the audio of books in each language.</p>
+      <ul className="models">
+        {Object.entries(LANGUAGES).map(([code, name]) => {
+          const options = models.filter((m) => m.installed && m.languages.includes(code))
+          const value = chosen[code] ?? getPref<string>(`model.${code}`, '')
+          return (
+            <li key={code}>
+              <div className="row">
+                <div className="name">{name}</div>
+                <select value={value} onChange={(e) => choose(code, e.target.value)}>
+                  <option value="">Automatic (first installed)</option>
+                  {options.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </li>
           )
         })}

@@ -32,7 +32,7 @@ def _say(args):
     else:
         text = args.text
     cache = SentenceCache(os.path.join(APP_DIR, "tts_cache"))
-    sup = Supervisor(model["engine"])
+    sup = Supervisor(model["engine"], repo=model["repositories"][0]["id"])
 
     def progress(i, n, sentence, _path, cached, secs):
         tag = "cached" if cached else f"{secs:5.1f}s"
