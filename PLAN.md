@@ -8,7 +8,7 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 
 | Area | State |
 |---|---|
-| Environment, test baseline | Done. 12 Japanese/MeCab tests fail on purpose (not studying Japanese). |
+| Environment, test baseline | Done. Whole suite passes (554). Japanese tests need `brew install mecab mecab-ipadic`. |
 | TTS service (`ocarina/tts`) | Done: MLX Chatterbox, worker process, sentence cache, CLI, model downloads. |
 | Book audio API | Done: whole-book jobs, sentence timings, never overwrites your recordings without `replace`. |
 | React app: books, book view, Settings (models), reader | Working. Reader: word panel, statuses, hover card, phrases, bulk status, audio following, page text edit, pictures, other examples, dictionaries (frame shown blank in preview, unverified). |
@@ -18,12 +18,13 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 ## Next (rough order)
 1. Model choice: per-language voice pref and import from folder are done; custom catalog entries (`models.json` in the data folder, then a Hugging Face form) wait for a second engine.
 2. Port remaining Lute screens to React: term list and bulk edit, term tags, language settings, backups, stats. (Book import done: file or web page, edit, save.)
-3. Audio: early playback while a book is still being voiced, voice preview and reference-voice picker, a second engine (CosyVoice2 or Parkiet).
+3. Audio: voice preview and reference-voice picker, a second engine (CosyVoice2 or Parkiet).
 4. Reader polish: remember current page on leaving, Bing image search, flash messages, keyboard help.
 5. Packaging: check the window, trim the 470 MB bundle, first-run flow, then retire Lute's Flask templates.
 6. Later: speech-to-text for pronunciation practice (Handy-style).
 
 ## Decisions
+- **No early playback** (2026-11-03): audio plays once the whole book is voiced.
 - **No baked-in slow voice** (2026-11-03): the model's pace can't be steered (see benchmarks); playback speed in the player is the learner control.
 - **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; change or delete Lute modules once their React replacement exists.
 - **Unsigned app** for now (open with right-click, Open). Revisit later.

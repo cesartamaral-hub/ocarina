@@ -15,6 +15,13 @@ from lute.app_factory import create_app
 from lute.models.language import Language
 
 
+def _find_homebrew_mecab():
+    "Let the Japanese tests find MeCab when it was installed with Homebrew (brew install mecab mecab-ipadic)."
+    lib = "/opt/homebrew/lib/libmecab.dylib"
+    if "MECAB_PATH" not in os.environ and os.path.exists(lib):
+        os.environ["MECAB_PATH"] = lib
+
+
 def pytest_sessionstart(session):  # pylint: disable=unused-argument
     """
     Ensure test config defines a test environment.
@@ -27,6 +34,7 @@ def pytest_sessionstart(session):  # pylint: disable=unused-argument
     accidentally write into the user_data (which could mess with prod
     data/media etc)
     """
+    _find_homebrew_mecab()
     thisdir = os.path.dirname(os.path.realpath(__file__))
     configfile = os.path.join(thisdir, "..", "lute", "config", "config.yml")
 

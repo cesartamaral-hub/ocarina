@@ -13,7 +13,7 @@ Start here, then read only what the task needs:
 ./desktop/dev.sh              # backend + Vite on a COPY of the library -> http://localhost:5173/ocarina/app/
 ./desktop/dev.sh --fresh      # new copy from the real library;  --real = the real library (careful)
 source .venv/bin/activate && pytest tests/ocarina -q       # Ocarina tests, ~2 s
-pytest --ignore=tests/acceptance --ignore=tests/playwright  # everything: 12 failures are Japanese/MeCab, expected
+pytest --ignore=tests/acceptance --ignore=tests/playwright  # everything; all pass (Japanese tests need `brew install mecab mecab-ipadic`)
 cd frontend && npx tsc -b && npm run lint && npm run build   # build goes to ocarina/web/dist (git-ignored)
 cd desktop && ./build.sh      # builds desktop/dist/Ocarina.app (minutes); needs ../.venv-build
 python -m ocarina.tts say --lang nl --out /tmp/x.wav "Hallo wereld."   # TTS from the command line
