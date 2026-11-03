@@ -11,12 +11,12 @@ import os
 
 from flask import Blueprint, current_app, jsonify, request
 
-from lute.book.forms import ALLOWED_AUDIO_EXTENSIONS
 from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
 from ocarina import prefs
 from ocarina.api import jobs
+from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 from ocarina.tts import models as model_files
 from ocarina.tts.book_audio import (
     generate_book_audio,
@@ -116,12 +116,12 @@ def start_audio(book_id):
             ),
             409,
         )
-    voice_id = body.get("voice") or saved.get(f"voice.{code}") or voices.BUILTIN_ID
+    voice_id = body.get("voice") or saved.get(f"voice.{code}") or voices.default_voice_id(code)
     voice = voices.path_of(cfg.datapath, voice_id)
     if voice is None:
         if body.get("voice"):
             return jsonify({"error": "Voice not found"}), 400
-        voice_id = voices.BUILTIN_ID  # the chosen voice was deleted: use the default
+        voice_id = voices.default_voice_id(code)  # the chosen voice was deleted: use the default
         voice = voices.path_of(cfg.datapath, voice_id)
     if jobs.active(kind="audio", book_id=book_id):
         return (

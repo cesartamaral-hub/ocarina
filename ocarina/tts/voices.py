@@ -1,8 +1,10 @@
 """
-Reference voices: the short clips Chatterbox imitates.
+Reference voices: the short clips the engines imitate.
 
-One clip ships with the app ("default"); the user's own clips live in <data folder>/voices as wav
-files (whatever they upload is converted to mono wav, so the model always gets a format it can read).
+Two clips ship with the app (in ocarina/tts/voices, a wav and optionally a .txt with the words spoken
+in it): "default", and "dutch", which is the default for Dutch books. The user's own clips live in
+<data folder>/voices as wav files (whatever they upload is converted to mono wav, so the model always
+gets a format it can read).
 """
 
 import io
@@ -15,6 +17,9 @@ import soundfile as sf
 from ocarina.tts.service import DEFAULT_VOICE
 
 BUILTIN_ID = "default"
+BUILTIN_DIR = os.path.dirname(DEFAULT_VOICE)
+BUILTINS = {"default": "Default", "dutch": "Dutch sample"}
+DEFAULT_FOR_LANGUAGE = {"nl": "dutch"}  # the others use "default"
 MIN_SECONDS, MAX_SECONDS = 3, 60
 MAX_BYTES = 25 * 1024 * 1024
 READABLE = (".wav", ".mp3", ".flac", ".ogg")
@@ -28,6 +33,11 @@ SAMPLE_TEXT = {
 
 class VoiceError(Exception):
     "A voice clip can't be used; the message says why."
+
+
+def default_voice_id(language_code):
+    "The voice used for books in this language when the user has not chosen one."
+    return DEFAULT_FOR_LANGUAGE.get(language_code, BUILTIN_ID)
 
 
 def voices_dir(datapath):
@@ -47,7 +57,16 @@ def _seconds(path):
 
 def list_voices(datapath):
     "All voices: the built-in one first, then the user's, by name."
-    voices = [{"id": BUILTIN_ID, "name": "Default", "builtin": True, "seconds": _seconds(DEFAULT_VOICE), "transcript": ""}]
+    voices = [
+        {
+            "id": voice_id,
+            "name": name,
+            "builtin": True,
+            "seconds": _seconds(os.path.join(BUILTIN_DIR, voice_id + ".wav")),
+            "transcript": transcript_of(datapath, voice_id) or "",
+        }
+        for voice_id, name in BUILTINS.items()
+    ]
     folder = voices_dir(datapath)
     if os.path.isdir(folder):
         for filename in sorted(os.listdir(folder), key=str.lower):
@@ -67,8 +86,10 @@ def list_voices(datapath):
 
 def path_of(datapath, voice_id):
     "File path of a voice, or None if there is no such voice."
-    if not voice_id or voice_id == BUILTIN_ID:
+    if not voice_id:
         return DEFAULT_VOICE
+    if voice_id in BUILTINS:
+        return os.path.join(BUILTIN_DIR, voice_id + ".wav")
     if voice_id != _slug(voice_id):
         return None
     path = os.path.join(voices_dir(datapath), voice_id + ".wav")
@@ -77,8 +98,9 @@ def path_of(datapath, voice_id):
 
 def transcript_of(datapath, voice_id):
     "The words spoken in a voice clip, if the user gave them; else None."
-    path = os.path.join(voices_dir(datapath), voice_id + ".txt")
-    if voice_id == BUILTIN_ID or not os.path.isfile(path):
+    folder = BUILTIN_DIR if voice_id in BUILTINS else voices_dir(datapath)
+    path = os.path.join(folder, voice_id + ".txt")
+    if voice_id != _slug(voice_id) or not os.path.isfile(path):
         return None
     with open(path, encoding="utf-8") as f:
         return f.read().strip() or None
@@ -93,7 +115,7 @@ def add_voice(datapath, filename, stream, name=None, transcript=None):
     if len(data) > MAX_BYTES:
         raise VoiceError("The file is larger than 25 MB.")
     voice_id = _slug(name or os.path.splitext(os.path.basename(filename))[0])
-    if not voice_id or voice_id == BUILTIN_ID:
+    if not voice_id or voice_id in BUILTINS:
         raise VoiceError("Give the voice a name.")
     try:
         audio, rate = sf.read(io.BytesIO(data), always_2d=True)
@@ -118,7 +140,7 @@ def add_voice(datapath, filename, stream, name=None, transcript=None):
 def delete_voice(datapath, voice_id):
     "Remove one of the user's clips; False if there is none."
     path = path_of(datapath, voice_id)
-    if voice_id == BUILTIN_ID or path is None:
+    if voice_id in BUILTINS or path is None:
         return False
     os.remove(path)
     if os.path.exists(path[:-4] + ".txt"):

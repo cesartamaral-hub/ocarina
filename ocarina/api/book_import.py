@@ -14,11 +14,11 @@ import os
 from flask import Blueprint, jsonify, request
 from sqlalchemy import text as sql
 
-from lute.book.forms import ALLOWED_AUDIO_EXTENSIONS
 from lute.book.model import Book
 from lute.book.service import BookImportException, FileTextExtraction, Service
 from lute.db import db
 from lute.models.repositories import BookRepository
+from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 
 bp = Blueprint("ocarina_book_import", __name__, url_prefix="/ocarina/api")
 

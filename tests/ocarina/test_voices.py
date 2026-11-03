@@ -39,11 +39,15 @@ def _upload(client, filename, data, **form):
     return client.post(VOICES, data={"clip": (io.BytesIO(data), filename), **form}, content_type="multipart/form-data")
 
 
-def test_builtin_voice_is_listed_first(client):
-    "The shipped voice is always there and can't be removed."
+def test_builtin_voices_are_listed_first(client):
+    "The two shipped voices are always there, the Dutch one with the words spoken in it; they can't be removed."
     listed = client.get(VOICES).json
-    assert listed[0]["id"] == "default" and listed[0]["builtin"] is True and listed[0]["seconds"] > 3
+    assert [v["id"] for v in listed[:2]] == ["default", "dutch"] and all(v["builtin"] for v in listed[:2])
+    assert all(v["seconds"] > 3 for v in listed[:2])
+    assert listed[1]["transcript"].startswith("In het oude land Eldoria")
     assert client.delete(f"{VOICES}/default").status_code == 404
+    assert client.delete(f"{VOICES}/dutch").status_code == 404
+    assert "name" in _upload(client, "dutch.wav", _clip()).json["error"]
 
 
 def test_add_list_and_delete_a_voice(client, app):
@@ -52,7 +56,7 @@ def test_add_list_and_delete_a_voice(client, app):
     assert r.status_code == 201 and r.json["id"] == "Mijn-stem"
     saved = os.path.join(app.env_config.datapath, "voices", "Mijn-stem.wav")
     assert sf.info(saved).channels == 1
-    assert [v["id"] for v in client.get(VOICES).json] == ["default", "Mijn-stem"]
+    assert [v["id"] for v in client.get(VOICES).json] == ["default", "dutch", "Mijn-stem"]
     assert _upload(client, "x.mp3", _clip(fmt="MP3"), name="Als mp3").json["id"] == "Als-mp3"
     assert client.delete(f"{VOICES}/Mijn-stem").status_code == 200
     assert not os.path.exists(saved)
@@ -77,6 +81,7 @@ def test_voice_ids_cannot_escape_the_voices_folder(app):
     assert voices.path_of(datapath, "../config") is None
     assert voices.path_of(datapath, "nope") is None
     assert voices.path_of(datapath, None) == voices.path_of(datapath, "default")
+    assert voices.default_voice_id("nl") == "dutch" and voices.default_voice_id("pl") == "default"
 
 
 def test_preview_job_makes_a_playable_wav(app, client):
@@ -120,13 +125,14 @@ def test_the_voice_for_a_language_is_used_for_its_books(app, client, monkeypatch
         wait_for_job(client, r.json["id"]) if r.status_code == 202 else None
         return r
 
-    start()
+    start()  # nothing chosen: Dutch books use the shipped Dutch voice
     prefs.update(str(tmp_path / "prefs.json"), {"voice.nl": "mijn"})
     start()
     client.delete(f"{VOICES}/mijn")
-    start()  # the chosen voice is gone: the default voice is used
+    start()  # the chosen voice is gone: back to the language's default voice
+    start(voice="default")  # the request can pick any voice, also a shipped one
     assert start(voice="nope").status_code == 400
-    assert used == ["default.wav", "mijn.wav", "default.wav"]
+    assert used == ["dutch.wav", "mijn.wav", "dutch.wav", "default.wav"]
 
 
 def test_transcript_is_stored_with_the_voice_and_used_when_voicing(app, client, monkeypatch):
@@ -136,7 +142,7 @@ def test_transcript_is_stored_with_the_voice_and_used_when_voicing(app, client, 
     app.config["OCARINA_TTS_ENGINE"] = "fake"
     r = _upload(client, "stem.wav", _clip(), transcript="  Goedemorgen allemaal.  ")
     assert r.json["transcript"] == "Goedemorgen allemaal."
-    assert [v["transcript"] for v in client.get(VOICES).json] == ["", "Goedemorgen allemaal."]
+    assert [v["transcript"] for v in client.get(VOICES).json][2:] == ["Goedemorgen allemaal."]
     seen = []
 
     def fake_run(app, job, check, book_id, model, voice, pause, ref_text=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
@@ -146,9 +152,11 @@ def test_transcript_is_stored_with_the_voice_and_used_when_voicing(app, client, 
     with app.app_context():
         book_id = make_dutch_book("Transcript").id
     url = f"/ocarina/api/books/{book_id}/audio"
-    for body in ({"voice": "stem"}, {}):
+    for body in ({"voice": "stem"}, {"voice": "default"}, {}):
         wait_for_job(client, client.post(url, json=body).json["id"])
-    assert seen == ["Goedemorgen allemaal.", None]
+    assert seen[0] == "Goedemorgen allemaal."
+    assert seen[1] is None  # the default clip has no words: engines that need them use their own voice
+    assert seen[2].startswith("In het oude land Eldoria")  # Dutch books default to the shipped Dutch voice
     client.delete(f"{VOICES}/stem")
     assert not os.path.exists(os.path.join(app.env_config.datapath, "voices", "stem.txt"))
 

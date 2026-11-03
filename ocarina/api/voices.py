@@ -98,14 +98,15 @@ def preview():
     if language not in voices.SAMPLE_TEXT:
         return jsonify({"error": "Choose a language"}), 400
     cfg = current_app.env_config
-    voice_path = voices.path_of(cfg.datapath, body.get("voice"))
+    saved = prefs.load(prefs.path_for(cfg.datapath))
+    voice_id = body.get("voice") or saved.get(f"voice.{language}") or voices.default_voice_id(language)
+    voice_path = voices.path_of(cfg.datapath, voice_id)
     if voice_path is None:
         return jsonify({"error": "Voice not found"}), 400
-    ref_text = voices.transcript_of(cfg.datapath, body.get("voice") or voices.BUILTIN_ID)
+    ref_text = voices.transcript_of(cfg.datapath, voice_id)
     text = (body.get("text") or "").strip() or voices.SAMPLE_TEXT[language]
     if len(text) > MAX_PREVIEW_TEXT:
         return jsonify({"error": f"The sample is at most {MAX_PREVIEW_TEXT} characters"}), 400
-    saved = prefs.load(prefs.path_for(cfg.datapath))
     model = model_files.choose_model(body.get("model"), saved.get(f"model.{language}"))
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
