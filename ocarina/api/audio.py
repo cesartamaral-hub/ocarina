@@ -7,7 +7,6 @@ JSON API for generating a book's audio.
 
 import json
 import os
-import threading
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -34,16 +33,20 @@ def _uses_real_engine(app):
     return "OCARINA_TTS_ENGINE" not in app.config
 
 
-def _run_job(app, job, book_id, model, voice, pause):
-    "Background thread: generate and attach the audio."
+def _run_job(app, job, check, book_id, model, voice, pause):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    "Queued job: generate and attach the audio. Finished sentences stay cached if it is cancelled."
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
     supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
     cache = SentenceCache(os.path.join(cfg.datapath, "tts_cache"))
 
     def progress(done, total):
+        check()
         job["done"], job["total"] = done, total
 
+    check()
+    if _uses_real_engine(app) and not model_files.is_installed(model):
+        raise RuntimeError(f"{model['name']} is not installed.")
     with app.app_context():
         try:
             book = BookRepository(db.session).find(book_id)
@@ -62,10 +65,9 @@ def _run_job(app, job, book_id, model, voice, pause):
                     if os.path.exists(p):
                         os.remove(p)
             job["audio_filename"] = name
-            job["state"] = "done"
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception:
             db.session.rollback()
-            job["state"], job["error"] = "error", f"{type(e).__name__}: {e}"
+            raise
         finally:
             supervisor.unload()
 
@@ -113,14 +115,17 @@ def start_audio(book_id):
     voice = body.get("voice") or DEFAULT_VOICE
     if not os.path.exists(voice):
         return jsonify({"error": "Voice file not found"}), 400
-    job = jobs.new_job("audio", book_id=book_id)
-    if job is None:
-        return jsonify({"error": "Another job is running"}), 409
-    threading.Thread(
-        target=_run_job,
-        args=(app, job, book_id, model, voice, float(body.get("pause", 0.5))),
-        daemon=True,
-    ).start()
+    if jobs.active(kind="audio", book_id=book_id):
+        return (
+            jsonify({"error": "Audio for this book is already queued or running", "code": "already_queued"}),
+            409,
+        )
+    pause = float(body.get("pause", 0.5))
+    job = jobs.submit(
+        "audio",
+        lambda job, check: _run_job(app, job, check, book_id, model, voice, pause),
+        book_id=book_id,
+    )
     return jsonify(job), 202
 
 

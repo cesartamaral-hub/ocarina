@@ -7,8 +7,6 @@ JSON API for the voice models.
     DELETE /ocarina/api/tts/models/<id>           delete a model's files
 """
 
-import threading
-
 from flask import Blueprint, jsonify, request
 
 from ocarina.api import jobs
@@ -17,35 +15,31 @@ from ocarina.tts import models as model_files
 bp = Blueprint("ocarina_tts_models", __name__, url_prefix="/ocarina/api")
 
 
-def _run_download(job, model, folder=None):
-    "Background thread: download a model's files, or copy them from a folder."
+def _run_download(job, check, model, folder=None):
+    "Queued job: download a model's files, or copy them from a folder (cancelling keeps what is there)."
 
     def progress(done, total):
+        check()
         job["done"], job["total"] = done, total
 
-    try:
-        if folder:
-            model_files.import_from_folder(model, folder, progress)
-        else:
-            model_files.download(model, progress)
-        job["state"] = "done"
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        job["state"], job["error"] = "error", f"{type(e).__name__}: {e}"
+    check()
+    if folder:
+        model_files.import_from_folder(model, folder, progress)
+    else:
+        model_files.download(model, progress)
 
 
 @bp.route("/tts/models", methods=["GET"])
 def models():
     "The model catalog, with whether each model is installed and its download size."
-    active = jobs.running_job()
+    active = jobs.active(kind="download")
     return jsonify(
         [
             {
                 **m,
                 "installed": model_files.is_installed(m),
                 "sizeBytes": model_files.total_bytes(m),
-                "downloadJob": active["id"]
-                if active and active.get("model_id") == m["id"]
-                else None,
+                "downloadJob": next((j["id"] for j in active if j["model_id"] == m["id"]), None),
             }
             for m in model_files.load_catalog()
         ]
@@ -60,10 +54,14 @@ def download_model(model_id):
         return jsonify({"error": "Unknown model"}), 404
     if model_files.is_installed(model):
         return jsonify({"error": "Model is already installed"}), 409
-    job = jobs.new_job("download", model_id=model_id, total=model_files.total_bytes(model))
-    if job is None:
-        return jsonify({"error": "Another job is running"}), 409
-    threading.Thread(target=_run_download, args=(job, model), daemon=True).start()
+    if jobs.active(kind="download", model_id=model_id):
+        return jsonify({"error": "This model is already being installed"}), 409
+    job = jobs.submit(
+        "download",
+        lambda job, check: _run_download(job, check, model),
+        model_id=model_id,
+        total=model_files.total_bytes(model),
+    )
     return jsonify(job), 202
 
 
@@ -80,10 +78,14 @@ def import_model(model_id):
         model_files.find_import_files(model, folder)
     except model_files.FolderError as e:
         return jsonify({"error": str(e), "code": "bad_folder"}), 400
-    job = jobs.new_job("download", model_id=model_id, total=model_files.total_bytes(model))
-    if job is None:
-        return jsonify({"error": "Another job is running"}), 409
-    threading.Thread(target=_run_download, args=(job, model, folder), daemon=True).start()
+    if jobs.active(kind="download", model_id=model_id):
+        return jsonify({"error": "This model is already being installed"}), 409
+    job = jobs.submit(
+        "download",
+        lambda job, check: _run_download(job, check, model, folder),
+        model_id=model_id,
+        total=model_files.total_bytes(model),
+    )
     return jsonify(job), 202
 
 
@@ -93,7 +95,7 @@ def delete_model(model_id):
     model = model_files.find_model(model_id)
     if model is None:
         return jsonify({"error": "Unknown model"}), 404
-    if jobs.running_job() is not None:
-        return jsonify({"error": "Another job is running"}), 409
+    if jobs.active():
+        return jsonify({"error": "Wait for the running jobs to finish, or cancel them"}), 409
     model_files.delete(model)
     return jsonify({"ok": True})

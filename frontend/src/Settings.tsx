@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  cancelJob,
   canPickFolder,
   deleteModel,
   downloadModel,
@@ -7,6 +8,7 @@ import {
   getModels,
   getPref,
   importModel,
+  isActive,
   pickFolder,
   setPref,
   type Job,
@@ -42,13 +44,13 @@ export function Settings() {
     load()
   }, [load])
 
-  const jobId = job?.state === 'running' ? job.id : null
+  const jobId = isActive(job) ? job!.id : null
   useEffect(() => {
     if (!jobId) return
     const timer = setInterval(async () => {
       const j = await getJob(jobId)
       setJob(j)
-      if (j.state !== 'running') load()
+      if (!isActive(j)) load()
     }, 700)
     return () => clearInterval(timer)
   }, [jobId, load])
@@ -93,7 +95,7 @@ export function Settings() {
   }
 
   if (!models) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>
-  const busy = job?.state === 'running'
+  const busy = isActive(job)
   return (
     <>
       <h1>Settings</h1>
@@ -140,11 +142,19 @@ export function Settings() {
                 <div className="progress">
                   <progress value={job.done} max={job.total || 1} />
                   <span className="muted">
-                    {formatBytes(job.done)} / {formatBytes(job.total)}
+                    {job.state === 'queued'
+                      ? 'Waiting for the job before it…'
+                      : `${formatBytes(job.done)} / ${formatBytes(job.total)}`}
                   </span>
+                  <button className="secondary" onClick={() => cancelJob(job.id).then(setJob, () => undefined)}>
+                    Cancel
+                  </button>
                 </div>
               )}
               {job?.state === 'error' && job.id === m.downloadJob && <p className="error">{job.error}</p>}
+              {job?.state === 'cancelled' && job.model_id === m.id && (
+                <p className="muted">Cancelled. Files already copied or downloaded are kept.</p>
+              )}
             </li>
           )
         })}

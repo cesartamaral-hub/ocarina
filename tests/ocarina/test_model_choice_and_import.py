@@ -54,9 +54,8 @@ def test_audio_uses_the_model_chosen_for_the_language(app, client, monkeypatch, 
     import ocarina.api.audio as audio  # pylint: disable=import-outside-toplevel
 
 
-    def fake_run(app, job, book_id, model, *rest):  # pylint: disable=unused-argument
+    def fake_run(app, job, check, book_id, model, *rest):  # pylint: disable=unused-argument
         used.append(model["id"])
-        job["state"] = "done"
 
     monkeypatch.setattr(audio, "_run_job", fake_run)
     with app.app_context():

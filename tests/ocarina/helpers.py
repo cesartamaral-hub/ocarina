@@ -25,7 +25,7 @@ def wait_for_job(client, job_id, seconds=20):
     end = time.time() + seconds
     while time.time() < end:
         job = client.get(f"/ocarina/api/jobs/{job_id}").json
-        if job["state"] != "running":
+        if job["state"] not in ("queued", "running"):
             return job
         time.sleep(0.1)
     raise AssertionError("job did not finish")

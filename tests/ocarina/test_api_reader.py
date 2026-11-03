@@ -166,14 +166,3 @@ def test_prefs_are_saved_in_the_data_folder_and_merged(client, monkeypatch, tmp_
     assert client.get("/ocarina/api/prefs").json["speed.Dutch"] == 0.8
     assert client.put("/ocarina/api/prefs", json=["not", "an", "object"]).status_code == 400
 
-
-def test_old_finished_jobs_are_dropped():
-    "The in-memory job list does not grow without limit."
-    from ocarina.api import jobs  # pylint: disable=import-outside-toplevel
-
-    jobs._jobs.clear()  # pylint: disable=protected-access
-    for _ in range(jobs.MAX_KEPT + 20):
-        job = jobs.new_job("audio")
-        job["state"] = "done"
-    assert len(jobs._jobs) <= jobs.MAX_KEPT + 1  # pylint: disable=protected-access
-    jobs._jobs.clear()  # pylint: disable=protected-access

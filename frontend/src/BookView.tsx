@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AudioBar } from './AudioBar'
-import { getJob, getSentences, startAudio, type BookSentences, type Job } from './api'
+import { cancelJob, getActiveJobs, getJob, getSentences, isActive, startAudio, type BookSentences, type Job } from './api'
 
 export function BookView({ bookId }: { bookId: number }) {
   const [book, setBook] = useState<BookSentences | null>(null)
@@ -20,11 +20,20 @@ export function BookView({ bookId }: { bookId: number }) {
   }, [bookId])
   useEffect(load, [load])
 
-  // Poll a running job until it finishes.
+  // Coming back to a book whose audio is still being made (or waiting its turn) shows that job.
   useEffect(() => {
-    if (!job || job.state !== 'running') return
+    getActiveJobs().then(
+      (jobs) => setJob((cur) => cur ?? jobs.find((j) => j.kind === 'audio' && j.book_id === bookId) ?? null),
+      () => undefined,
+    )
+  }, [bookId])
+
+  // Poll a waiting or running job until it ends.
+  const jobId = isActive(job) ? job!.id : null
+  useEffect(() => {
+    if (!jobId) return
     const timer = setInterval(async () => {
-      const j = await getJob(job.id)
+      const j = await getJob(jobId)
       setJob(j)
       if (j.state === 'done') {
         setAudioVersion((v) => v + 1)
@@ -32,7 +41,11 @@ export function BookView({ bookId }: { bookId: number }) {
       }
     }, 700)
     return () => clearInterval(timer)
-  }, [job, load])
+  }, [jobId, load])
+
+  async function cancel() {
+    if (job) setJob(await cancelJob(job.id).catch(() => job))
+  }
 
   async function generate(replace = false) {
     try {
@@ -70,7 +83,7 @@ export function BookView({ bookId }: { bookId: number }) {
   if (error) return <p className="error">{error}</p>
   if (!book) return <p className="muted">Loading…</p>
 
-  const running = job?.state === 'running'
+  const running = isActive(job)
   const pauseAndGenerate = (
     <>
       <label>
@@ -105,11 +118,25 @@ export function BookView({ bookId }: { bookId: number }) {
         )}
         {job && running && (
           <div className="progress">
-            <progress value={job.done} max={job.total || 1} />
-            <span className="muted">
-              {job.done} / {job.total || '…'} sentences
-            </span>
+            {job.state === 'queued' ? (
+              <span className="muted">
+                Waiting for {job.queuePosition === 1 ? 'the job before it' : `${job.queuePosition! - 1} jobs before it`}…
+              </span>
+            ) : (
+              <>
+                <progress value={job.done} max={job.total || 1} />
+                <span className="muted">
+                  {job.done} / {job.total || '…'} sentences
+                </span>
+              </>
+            )}
+            <button className="secondary" onClick={cancel}>
+              Cancel
+            </button>
           </div>
+        )}
+        {job?.state === 'cancelled' && (
+          <p className="muted">Cancelled. Sentences already voiced are kept, so starting again is quick.</p>
         )}
         {job?.state === 'error' && <p className="error">{job.error}</p>}
         {needsModel && (

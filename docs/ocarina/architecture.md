@@ -18,7 +18,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `pages.py` | `GET /books/<id>/pages/<n>` (opens the page), `POST .../finish`, `GET/PUT .../text` |
 | `terms.py` | `GET /terms/<id>`, `POST /terms`, `GET /terms/lookup`, `PATCH /terms/<id>/status`, `POST /terms/bulk-status`, `GET /terms/<id>/popup`, `GET /terms/<id>/references`, `POST/DELETE /terms/<id>/image` |
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
-| `jobs.py` | `GET /jobs/<id>`; one job at a time, in memory (audio and downloads share it) |
+| `jobs.py` | `GET /jobs`, `GET /jobs/<id>`, `POST /jobs/<id>/cancel`; a FIFO queue run one job at a time by one thread (audio and downloads share it); jobs call `check()` to notice cancelling |
 | `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
 | `book_import.py` | `GET /languages`, `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |
@@ -51,7 +51,7 @@ start (`loadPrefs`) and are read with `getPref`.
 
 ## Known debt
 - Language name to TTS code mapping is fragile (renaming a language breaks it); move it to a per-language setting.
-- Jobs are in memory (lost on restart) and there is no cancel or queue.
+- Jobs are in memory (lost on restart); a queued job does not survive closing the app. Cancelling is noticed between sentences (or between file chunks in a download).
 - "Installed" model check compares file sizes only, not hashes.
 - Lute's old screens still serve everything not yet ported (term lists, import, backups, stats).
 - Bundle is ~470 MB (mlx, scipy, transformers); trim later.
