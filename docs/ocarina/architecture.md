@@ -14,7 +14,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 ## API (all under `/ocarina/api`)
 | Module | Endpoints |
 |---|---|
-| `books.py` | `GET /books`, `GET /books/<id>/sentences` (with start times if audio is ours) |
+| `books.py` | `PATCH/DELETE /books/<id>` (title, source, tags, archive; delete removes generated audio), `GET /books`, `GET /books/<id>/sentences` (with start times if audio is ours) |
 | `pages.py` | `GET /books/<id>/pages/<n>` (opens the page), `POST .../finish`, `GET/PUT .../text` |
 | `terms.py` | `GET /terms/<id>`, `POST /terms`, `GET /terms/lookup`, `PATCH /terms/<id>/status`, `POST /terms/bulk-status`, `GET /terms/<id>/popup`, `GET /terms/<id>/references`, `POST/DELETE /terms/<id>/image` |
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
@@ -24,6 +24,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `term_list.py` | `GET /term-list` (filters, sort, paging), `GET /term-list/export` (CSV), `GET /tags`, `POST /terms/bulk` (status, tags, parent, delete) |
 | `backups.py` | `GET /backups`, `PUT /backups/settings`, `POST /backups` (now; `manual` keeps it), `POST /backups/skip`, `GET /backups/<name>/download`; the app makes a due backup when it opens |
 | `stats.py` | `GET /stats` (streak, words read per language and period, daily history) |
+| `voices.py` | `GET/POST /tts/voices`, `DELETE /tts/voices/<id>`, `POST /tts/voices/preview` (a job), `GET /tts/previews/<name>`; clips in `<data>/voices/` as mono wav with an optional `.txt` of the words spoken |
 | `languages.py` | `GET /languages` (with counts), `GET/PUT/DELETE /languages/<id>`, `POST /languages`, `GET /languages/template` (blank or predefined), `GET /languages/parsers`; delete needs `force=true` when it holds books or terms |
 | `book_import.py` | `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |
