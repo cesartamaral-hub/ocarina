@@ -18,6 +18,18 @@ export type BookSentences = {
   sentences: Sentence[]
 }
 
+export type Model = {
+  id: string
+  name: string
+  description: string
+  license: string
+  languages: string[]
+  installed: boolean
+  sizeBytes: number
+  downloadJob: string | null
+  benchmark?: { secondsPerSecondOfAudio: number; machine: string }
+}
+
 export type Job = {
   id: string
   state: 'running' | 'done' | 'error'
@@ -47,3 +59,11 @@ export const startAudio = (id: number, opts: { replace?: boolean; pause?: number
   }).then((r) => json<Job>(r))
 
 export const getJob = (id: string) => fetch(`${API}/jobs/${id}`).then((r) => json<Job>(r))
+
+export const getModels = () => fetch(`${API}/tts/models`).then((r) => json<Model[]>(r))
+
+export const downloadModel = (id: string) =>
+  fetch(`${API}/tts/models/${id}/download`, { method: 'POST' }).then((r) => json<Job>(r))
+
+export const deleteModel = (id: string) =>
+  fetch(`${API}/tts/models/${id}`, { method: 'DELETE' }).then((r) => json<{ ok: boolean }>(r))

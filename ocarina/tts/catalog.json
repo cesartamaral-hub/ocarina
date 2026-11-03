@@ -6,13 +6,34 @@
       "name": "Chatterbox Multilingual v3 (MLX)",
       "description": "Default. Faster than real time on Apple Silicon; clones the reference voice.",
       "engine": "mlx-chatterbox",
-      "repository": "mlx-community/chatterbox-multilingual-v3",
-      "revision": "03565773edd72e949572557597af8063bb49a18a",
+      "repositories": [
+        {
+          "id": "mlx-community/chatterbox-multilingual-v3",
+          "revision": "03565773edd72e949572557597af8063bb49a18a",
+          "files": {
+            "model.safetensors": 2711113780,
+            "tokenizer.json": 69989,
+            "config.json": 666,
+            "Cangjie5_TC.json": 1920163
+          }
+        },
+        {
+          "id": "mlx-community/S3TokenizerV2",
+          "revision": "e0c9886f0e1c35ae85b1f27277416fb19fc72bec",
+          "files": {
+            "model.safetensors": 494868984,
+            "config.json": 126
+          }
+        }
+      ],
       "license": "mit",
-      "sizeBytes": 2711113780,
       "family": "chatterbox",
       "device": "mlx",
-      "languages": ["nl", "pl", "fr"],
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ],
       "needsReferenceVoice": true,
       "benchmark": {
         "machine": "M1 Max 32GB",

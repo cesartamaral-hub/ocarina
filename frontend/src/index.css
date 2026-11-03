@@ -32,7 +32,7 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-.top { padding: 12px 24px; border-bottom: 1px solid var(--line); }
+.top { padding: 12px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
 .brand { font-weight: 600; color: var(--fg); letter-spacing: 0.02em; }
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
 h1 { font-size: 1.6rem; margin: 0.4em 0 0.2em; }
@@ -54,3 +54,9 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sentences li::marker { color: var(--muted); font-size: 0.8em; }
 .sentences li:hover { background: var(--panel); }
 .sentences li.current { background: var(--current); }
+.models { list-style: none; padding: 0; }
+.models li { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: var(--panel); }
+.models .name { font-weight: 600; }
+.models .row { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+.models .actions { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }

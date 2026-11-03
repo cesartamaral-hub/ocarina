@@ -20,7 +20,13 @@ def worker_command_and_env():
     The app's own launcher is not used: it starts Python in ASCII mode,
     which breaks libraries that read files without an encoding.
     """
-    env = {**os.environ, "PYTORCH_ENABLE_MPS_FALLBACK": "1", "PYTHONUTF8": "1"}
+    # HF_HUB_OFFLINE: the worker never downloads; the download manager does that.
+    env = {
+        **os.environ,
+        "PYTORCH_ENABLE_MPS_FALLBACK": "1",
+        "PYTHONUTF8": "1",
+        "HF_HUB_OFFLINE": "1",
+    }
     if getattr(sys, "frozen", False):
         lib = os.path.join(os.environ["RESOURCEPATH"], "lib")
         env["PYTHONPATH"] = os.pathsep.join(

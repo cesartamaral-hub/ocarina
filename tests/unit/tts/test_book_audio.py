@@ -102,3 +102,60 @@ def test_frontend_is_served_with_client_routes(client):
         return
     assert client.get("/ocarina/app/").status_code == 200
     assert b"<div id=\"root\">" in client.get("/ocarina/app/book/1").data
+
+
+def test_models_list_shows_install_status_and_size(client, monkeypatch):
+    "The model list reports whether each model is installed."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    monkeypatch.setattr(model_files, "is_installed", lambda m: False)
+    models = client.get("/ocarina/api/tts/models").json
+    assert models[0]["installed"] is False
+    assert models[0]["sizeBytes"] > 1_000_000_000
+    assert models[0]["downloadJob"] is None
+
+
+def test_audio_needs_installed_model(app, client, monkeypatch):
+    "With the real engine, generating audio before the download is refused."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    monkeypatch.setattr(model_files, "is_installed", lambda m: False)
+    with app.app_context():
+        book_id = _dutch_book("No model").id
+    r = client.post(f"/ocarina/api/books/{book_id}/audio", json={})
+    assert r.status_code == 409 and r.json["code"] == "model_not_installed"
+
+
+def test_download_job_reports_progress_and_then_installs(client, monkeypatch):
+    "A download runs as a job; the model counts as installed once it finishes."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    state = {"installed": False}
+    monkeypatch.setattr(model_files, "is_installed", lambda m: state["installed"])
+
+    def fake_download(model, on_progress):
+        on_progress(50, 100)
+        state["installed"] = True
+        on_progress(100, 100)
+
+    monkeypatch.setattr(model_files, "download", fake_download)
+    model_id = client.get("/ocarina/api/tts/models").json[0]["id"]
+    r = client.post(f"/ocarina/api/tts/models/{model_id}/download")
+    assert r.status_code == 202
+    job = _wait(client, r.json["id"])
+    assert job["state"] == "done" and job["done"] == 100
+    assert client.get("/ocarina/api/tts/models").json[0]["installed"] is True
+    again = client.post(f"/ocarina/api/tts/models/{model_id}/download")
+    assert again.status_code == 409
+
+
+def test_delete_model_calls_delete(client, monkeypatch):
+    "DELETE removes the model files."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    deleted = []
+    monkeypatch.setattr(model_files, "delete", lambda m: deleted.append(m["id"]))
+    model_id = client.get("/ocarina/api/tts/models").json[0]["id"]
+    assert client.delete(f"/ocarina/api/tts/models/{model_id}").status_code == 200
+    assert deleted == [model_id]
+    assert client.delete("/ocarina/api/tts/models/nope").status_code == 404

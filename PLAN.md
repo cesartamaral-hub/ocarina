@@ -155,16 +155,34 @@ Check each model's license before recommending or bundling it.
    (3) the bundle is 550 MB (transformers, scipy and others): trim later. Not yet checked: the
    window itself by eye, double-clicking from Finder, code signing, a Mac without the Hugging
    Face cache (first run must download the 2.7 GB model).
-6. **Settings: TTS model catalog.** Picker, download manager, voice preview.
+6. **Settings: TTS model catalog.** MOSTLY DONE. Settings screen (`#/settings`) lists catalog
+   models with language, license, size and speed; Download (with byte progress), Delete, and an
+   "Installed" state. Backend: `ocarina/tts/models.py`, `POST /tts/models/<id>/download`,
+   `DELETE /tts/models/<id>`; generating audio without the model returns
+   `model_not_installed` and the book page links to Settings. Files go in the standard Hugging
+   Face cache (the MLX library looks there); after a download `refs/main` is pointed at the
+   pinned revision and the TTS worker runs with `HF_HUB_OFFLINE=1`, so it never downloads by
+   itself. Checked: a fresh 3.2 GB download from the UI into an empty cache, then audio
+   generated offline from it, then delete (refused audio again). Catalog now lists
+   `repositories` with exact files and sizes (the installed check compares file sizes, not
+   hashes). Still open: voice preview, a second model (CosyVoice2/Parkiet, only the catalog
+   entry plus an engine), reference-voice picker, rebuild of `Ocarina.app` with these changes.
 7. **Packaging for real.** Add the React build and TTS worker to the py2app bundle, confirm the
    window opens by double-click, then sign and (optionally) notarize.
 8. **Port the remaining screens**, then retire the Flask templates one by one.
+
+## Decisions
+
+- **Hard fork (2026-11-03).** Ocarina does not track upstream `lute-v3`. The `upstream` remote
+  stays only to read or cherry-pick upstream fixes by hand. So we no longer need to keep edits to
+  Lute's own code small: change or delete Lute modules, templates and tests freely when the
+  React replacement exists. (Earlier notes about keeping upstream merges clean no longer apply.)
+- **Unsigned for now (2026-11-03).** No code signing or notarization yet; the app is opened with
+  right-click, Open. Revisit later.
 
 ## Open questions
 
 - Do the MLX clips sound good in all three languages, and which reference voice(s) to ship?
 - Is `lute/db/language_defs` still the right place for Dutch, Polish and French definitions, or
   do we want to trim the language list?
-- Keep tracking upstream `lute-v3`, or treat Ocarina as a hard fork once the React frontend lands?
-- Sign with a personal developer certificate, or leave the app unsigned (right-click open)?
 - Later, optional: speech-to-text for pronunciation or shadowing practice (Handy-style).
