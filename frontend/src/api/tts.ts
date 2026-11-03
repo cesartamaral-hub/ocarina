@@ -7,6 +7,7 @@ export type Job = {
   done: number
   total: number
   queuePosition?: number
+  title?: string
   book_id?: number
   model_id?: string
   preview?: string
@@ -63,7 +64,17 @@ export const uploadAudio = (bookId: number, file: File) => {
 
 export const getJob = (id: string) => fetch(`${API}/jobs/${id}`).then((r) => json<Job>(r))
 
-export const startAudio = (id: number, opts: { replace?: boolean; pause?: number }) =>
+export type AudioOptions = {
+  language: string
+  defaultModel: string
+  defaultVoice: string
+  models: { id: string; name: string; installed: boolean; custom: boolean }[]
+  voices: { id: string; name: string; builtin: boolean }[]
+}
+
+export const getAudioOptions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/options`).then((r) => json<AudioOptions>(r))
+
+export const startAudio = (id: number, opts: { replace?: boolean; pause?: number; model?: string; voice?: string }) =>
   fetch(`${API}/books/${id}/audio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

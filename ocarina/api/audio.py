@@ -3,6 +3,7 @@ JSON API for generating a book's audio.
 
     POST /ocarina/api/books/<id>/audio            start a job
     POST /ocarina/api/books/<id>/audio/upload     attach your own audio file (form field "audio")
+    GET  /ocarina/api/books/<id>/audio/options    what would voice this book, and what can be chosen instead
     GET  /ocarina/api/books/<id>/audio/sentences  sentence start times
 """
 
@@ -134,6 +135,7 @@ def start_audio(book_id):
         "audio",
         lambda job, check: _run_job(app, job, check, book_id, model, voice, pause, ref_text),
         book_id=book_id,
+        title=book.title,
     )
     return jsonify(job), 202
 
@@ -164,6 +166,40 @@ def upload_audio(book_id):
             if os.path.exists(path):
                 os.remove(path)
     return jsonify({"audio_filename": book.audio_filename}), 201
+
+
+@bp.route("/books/<int:book_id>/audio/options", methods=["GET"])
+def audio_options(book_id):
+    """
+    The model and voice that would voice this book (the language's choice in Settings, else the first
+    installed model), and the models and voices that can be picked for one generation instead.
+    """
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    try:
+        code = tts_lang(book.language)
+    except ValueError:
+        return jsonify({"error": f"Ocarina can't make audio for {book.language.name} yet", "code": "unsupported_language"}), 400
+    datapath = current_app.env_config.datapath
+    saved = prefs.load(prefs.path_for(datapath))
+    default_model = model_files.choose_model(None, saved.get(f"model.{code}"))
+    voice_list = voices.list_voices(datapath)
+    voice_id = saved.get(f"voice.{code}") or voices.default_voice_id(code)
+    default_voice = next((v for v in voice_list if v["id"] == voices.LEGACY_IDS.get(voice_id, voice_id)), voice_list[0])
+    return jsonify(
+        {
+            "language": code,
+            "defaultModel": default_model["id"],
+            "defaultVoice": default_voice["id"],
+            "models": [
+                {"id": m["id"], "name": m["name"], "installed": model_files.is_installed(m), "custom": bool(m.get("custom"))}
+                for m in model_files.load_catalog()
+                if code in m.get("languages", [])
+            ],
+            "voices": [{"id": v["id"], "name": v["name"], "builtin": v["builtin"]} for v in voice_list],
+        }
+    )
 
 
 @bp.route("/books/<int:book_id>/audio/sentences", methods=["GET"])

@@ -18,9 +18,9 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `pages.py` | `GET /books/<id>/pages/<n>` (opens the page), `POST .../finish`, `GET/PUT .../text` |
 | `terms.py` | `GET /terms/<id>`, `POST /terms`, `GET /terms/lookup`, `PATCH /terms/<id>/status`, `POST /terms/bulk-status`, `GET /terms/<id>/popup`, `GET /terms/<id>/references`, `POST/DELETE /terms/<id>/image` |
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
-| `jobs.py` | `GET /jobs`, `GET /jobs/<id>`, `POST /jobs/<id>/cancel`; a FIFO queue run one job at a time by one thread (audio and downloads share it); jobs call `check()` to notice cancelling |
+| `jobs.py` | `GET /jobs`, `GET /jobs/<id>`, `POST /jobs/<id>/cancel`; a FIFO queue run one job at a time by one thread (audio and downloads share it); jobs call `check()` to notice cancelling; they carry a `title` (book or model name) so the header can say what runs |
 | `tts_models.py` | `GET /tts/models`, `GET /tts/engines`, `POST /tts/models/lookup`, `POST /tts/models/custom`, `DELETE /tts/models/<id>/entry`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
-| `audio.py` also: `POST /books/<id>/audio/upload` (own audio file; removes a replaced generated file, keeps recordings) |
+| `audio.py` also: `GET /books/<id>/audio/options` (the language's default model and voice, and what can be chosen for one generation; the generate call takes `model` and `voice`),  `POST /books/<id>/audio/upload` (own audio file; removes a replaced generated file, keeps recordings) |
 | `term_list.py` | `GET /term-list` (filters, sort, paging), `GET /term-list/export` (CSV), `GET /tags`, `POST /terms/bulk` (status, tags, parent, delete) |
 | `backups.py` | `GET /backups`, `PUT /backups/settings`, `POST /backups` (now; `manual` keeps it), `POST /backups/skip`, `GET /backups/<name>/download`; the app makes a due backup when it opens |
 | `stats.py` | `GET /stats` (streak, words read per language and period, daily history) |

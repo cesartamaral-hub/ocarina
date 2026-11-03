@@ -21,6 +21,7 @@ export type BookSentences = {
   language: string
   hasAudio: boolean
   hasTimings: boolean
+  audioModel?: string
   currentPage: number
   sentences: Sentence[]
 }

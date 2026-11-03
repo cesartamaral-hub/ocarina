@@ -123,6 +123,8 @@ def sentences(book_id):
         )
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
-                result["sentences"] = json.load(f)["sentences"]
+                made = json.load(f)
+            result["sentences"] = made["sentences"]
+            result["audioModel"] = made.get("model")  # the catalog id of the model that voiced it
             result["hasTimings"] = True
     return jsonify(result)

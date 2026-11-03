@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AudioBar } from './AudioBar'
-import { cancelJob, getActiveJobs, getJob, getSentences, isActive, startAudio, uploadAudio, type BookSentences, type Job } from './api'
+import {
+  cancelJob,
+  getActiveJobs,
+  getAudioOptions,
+  getJob,
+  getSentences,
+  isActive,
+  startAudio,
+  uploadAudio,
+  type AudioOptions,
+  type BookSentences,
+  type Job,
+} from './api'
+import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
+
+const modelName = (o: AudioOptions, id: string) => o.models.find((m) => m.id === id)?.name ?? id
+const voiceName = (o: AudioOptions, id: string) => o.voices.find((v) => v.id === id)?.name ?? id
 
 export function BookView({ bookId }: { bookId: number }) {
   const [book, setBook] = useState<BookSentences | null>(null)
@@ -10,6 +26,9 @@ export function BookView({ bookId }: { bookId: number }) {
   const [pause, setPause] = useState(0.5)
   const [current, setCurrent] = useState(-1)
   const [needsModel, setNeedsModel] = useState(false)
+  const [options, setOptions] = useState<AudioOptions | null>(null)
+  const [optionsError, setOptionsError] = useState('')
+  const [choice, setChoice] = useState<AudioChoice>({ model: '', voice: '' })
   const audio = useRef<HTMLAudioElement>(null)
 
   const load = useCallback(() => {
@@ -19,6 +38,9 @@ export function BookView({ bookId }: { bookId: number }) {
     )
   }, [bookId])
   useEffect(load, [load])
+  useEffect(() => {
+    getAudioOptions(bookId).then(setOptions, (e) => setOptionsError(e.message))
+  }, [bookId])
 
   // Coming back to a book whose audio is still being made (or waiting its turn) shows that job.
   useEffect(() => {
@@ -62,7 +84,8 @@ export function BookView({ bookId }: { bookId: number }) {
 
   async function generate(replace = false) {
     try {
-      setJob(await startAudio(bookId, { replace, pause }))
+      setJob(await startAudio(bookId, { replace, pause, model: choice.model || undefined, voice: choice.voice || undefined }))
+      setChoice({ model: '', voice: '' }) // a choice made in the menu is for one generation only
     } catch (e) {
       const err = e as Error & { code?: string }
       if (err.code === 'has_user_audio') {
@@ -103,9 +126,19 @@ export function BookView({ bookId }: { bookId: number }) {
         Pause between sentences {pause.toFixed(1)} s
         <input type="range" min={0.2} max={2} step={0.1} value={pause} onChange={(e) => setPause(Number(e.target.value))} />
       </label>
-      <button disabled={running} onClick={() => generate()}>
-        {book?.hasAudio ? 'Regenerate audio' : 'Generate audio'}
-      </button>
+      <span className="split">
+        <button disabled={running || optionsError !== ''} onClick={() => generate()}>
+          {book?.hasAudio ? 'Regenerate audio' : 'Generate audio'}
+        </button>
+        {options ? (
+          <AudioOptionsMenu options={options} choice={choice} onChange={setChoice} disabled={running} />
+        ) : (
+          // Same size as the real button, so nothing jumps when the options arrive.
+          <button className="secondary icon-button" disabled aria-label="Loading model and voice options">
+            ⋯
+          </button>
+        )}
+      </span>
       <label className="file-button">
         <input
           type="file"
@@ -140,6 +173,24 @@ export function BookView({ bookId }: { bookId: number }) {
           <div className="controls">
             {pauseAndGenerate}
           </div>
+        )}
+        {options && (
+          <p className="muted audio-using">
+            {modelName(options, choice.model || options.defaultModel)} · {voiceName(options, choice.voice || options.defaultVoice)}
+            {(choice.model || choice.voice) && (
+              <>
+                {' '}
+                <strong>(this time only)</strong>{' '}
+                <button className="link-button" onClick={() => setChoice({ model: '', voice: '' })}>
+                  Use the defaults
+                </button>
+              </>
+            )}
+          </p>
+        )}
+        {optionsError && <p className="error">{optionsError}</p>}
+        {book.hasTimings && book.audioModel && options && (
+          <p className="muted">Audio made with {modelName(options, book.audioModel)}.</p>
         )}
         {job && running && (
           <div className="progress">
