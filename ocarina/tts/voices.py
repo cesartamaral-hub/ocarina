@@ -1,8 +1,8 @@
 """
 Reference voices: the short clips the engines imitate.
 
-Two clips ship with the app (in ocarina/tts/voices, a wav and optionally a .txt with the words spoken
-in it): "default", and "dutch", which is the default for Dutch books. The user's own clips live in
+One clip ships with the app (in ocarina/tts/voices: "dutch", a wav with a .txt of the words spoken in
+it); it is the default voice for every language. The user's own clips live in
 <data folder>/voices as wav files (whatever they upload is converted to mono wav, so the model always
 gets a format it can read).
 """
@@ -16,10 +16,10 @@ import soundfile as sf
 
 from ocarina.tts.service import DEFAULT_VOICE
 
-BUILTIN_ID = "default"
+BUILTIN_ID = "dutch"
 BUILTIN_DIR = os.path.dirname(DEFAULT_VOICE)
-BUILTINS = {"default": "Default", "dutch": "Dutch sample"}
-DEFAULT_FOR_LANGUAGE = {"nl": "dutch"}  # the others use "default"
+BUILTINS = {BUILTIN_ID: "Dutch sample"}
+LEGACY_IDS = {"default": BUILTIN_ID}  # the first shipped clip was removed; saved choices of it map to the remaining one
 MIN_SECONDS, MAX_SECONDS = 3, 60
 MAX_BYTES = 25 * 1024 * 1024
 READABLE = (".wav", ".mp3", ".flac", ".ogg")
@@ -35,9 +35,9 @@ class VoiceError(Exception):
     "A voice clip can't be used; the message says why."
 
 
-def default_voice_id(language_code):
+def default_voice_id(language_code):  # pylint: disable=unused-argument
     "The voice used for books in this language when the user has not chosen one."
-    return DEFAULT_FOR_LANGUAGE.get(language_code, BUILTIN_ID)
+    return BUILTIN_ID
 
 
 def voices_dir(datapath):
@@ -86,6 +86,7 @@ def list_voices(datapath):
 
 def path_of(datapath, voice_id):
     "File path of a voice, or None if there is no such voice."
+    voice_id = LEGACY_IDS.get(voice_id, voice_id)
     if not voice_id:
         return DEFAULT_VOICE
     if voice_id in BUILTINS:
@@ -98,6 +99,7 @@ def path_of(datapath, voice_id):
 
 def transcript_of(datapath, voice_id):
     "The words spoken in a voice clip, if the user gave them; else None."
+    voice_id = LEGACY_IDS.get(voice_id, voice_id)
     folder = BUILTIN_DIR if voice_id in BUILTINS else voices_dir(datapath)
     path = os.path.join(folder, voice_id + ".txt")
     if voice_id != _slug(voice_id) or not os.path.isfile(path):
@@ -115,7 +117,7 @@ def add_voice(datapath, filename, stream, name=None, transcript=None):
     if len(data) > MAX_BYTES:
         raise VoiceError("The file is larger than 25 MB.")
     voice_id = _slug(name or os.path.splitext(os.path.basename(filename))[0])
-    if not voice_id or voice_id in BUILTINS:
+    if not voice_id or voice_id in BUILTINS or voice_id in LEGACY_IDS:
         raise VoiceError("Give the voice a name.")
     try:
         audio, rate = sf.read(io.BytesIO(data), always_2d=True)

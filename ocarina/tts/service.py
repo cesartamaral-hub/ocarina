@@ -9,7 +9,7 @@ import time
 from ocarina.tts.cache import SentenceCache, file_digest
 from ocarina.tts.sentences import split_sentences
 
-DEFAULT_VOICE = os.path.join(os.path.dirname(__file__), "voices", "default.wav")
+DEFAULT_VOICE = os.path.join(os.path.dirname(__file__), "voices", "dutch.wav")
 
 
 def voice_digest(voice, ref_text=None):

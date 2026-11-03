@@ -10,7 +10,7 @@ Chatterbox Multilingual, about 25 words of Dutch, Polish and French, run after a
 
 - MLX is the default engine (faster than real time). PyTorch is only ~20% faster on GPU than CPU.
 - The MLX model has no built-in voice: it needs a reference clip (`ref_audio`). Ours is
-  `ocarina/tts/voices/default.wav` (a clip from the PyTorch run).
+  `ocarina/tts/voices/dutch.wav` (a Dutch sample, with its transcript in `dutch.txt`).
 - All three languages sound fine; the voice is too fast for a learner, so playback speed (0.5x to
   1.0x, pitch kept) is a reader control. Speaking pace is not
   controllable in the model (2026-11-03, Dutch sentence, 3.8 s at default): `speed` is ignored by
