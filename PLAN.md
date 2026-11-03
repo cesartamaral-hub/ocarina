@@ -123,9 +123,20 @@ Check each model's license before recommending or bundling it.
    clean. Test leftover `tests/zz_bkp/` is excluded via `.git/info/exclude`. Old Lute data
    (3 languages, 7 books, 543 terms, 5 audio files) was imported into
    `~/Library/Application Support/Ocarina`.
-3. **TTS service.** Worker process, MLX engine, reference-voice handling, per-sentence cache,
-   CLI test (no UI). Include a long-text test and a first-run download test.
-4. **Backend API.** JSON endpoints for books, terms and TTS jobs, next to the existing routes.
+3. **TTS service.** DONE (`ocarina/tts/`): worker process with restart, MLX engine, reference
+   voice, per-sentence cache, CLI (`python -m ocarina.tts say ...`). Still open: a long-text
+   test and a first-run model download manager (dev venv downloads from Hugging Face).
+4. **Backend API.** IN PROGRESS. Done (`ocarina/api/tts_routes.py`, registered with 2 lines in
+   `lute/app_factory.py`): `GET /ocarina/api/tts/models`, `POST /ocarina/api/books/<id>/audio`
+   (background job, one at a time; refuses to overwrite a user's own audio without
+   `replace=true`), `GET /ocarina/api/jobs/<id>`, `GET /ocarina/api/books/<id>/audio/sentences`.
+   Sentences come from Lute's language parser. The book's mp3 goes in Lute's single audio slot;
+   sentence start times go in a sidecar `<audio>.sentences.json` (Lute's bookmarks stay the
+   user's). Checked end to end with the real model on a scratch copy of your data (17 sentences
+   of "Mijn naam is Carla", 36 s). Language to TTS code is by name (Dutch, Polish/Polski,
+   French only). Still open: audio is only playable when the whole job finishes (no early
+   playback), JSON endpoints for books/terms, cancel/queue, and `soundfile` MP3 writing must be
+   checked inside the py2app bundle.
 5. **React shell.** Vite project, served by Flask, loaded in the pywebview window; first screen:
    book list and reader.
 6. **Settings: TTS model catalog.** Picker, download manager, voice preview.

@@ -62,6 +62,7 @@ from lute.settings.routes import bp as settings_bp
 from lute.themes.routes import bp as themes_bp
 from lute.stats.routes import bp as stats_bp
 from lute.cli.commands import bp as cli_bp
+from ocarina.api.tts_routes import bp as ocarina_tts_bp
 
 
 def _setup_app_dir(dirname, readme_content):
@@ -349,6 +350,7 @@ def _create_app(app_config, extra_config):
     app.register_blueprint(themes_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(cli_bp)
+    app.register_blueprint(ocarina_tts_bp)
     if app_config.is_test_db:
         app.register_blueprint(dev_api_bp)
 

@@ -37,4 +37,24 @@ def synthesize_text(  # pylint: disable=too-many-arguments,too-many-positional-a
     return result
 
 
-__all__ = ["synthesize_text", "SentenceCache", "DEFAULT_VOICE"]
+__all__ = ["synthesize_text", "synthesize_text_sentences", "SentenceCache", "DEFAULT_VOICE"]
+
+
+def synthesize_text_sentences(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    supervisor, cache, model_id, sentences, lang, voice, on_sentence=None
+):
+    """
+    Like synthesize_text, but for sentences already split by the caller.
+    Returns the wav paths, in order.
+    """
+    digest = file_digest(voice)
+    paths = []
+    for i, sentence in enumerate(sentences):
+        path = cache.get(model_id, lang, digest, sentence)
+        if path is None:
+            path = cache.path_for(model_id, lang, digest, sentence)
+            supervisor.synth(sentence, lang, voice, path)
+        paths.append(path)
+        if on_sentence:
+            on_sentence(i, len(sentences))
+    return paths
