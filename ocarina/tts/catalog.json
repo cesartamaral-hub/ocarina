@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "models": [
+    {
+      "id": "chatterbox-multilingual-v3-mlx",
+      "name": "Chatterbox Multilingual v3 (MLX)",
+      "description": "Default. Faster than real time on Apple Silicon; clones the reference voice.",
+      "engine": "mlx-chatterbox",
+      "repository": "mlx-community/chatterbox-multilingual-v3",
+      "revision": "03565773edd72e949572557597af8063bb49a18a",
+      "license": "mit",
+      "sizeBytes": 2711113780,
+      "family": "chatterbox",
+      "device": "mlx",
+      "languages": ["nl", "pl", "fr"],
+      "needsReferenceVoice": true,
+      "benchmark": {
+        "machine": "M1 Max 32GB",
+        "secondsPerSecondOfAudio": 0.54,
+        "loadSeconds": 2.5,
+        "peakRamGb": 3.5
+      }
+    }
+  ]
+}
