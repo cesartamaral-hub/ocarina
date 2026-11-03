@@ -19,7 +19,7 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 
 **1. Selection stands out in the dark theme (done).** The clicked word or dragged phrase gets a thick outline in a neutral high-contrast colour (white in dark, near-black in light, with a soft halo). The playing sentence now has a calmer outline in another hue (gold in dark, burnt orange in light) and a faint tint, and the sentence around the selection gets a subtle band, so you see which sentence "translate" will use.
 
-**2. Audio versions per book.** A book keeps several audio versions; generating never replaces yours.
+**2. Audio versions per book (done).** A book keeps several audio versions; generating never replaces yours.
 - New table of versions per book (label, own or generated, model, voice, pause, timings file, created); the book points at the selected one, which the player and sentence following use. A migration turns each book's existing audio into its first version.
 - Generating adds a version; the same model + voice + pause replaces that generated version only. "Use my own audio…" also adds a version. Deleting a version asks first.
 - UI: a selector in the audio panel with rename and delete.

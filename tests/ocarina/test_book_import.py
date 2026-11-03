@@ -159,8 +159,8 @@ def test_upload_audio_to_an_existing_book(app, client):
     assert second.json["audio_filename"] != first.json["audio_filename"]
 
 
-def test_upload_audio_replaces_generated_audio_and_removes_it(app, client):
-    "A file made by Ocarina (with timings) is deleted when the user uploads their own."
+def test_upload_audio_keeps_generated_audio_as_another_version(app, client):
+    "A file made by Ocarina (with timings) stays when the user uploads their own; both are versions."
     from tests.ocarina.helpers import make_dutch_book, wait_for_job  # pylint: disable=import-outside-toplevel
 
     app.config["OCARINA_TTS_ENGINE"] = "fake"
@@ -175,4 +175,6 @@ def test_upload_audio_replaces_generated_audio_and_removes_it(app, client):
         content_type="multipart/form-data",
     )
     assert r.status_code == 201
-    assert not os.path.exists(generated) and not os.path.exists(generated + ".sentences.json")
+    assert os.path.exists(generated) and os.path.exists(generated + ".sentences.json")
+    kinds = [(v["kind"], v["selected"]) for v in client.get(f"/ocarina/api/books/{book_id}/audio/versions").json]
+    assert kinds == [("generated", False), ("own", True)]

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AudioBar } from '../AudioBar'
+import { AudioVersions } from '../AudioVersions'
 import { notify } from '../notices'
 import {
   bulkStatus,
@@ -39,7 +40,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }, [])
   const hoverCard = useHoverCard()
   const shownPage = useRef(0)
-  const audio = useAudioFollow(bookId, page, follow)
+  const [audioVersion, setAudioVersion] = useState(0) // bumped when another audio version is picked
+  const audio = useAudioFollow(bookId, page, follow, audioVersion)
 
   useEffect(() => {
     const run = { alive: true }
@@ -236,7 +238,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       <div className="reader-main">
         {audio.audioInfo?.hasAudio && (
           <section className="panel audio-sticky">
-            <AudioBar bookId={bookId} language={page.language.name} version={0} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
+            <AudioVersions bookId={bookId} refreshKey={0} compact onChanged={() => setAudioVersion((v) => v + 1)} />
+            <AudioBar bookId={bookId} language={page.language.name} version={audioVersion} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
               {audio.firstStart !== undefined && (
                 <button className="secondary" onClick={() => audio.playAt(audio.firstStart!)}>
                   ▶ Play this page

@@ -13,6 +13,7 @@ import os
 from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
+from ocarina import audio_versions
 from lute.models.book import Book as DBBook, BookTag
 from lute.models.repositories import BookRepository
 from ocarina.tts.book_audio import book_sentences, is_ocarina_audio, timings_path
@@ -86,19 +87,17 @@ def change_book(book_id):
 
 @bp.route("/books/<int:book_id>", methods=["DELETE"])
 def delete_book(book_id):
-    "Delete a book with its pages. Audio Ocarina generated for it goes too; your own recordings stay."
+    "Delete a book with its pages. Audio Ocarina generated for it (all versions) goes too; your own recordings stay."
     book = BookRepository(db.session).find(book_id)
     if book is None:
         return jsonify({"error": "No such book"}), 404
     audio_dir = current_app.env_config.useraudiopath
-    generated = book.audio_filename if is_ocarina_audio(audio_dir, book.audio_filename) else None
+    audio_versions.sync(book, audio_dir)
+    generated = audio_versions.generated_filenames(book)
     db.session.delete(book)
-    db.session.commit()
-    if generated:
-        for suffix in ("", ".sentences.json"):
-            path = os.path.join(audio_dir, generated + suffix)
-            if os.path.exists(path):
-                os.remove(path)
+    db.session.commit()  # the version rows go with the book
+    for filename in generated:
+        audio_versions.drop_generated_file(audio_dir, filename)
     return jsonify({"deleted": book_id})
 
 

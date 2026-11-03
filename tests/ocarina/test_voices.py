@@ -113,7 +113,7 @@ def test_the_voice_for_a_language_is_used_for_its_books(app, client, monkeypatch
     monkeypatch.setattr(prefs, "path_for", lambda datapath: str(tmp_path / "prefs.json"))
     used = []
 
-    def fake_run(app, job, check, book_id, model, voice, pause, ref_text=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
+    def fake_run(app, job, check, book_id, model, voice, pause, ref_text=None, voice_id=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
         used.append(os.path.basename(voice))
 
     monkeypatch.setattr(audio, "_run_job", fake_run)
@@ -147,7 +147,7 @@ def test_transcript_is_stored_with_the_voice_and_used_when_voicing(app, client, 
     assert [v["transcript"] for v in client.get(VOICES).json][1:] == ["Goedemorgen allemaal."]
     seen = []
 
-    def fake_run(app, job, check, book_id, model, voice, pause, ref_text=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
+    def fake_run(app, job, check, book_id, model, voice, pause, ref_text=None, voice_id=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
         seen.append(ref_text)
 
     monkeypatch.setattr(audio, "_run_job", fake_run)

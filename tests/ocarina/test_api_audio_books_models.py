@@ -44,8 +44,8 @@ def test_generate_audio_job_attaches_mp3_and_timings(app, client):
     assert t["language"] == "nl"
 
 
-def test_book_with_own_audio_needs_replace(app, client):
-    "A user's own recording is not overwritten unless replace=true."
+def test_generating_for_a_book_with_own_audio_adds_a_version(app, client):
+    "A user's own recording is kept: generated audio is added next to it, and both can be chosen."
     app.config["OCARINA_TTS_ENGINE"] = "fake"
     with app.app_context():
         b = make_dutch_book("Own audio")
@@ -54,10 +54,11 @@ def test_book_with_own_audio_needs_replace(app, client):
         db.session.commit()
         book_id = b.id
     r = client.post(f"/ocarina/api/books/{book_id}/audio", json={})
-    assert r.status_code == 409 and r.json["code"] == "has_user_audio"
-    r = client.post(f"/ocarina/api/books/{book_id}/audio", json={"replace": True})
     assert r.status_code == 202
     assert wait_for_job(client, r.json["id"])["state"] == "done"
+    versions = client.get(f"/ocarina/api/books/{book_id}/audio/versions").json
+    assert [v["kind"] for v in versions] == ["own", "generated"]
+    assert [v["selected"] for v in versions] == [False, True]
 
 
 def test_books_and_sentences_api(app, client):

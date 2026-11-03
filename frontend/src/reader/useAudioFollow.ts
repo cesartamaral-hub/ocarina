@@ -6,14 +6,14 @@ import { getSentences, type BookSentences, type ReaderPage } from '../api'
 // Sentences that contain a word, in page order, line up one to one with the generated audio's
 // sentences for the same page (both come from Lute's parser). If the counts differ, the text
 // was edited after the audio was made, so following switches itself off (aligned = false).
-export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: boolean) {
+export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: boolean, version = 0) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [audioInfo, setAudioInfo] = useState<BookSentences | null>(null)
   const [playing, setPlaying] = useState<number | null>(null)
 
   useEffect(() => {
     getSentences(bookId).then(setAudioInfo, () => setAudioInfo(null))
-  }, [bookId])
+  }, [bookId, version]) // another audio version has other timings (or none)
 
   const timings = audioInfo?.hasTimings ? audioInfo.sentences : null
   const wordSentences = useMemo(

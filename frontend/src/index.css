@@ -264,3 +264,10 @@ table.tags td:first-child { width: 160px; }
 .menu-footer > p, .menu-empty { margin: 4px 10px; }
 .audio-using { margin: 6px 0 0; }
 button.link-button { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
+
+/* Audio versions: the picker above the player */
+.audio-versions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 10px; }
+.audio-versions select, .audio-versions input { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; max-width: 320px; }
+.audio-versions label.inline { gap: 10px; }
+.audio-versions label.inline > .muted { padding-right: 4px; }
+.audio-versions .row-actions button { padding: 3px 10px; font-size: 0.85rem; }

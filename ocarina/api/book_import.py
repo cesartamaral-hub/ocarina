@@ -11,13 +11,14 @@ Reading the file formats and the web page is Lute's own code (lute/book/service.
 
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text as sql
 
 from lute.book.model import Book
 from lute.book.service import BookImportException, FileTextExtraction, Service
 from lute.db import db
 from lute.models.repositories import BookRepository
+from ocarina import audio_versions
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 
 bp = Blueprint("ocarina_book_import", __name__, url_prefix="/ocarina/api")
@@ -92,4 +93,5 @@ def create_book():
     except BookImportException as e:
         db.session.rollback()
         return _error(e.message)
+    audio_versions.sync(saved, current_app.env_config.useraudiopath)  # an audio file sent with the book is its first version
     return jsonify({"id": saved.id}), 201

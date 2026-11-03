@@ -74,7 +74,34 @@ export type AudioOptions = {
 
 export const getAudioOptions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/options`).then((r) => json<AudioOptions>(r))
 
-export const startAudio = (id: number, opts: { replace?: boolean; pause?: number; model?: string; voice?: string }) =>
+export type AudioVersion = {
+  id: number
+  label: string
+  kind: 'own' | 'generated'
+  model: string | null
+  modelName: string | null
+  voice: string | null
+  pause: number | null
+  created: string
+  selected: boolean
+  hasTimings: boolean
+  missing: boolean
+}
+
+export const getAudioVersions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/versions`).then((r) => json<AudioVersion[]>(r))
+
+export const selectAudioVersion = (bookId: number, id: number) =>
+  fetch(`${API}/books/${bookId}/audio/versions/${id}/select`, { method: 'PUT' }).then((r) => json<AudioVersion[]>(r))
+
+export const renameAudioVersion = (bookId: number, id: number, label: string) =>
+  send<AudioVersion[]>('PATCH', `${API}/books/${bookId}/audio/versions/${id}`, { label })
+
+export const deleteAudioVersion = (bookId: number, id: number) =>
+  fetch(`${API}/books/${bookId}/audio/versions/${id}`, { method: 'DELETE' }).then((r) =>
+    json<{ removed: AudioVersion; versions: AudioVersion[] }>(r),
+  )
+
+export const startAudio = (id: number, opts: { pause?: number; model?: string; voice?: string }) =>
   fetch(`${API}/books/${id}/audio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -4,6 +4,8 @@ Library start-up shared by the desktop app and the development server.
 
 from lute.app_factory import data_initialization
 from lute.db import db
+from lute.models.book import Book
+from ocarina import audio_versions
 from lute.db.demo import Service as DemoService
 
 
@@ -16,3 +18,6 @@ def prepare_library(app):
     with app.app_context():
         DemoService(db.session).remove_load_demo_flag()
         data_initialization(db.session, lambda s: None)
+        # Audio that books had before versions existed becomes each book's first version.
+        for book in db.session.query(Book).filter(Book.audio_filename.isnot(None)).all():
+            audio_versions.sync(book, app.env_config.useraudiopath)

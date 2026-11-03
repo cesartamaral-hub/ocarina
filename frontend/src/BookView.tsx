@@ -14,6 +14,7 @@ import {
   type Job,
 } from './api'
 import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
+import { AudioVersions } from './AudioVersions'
 
 const modelName = (o: AudioOptions, id: string) => o.models.find((m) => m.id === id)?.name ?? id
 const voiceName = (o: AudioOptions, id: string) => o.voices.find((v) => v.id === id)?.name ?? id
@@ -22,7 +23,8 @@ export function BookView({ bookId }: { bookId: number }) {
   const [book, setBook] = useState<BookSentences | null>(null)
   const [error, setError] = useState('')
   const [job, setJob] = useState<Job | null>(null)
-  const [audioVersion, setAudioVersion] = useState(0)
+  const [audioVersion, setAudioVersion] = useState(0) // bumped when the player must load another file
+  const [versionsKey, setVersionsKey] = useState(0) // bumped when a version was added or removed
   const [pause, setPause] = useState(0.5)
   const [current, setCurrent] = useState(-1)
   const [needsModel, setNeedsModel] = useState(false)
@@ -59,19 +61,21 @@ export function BookView({ bookId }: { bookId: number }) {
       setJob(j)
       if (j.state === 'done') {
         setAudioVersion((v) => v + 1)
+        setVersionsKey((k) => k + 1)
         load()
       }
     }, 700)
     return () => clearInterval(timer)
   }, [jobId, load])
 
+  // Your own audio is added as another version of the book's audio; nothing is replaced.
   async function upload(file: File) {
-    if (book?.hasAudio && !window.confirm('Replace the current audio with this file?')) return
     setError('')
     try {
       await uploadAudio(bookId, file)
       setJob(null)
       setAudioVersion((v) => v + 1)
+      setVersionsKey((k) => k + 1)
       load()
     } catch (e) {
       setError((e as Error).message)
@@ -82,17 +86,14 @@ export function BookView({ bookId }: { bookId: number }) {
     if (job) setJob(await cancelJob(job.id).catch(() => job))
   }
 
-  async function generate(replace = false) {
+  // Generating adds a version next to what the book already has; nothing is replaced.
+  async function generate() {
     try {
-      setJob(await startAudio(bookId, { replace, pause, model: choice.model || undefined, voice: choice.voice || undefined }))
+      setJob(await startAudio(bookId, { pause, model: choice.model || undefined, voice: choice.voice || undefined }))
       setChoice({ model: '', voice: '' }) // a choice made in the menu is for one generation only
     } catch (e) {
       const err = e as Error & { code?: string }
-      if (err.code === 'has_user_audio') {
-        if (window.confirm('This book has your own audio. Replace it with generated audio?')) {
-          generate(true)
-        }
-      } else if (err.code === 'model_not_installed') {
+      if (err.code === 'model_not_installed') {
         setNeedsModel(true)
       } else {
         setError(err.message)
@@ -128,7 +129,7 @@ export function BookView({ bookId }: { bookId: number }) {
       </label>
       <span className="split">
         <button disabled={running || optionsError !== ''} onClick={() => generate()}>
-          {book?.hasAudio ? 'Regenerate audio' : 'Generate audio'}
+          Generate audio
         </button>
         {options ? (
           <AudioOptionsMenu options={options} choice={choice} onChange={setChoice} disabled={running} />
@@ -150,7 +151,7 @@ export function BookView({ bookId }: { bookId: number }) {
             if (f) upload(f)
           }}
         />
-        <span className={`button secondary${running ? ' disabled' : ''}`}>Use my own audio…</span>
+        <span className={`button secondary${running ? ' disabled' : ''}`}>Add my own audio…</span>
       </label>
     </>
   )
@@ -165,6 +166,15 @@ export function BookView({ bookId }: { bookId: number }) {
       </p>
 
       <section className="panel">
+        <AudioVersions
+          bookId={book.id}
+          refreshKey={versionsKey}
+          disabled={running}
+          onChanged={() => {
+            setAudioVersion((v) => v + 1)
+            load()
+          }}
+        />
         {book.hasAudio ? (
           <AudioBar bookId={book.id} language={book.language} version={audioVersion} audioRef={audio} onTime={onTime}>
             {pauseAndGenerate}
@@ -176,6 +186,7 @@ export function BookView({ bookId }: { bookId: number }) {
         )}
         {options && (
           <p className="muted audio-using">
+            {book.hasAudio && <>Adds a new version; your other audio is kept. </>}
             {modelName(options, choice.model || options.defaultModel)} · {voiceName(options, choice.voice || options.defaultVoice)}
             {(choice.model || choice.voice) && (
               <>

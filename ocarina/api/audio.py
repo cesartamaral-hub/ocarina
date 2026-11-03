@@ -1,7 +1,7 @@
 """
 JSON API for generating a book's audio.
 
-    POST /ocarina/api/books/<id>/audio            start a job
+    POST /ocarina/api/books/<id>/audio            start a job (adds a version; never replaces yours)
     POST /ocarina/api/books/<id>/audio/upload     attach your own audio file (form field "audio")
     GET  /ocarina/api/books/<id>/audio/options    what would voice this book, and what can be chosen instead
     GET  /ocarina/api/books/<id>/audio/sentences  sentence start times
@@ -15,7 +15,7 @@ from flask import Blueprint, current_app, jsonify, request
 from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import prefs
+from ocarina import audio_versions, prefs
 from ocarina.api import jobs
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 from ocarina.tts import models as model_files
@@ -37,8 +37,12 @@ def _uses_real_engine(app):
     return "OCARINA_TTS_ENGINE" not in app.config
 
 
-def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    "Queued job: generate and attach the audio. Finished sentences stay cached if it is cancelled."
+def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None, voice_id=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    """
+    Queued job: generate the audio and add it to the book as a new version (selected). Nothing the book
+    already has is touched, except a generated version made with exactly the same model, voice and pause,
+    which this one replaces. Finished sentences stay cached if the job is cancelled.
+    """
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
     supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
@@ -54,20 +58,19 @@ def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None):  # p
     with app.app_context():
         try:
             book = BookRepository(db.session).find(book_id)
-            old = book.audio_filename
+            audio_versions.sync(book, cfg.useraudiopath)  # audio from before versions becomes one first
             name = generate_book_audio(
                 book, supervisor, cache, model["id"], cfg.useraudiopath, voice, pause, progress, ref_text
             )
-            book.audio_filename = name
-            book.audio_current_pos = 0
-            book.audio_bookmarks = None
-            db.session.add(book)
-            db.session.commit()
-            if old and is_ocarina_audio(cfg.useraudiopath, old):
-                for suffix in ("", ".sentences.json"):
-                    p = os.path.join(cfg.useraudiopath, old + suffix)
-                    if os.path.exists(p):
-                        os.remove(p)
+            same = audio_versions.find_same_generated(book, model["id"], voice_id, pause)
+            existing = [v["label"] for v in audio_versions.list_versions(book, cfg.useraudiopath)]
+            voice_name = next((v["name"] for v in voices.list_voices(cfg.datapath) if v["id"] == voice_id), voice_id)
+            label = f"{model['name']} · {voice_name}"
+            if any(e == label or e.startswith(label + " · pause") for e in existing if not same or e != label):
+                label += f" · pause {pause:.1f} s"
+            audio_versions.add(book, name, audio_versions.GENERATED, label, model["id"], voice_id, pause)
+            if same:
+                audio_versions.remove(book, same.BaID, cfg.useraudiopath)
             job["audio_filename"] = name
         except Exception:
             db.session.rollback()
@@ -84,17 +87,6 @@ def start_audio(book_id):
     if book is None:
         return jsonify({"error": "No such book"}), 404
     cfg = current_app.env_config
-    if book.audio_filename and not is_ocarina_audio(cfg.useraudiopath, book.audio_filename):
-        if not body.get("replace"):
-            return (
-                jsonify(
-                    {
-                        "error": "Book has its own audio. Send replace=true to overwrite it.",
-                        "code": "has_user_audio",
-                    }
-                ),
-                409,
-            )
     saved = prefs.load(prefs.path_for(cfg.datapath))
     try:
         code = tts_lang(book.language)
@@ -133,7 +125,7 @@ def start_audio(book_id):
     ref_text = voices.transcript_of(cfg.datapath, voice_id)
     job = jobs.submit(
         "audio",
-        lambda job, check: _run_job(app, job, check, book_id, model, voice, pause, ref_text),
+        lambda job, check: _run_job(app, job, check, book_id, model, voice, pause, ref_text, voice_id),
         book_id=book_id,
         title=book.title,
     )
@@ -142,7 +134,7 @@ def start_audio(book_id):
 
 @bp.route("/books/<int:book_id>/audio/upload", methods=["POST"])
 def upload_audio(book_id):
-    "Attach an audio file of the user's own; a generated file it replaces is removed, a recording is kept."
+    "Add an audio file of the user's own as a new version of the book's audio (and select it). Nothing is replaced."
     book = BookRepository(db.session).find(book_id)
     if book is None:
         return jsonify({"error": "No such book"}), 404
@@ -154,18 +146,11 @@ def upload_audio(book_id):
     if jobs.active(kind="audio", book_id=book_id):
         return jsonify({"error": "Audio for this book is being generated. Cancel it first."}), 409
     audio_dir = current_app.env_config.useraudiopath
-    old = book.audio_filename
-    book.audio_filename = Service().save_audio_file(audio)
-    book.audio_current_pos = 0
-    book.audio_bookmarks = None
-    db.session.add(book)
-    db.session.commit()
-    if old and is_ocarina_audio(audio_dir, old):
-        for suffix in ("", ".sentences.json"):
-            path = os.path.join(audio_dir, old + suffix)
-            if os.path.exists(path):
-                os.remove(path)
-    return jsonify({"audio_filename": book.audio_filename}), 201
+    audio_versions.sync(book, audio_dir)  # what the book has now becomes a version before the new one is selected
+    filename = Service().save_audio_file(audio)
+    label = os.path.splitext(os.path.basename(audio.filename))[0].strip()[:60] or "Original"
+    version_id = audio_versions.add(book, filename, audio_versions.OWN, label)
+    return jsonify({"audio_filename": filename, "versionId": version_id}), 201
 
 
 @bp.route("/books/<int:book_id>/audio/options", methods=["GET"])
