@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { loadPrefs } from './api'
+import { loadPrefs, runDueBackup } from './api'
+import { Backups } from './Backups'
 import { BookList } from './BookList'
 import { BookView } from './BookView'
 import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
+import { Stats } from './Stats'
 import { TermList } from './TermList'
 
 // Tiny hash router: "#/" is the book list, "#/book/12" a book.
@@ -24,6 +26,8 @@ function useRoute() {
     settings: hash === '#/settings',
     newBook: hash === '#/new',
     terms: hash === '#/terms',
+    stats: hash === '#/stats',
+    backups: hash === '#/backups',
     languages: hash === '#/languages',
     languageId: hash === '#/languages/new' ? 'new' : (hash.match(/^#\/languages\/(\d+)$/)?.[1] ?? null),
   }
@@ -42,10 +46,11 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms, languages, languageId } = useRoute()
+  const { bookId, readPage, settings, newBook, terms, stats, backups, languages, languageId } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => setReady(true))
+    runDueBackup()
   }, [])
   return (
     <>
@@ -57,12 +62,17 @@ export default function App() {
         <nav>
           <a href="#/terms">Terms</a>
           <a href="#/languages">Languages</a>
+          <a href="#/stats">Reading</a>
           <a href="#/settings">Settings</a>
         </nav>
       </header>
       <main>
         {!ready ? null : settings ? (
           <Settings />
+        ) : stats ? (
+          <Stats />
+        ) : backups ? (
+          <Backups />
         ) : languages ? (
           <LanguageList />
         ) : languageId ? (

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { getBooks, type Book } from './api'
+import { getBackupsAfterStartup, getBooks, type Book } from './api'
 
 export function BookList() {
   const [books, setBooks] = useState<Book[] | null>(null)
   const [error, setError] = useState('')
+  const [backupWarning, setBackupWarning] = useState('')
 
   useEffect(() => {
     getBooks().then(setBooks, (e) => setError(e.message))
+    getBackupsAfterStartup().then((b) => setBackupWarning(b.warning), () => undefined)
   }, [])
 
   if (error) return <p className="error">{error}</p>
@@ -21,6 +23,11 @@ export function BookList() {
           Add a book
         </a>
       </div>
+      {backupWarning && (
+        <p className="error">
+          {backupWarning} <a href="#/backups">Open backups</a>
+        </p>
+      )}
       {languages.map((lang) => (
         <section key={lang}>
           <h2>{lang}</h2>

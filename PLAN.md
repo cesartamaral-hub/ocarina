@@ -17,7 +17,7 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 
 ## Next (rough order)
 1. Model choice: per-language voice pref and import from folder are done; custom catalog entries (`models.json` in the data folder, then a Hugging Face form) wait for a second engine.
-2. Port remaining Lute screens to React: backups, stats. (Done: language settings; book import; term list with search, filters, bulk edit, inline edit, CSV export. Term tags have no screen of their own: they are edited on terms.) (Book import done: file or web page, edit, save.)
+2. Port what is left of Lute's screens: edit, archive and delete a book (the React list has none); Lute's own user settings (theme, keyboard shortcuts); tag management. Already in React: book import, term list, languages, backups, stats.
 3. Audio: voice preview and reference-voice picker, a second engine (CosyVoice2 or Parkiet).
 4. Reader polish: remember current page on leaving, Bing image search, flash messages, keyboard help.
 5. Packaging: check the window, trim the 470 MB bundle, first-run flow, then retire Lute's Flask templates.

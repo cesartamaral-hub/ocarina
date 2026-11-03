@@ -5,6 +5,7 @@ Db and image backup.
 import os
 import re
 import shutil
+import sqlite3
 import gzip
 from datetime import datetime
 import time
@@ -151,8 +152,14 @@ class Service:
         return ""
 
     def _create_db_backup(self, dbfilename, backupfile):
-        "Make a backup."
-        shutil.copy(dbfilename, backupfile)
+        "Make a backup (with SQLite's own copy, which is safe while the app is writing)."
+        source = sqlite3.connect(f"file:{dbfilename}?mode=ro", uri=True)
+        target = sqlite3.connect(backupfile)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+            source.close()
         f = f"{backupfile}.gz"
         with open(backupfile, "rb") as in_file, gzip.open(
             f, "wb", compresslevel=4

@@ -99,6 +99,9 @@ export function Settings() {
   return (
     <>
       <h1>Settings</h1>
+      <p>
+        <a href="#/backups">Backups</a>
+      </p>
       <h2>Voice models</h2>
       <p className="muted">
         Models are downloaded once and run on this Mac. Audio generation needs one installed.

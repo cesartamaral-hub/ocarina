@@ -4,11 +4,13 @@ Ocarina's routes, registered on the Lute app. One module per area; see each modu
 
 from ocarina.api import (
     audio,
+    backups,
     book_import,
     books,
     jobs,
     languages,
     pages,
+    stats,
     system,
     term_list,
     terms,
@@ -19,5 +21,5 @@ from ocarina.api import (
 
 def register(app):
     "Register all Ocarina blueprints."
-    for module in (audio, book_import, books, jobs, languages, pages, system, term_list, terms, tts_models, web):
+    for module in (audio, backups, book_import, books, jobs, languages, pages, stats, system, term_list, terms, tts_models, web):
         app.register_blueprint(module.bp)
