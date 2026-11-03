@@ -1,5 +1,9 @@
 """
-Model files: is a model installed, download it with progress, delete it.
+Model files: the catalog, is a model installed, download it with progress, delete it.
+
+The catalog is catalog.json (shipped) plus the user's own entries in <data folder>/models.json,
+which the app writes when a model is added from Hugging Face. Entries have the same shape:
+pinned revisions and exact file sizes, so "installed" and offline loading work the same way.
 
 Files live in the standard Hugging Face cache, because the MLX
 library looks there. After a download "main" is pointed at the pinned
@@ -9,19 +13,54 @@ never fetches anything on its own.
 
 import json
 import os
+import re
 import shutil
 import tempfile
 
-from huggingface_hub import constants, snapshot_download
+from huggingface_hub import HfApi, constants, snapshot_download
 from tqdm.auto import tqdm
 
 CATALOG = os.path.join(os.path.dirname(__file__), "catalog.json")
 
+# How the worker talks to a model: the engine decides which arguments generate() gets.
+ENGINES = {
+    "mlx-chatterbox": "Chatterbox style: imitates a voice clip",
+    "mlx-audio8": "Audio8 style: own voice; imitates a clip only with the words spoken in it",
+}
+LANGUAGE_CODES = ("nl", "pl", "fr")
+_user_catalog = None  # path of models.json, set by configure()
+
+
+def configure(datapath):
+    "Where the user's own catalog entries live (called once when the app starts)."
+    global _user_catalog  # pylint: disable=global-statement
+    _user_catalog = os.path.join(datapath, "models.json") if datapath else None
+
+
+def _load_user_models():
+    if not _user_catalog or not os.path.exists(_user_catalog):
+        return []
+    try:
+        with open(_user_catalog, encoding="utf-8") as f:
+            models = json.load(f)["models"]
+    except (OSError, ValueError, KeyError):
+        return []  # an unreadable file must not take the shipped models down with it
+    return [{**m, "custom": True} for m in models if isinstance(m, dict)]
+
+
+def _save_user_models(models):
+    os.makedirs(os.path.dirname(_user_catalog), exist_ok=True)
+    plain = [{k: v for k, v in m.items() if k != "custom"} for m in models]
+    with open(_user_catalog, "w", encoding="utf-8") as f:
+        json.dump({"schema": 1, "models": plain}, f, indent=2, ensure_ascii=False)
+
 
 def load_catalog():
-    "All models in the catalog."
+    "All models: the shipped ones, then the user's own."
     with open(CATALOG, encoding="utf-8") as f:
-        return json.load(f)["models"]
+        shipped = json.load(f)["models"]
+    ids = {m["id"] for m in shipped}
+    return shipped + [m for m in _load_user_models() if m.get("id") and m["id"] not in ids]
 
 
 def find_model(model_id):
@@ -169,3 +208,70 @@ def import_from_folder(model, folder, on_progress=None):
             f.write(repo["revision"])
     if not is_installed(model):
         raise RuntimeError("Copy finished but some files are missing or the wrong size.")
+
+
+class HubError(Exception):
+    "A model can't be added from Hugging Face; the message says why."
+
+
+REPO_ID = re.compile(r"^[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*$")
+SKIP_FILES = (".gitattributes",)
+
+
+def lookup_hub_repo(repo_id):
+    "Latest revision, license and file sizes of a Hugging Face model repository (needs the internet)."
+    if not REPO_ID.match(repo_id or ""):
+        raise HubError("Give the repository as owner/name, for example mlx-community/some-model.")
+    try:
+        info = HfApi().model_info(repo_id, files_metadata=True)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise HubError(f"Can't look up {repo_id} ({type(e).__name__}). Check the name and your connection.") from e
+    files = {
+        s.rfilename: s.size
+        for s in info.siblings
+        if s.size and s.rfilename not in SKIP_FILES and not s.rfilename.lower().endswith(".md")
+    }
+    if not any(name.endswith(".safetensors") for name in files):
+        raise HubError("That repository has no .safetensors weights, so it can't be loaded here.")
+    card = info.card_data.to_dict() if info.card_data else {}
+    return {
+        "repo": repo_id,
+        "revision": info.sha,
+        "license": str(card.get("license") or "unknown"),
+        "files": files,
+        "totalBytes": sum(files.values()),
+    }
+
+
+def add_custom_model(repo_id, engine, languages, name=None):
+    "Add a Hugging Face model to the user's catalog (pinned to its latest revision) and return the entry."
+    if engine not in ENGINES:
+        raise HubError("Choose how the model is used.")
+    languages = [code for code in languages if code in LANGUAGE_CODES]
+    if not languages:
+        raise HubError("Choose at least one language.")
+    found = lookup_hub_repo(repo_id)
+    model_id = "custom-" + re.sub(r"[^a-z0-9]+", "-", repo_id.lower()).strip("-")
+    if find_model(model_id):
+        raise HubError("That model is already in the list.")
+    entry = {
+        "id": model_id,
+        "name": (name or repo_id.split("/")[1]).strip()[:80],
+        "description": f"From Hugging Face: {repo_id}.",
+        "engine": engine,
+        "repositories": [{"id": repo_id, "revision": found["revision"], "files": found["files"]}],
+        "license": found["license"],
+        "languages": languages,
+    }
+    _save_user_models([m for m in _load_user_models()] + [entry])
+    return {**entry, "custom": True}
+
+
+def remove_custom_model(model_id):
+    "Take a user-added model out of the catalog (its files are deleted separately); False if it isn't one."
+    models = _load_user_models()
+    kept = [m for m in models if m["id"] != model_id]
+    if len(kept) == len(models):
+        return False
+    _save_user_models(kept)
+    return True

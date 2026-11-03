@@ -5,6 +5,10 @@ JSON API for the voice models.
     POST   /ocarina/api/tts/models/<id>/download  download a model (a job)
     POST   /ocarina/api/tts/models/<id>/import    copy a model's files from a folder (a job)
     DELETE /ocarina/api/tts/models/<id>           delete a model's files
+    GET    /ocarina/api/tts/engines               how a model can be used (for adding one)
+    POST   /ocarina/api/tts/models/lookup         look up a Hugging Face repository (needs the internet)
+    POST   /ocarina/api/tts/models/custom         add a Hugging Face model to the list
+    DELETE /ocarina/api/tts/models/<id>/entry     take a model you added out of the list (and delete its files)
 """
 
 from flask import Blueprint, jsonify, request
@@ -87,6 +91,53 @@ def import_model(model_id):
         total=model_files.total_bytes(model),
     )
     return jsonify(job), 202
+
+
+@bp.route("/tts/engines", methods=["GET"])
+def engines():
+    "Ways a model can be used, and the languages it can be added for."
+    return jsonify(
+        {
+            "engines": [{"id": key, "name": label} for key, label in model_files.ENGINES.items()],
+            "languages": list(model_files.LANGUAGE_CODES),
+        }
+    )
+
+
+@bp.route("/tts/models/lookup", methods=["POST"])
+def lookup_model():
+    "What a Hugging Face repository holds: revision, license and size."
+    try:
+        found = model_files.lookup_hub_repo((request.get_json(silent=True) or {}).get("repo", "").strip())
+    except model_files.HubError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({**found, "files": len(found["files"])})
+
+
+@bp.route("/tts/models/custom", methods=["POST"])
+def add_custom_model():
+    "Add a Hugging Face model to the list (it still has to be downloaded)."
+    body = request.get_json(silent=True) or {}
+    try:
+        entry = model_files.add_custom_model(
+            (body.get("repo") or "").strip(), body.get("engine"), body.get("languages") or [], body.get("name")
+        )
+    except model_files.HubError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify(entry), 201
+
+
+@bp.route("/tts/models/<model_id>/entry", methods=["DELETE"])
+def remove_model_entry(model_id):
+    "Forget a model that was added from Hugging Face, and delete its files."
+    model = model_files.find_model(model_id)
+    if model is None or not model.get("custom"):
+        return jsonify({"error": "Only models you added can be removed from the list"}), 404
+    if jobs.active():
+        return jsonify({"error": "Wait for the running jobs to finish, or cancel them"}), 409
+    model_files.delete(model)
+    model_files.remove_custom_model(model_id)
+    return jsonify({"removed": model_id})
 
 
 @bp.route("/tts/models/<model_id>", methods=["DELETE"])
