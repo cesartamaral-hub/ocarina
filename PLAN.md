@@ -14,7 +14,7 @@ Not goals: Japanese (MeCab not installed, those tests are ignored), Windows/Linu
 ## Environment (verified 2026-11-03)
 
 - M1 Max, 32 GB, macOS 27.0, Xcode installed. ffmpeg 9.0.2, uv, pyenv, brew present.
-- **Node/npm: not installed yet** (needed for the React frontend).
+- Node 26.13.0 / npm 11.20.0 (Homebrew), for the React frontend.
 - Project: `~/Lute-Ocarina/ocarina` (branch `develop`).
 - Submodule `lute/db/language_defs` is initialized. `.gitmodules` uses an SSH URL that fails
   here; the local git config overrides it to HTTPS. Decide whether to commit the HTTPS URL.
@@ -117,10 +117,12 @@ Check each model's license before recommending or bundling it.
 
 ## Milestones
 
-1. **Listen and decide.** Play the Dutch, Polish and French clips from MLX (and PyTorch for
-   comparison). If a language sounds bad, test CosyVoice2 and Voxtral for it before going further.
-2. **Housekeeping.** Install Node. Decide on `.gitmodules` URL. Add `spike/`, `bench/` handling
-   and `.gitignore` entries. First commit on `develop` (ask before committing).
+1. **Listen and decide.** DONE: all three MLX voices sound OK; too fast for a learner (see Pace).
+2. **Housekeeping.** DONE: Node 26.13.0 / npm 11.20.0 installed (Homebrew). `.gitmodules` left
+   as upstream (SSH); the HTTPS override stays in local git config only, to keep upstream merges
+   clean. Test leftover `tests/zz_bkp/` is excluded via `.git/info/exclude`. Old Lute data
+   (3 languages, 7 books, 543 terms, 5 audio files) was imported into
+   `~/Library/Application Support/Ocarina`.
 3. **TTS service.** Worker process, MLX engine, reference-voice handling, per-sentence cache,
    CLI test (no UI). Include a long-text test and a first-run download test.
 4. **Backend API.** JSON endpoints for books, terms and TTS jobs, next to the existing routes.
