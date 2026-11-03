@@ -51,6 +51,14 @@ export const getActiveJobs = () => fetch(`${API}/jobs`).then((r) => json<Job[]>(
 
 export const cancelJob = (id: string) => fetch(`${API}/jobs/${id}/cancel`, { method: 'POST' }).then((r) => json<Job>(r))
 
+export const uploadAudio = (bookId: number, file: File) => {
+  const form = new FormData()
+  form.append('audio', file)
+  return fetch(`${API}/books/${bookId}/audio/upload`, { method: 'POST', body: form }).then((r) =>
+    json<{ audio_filename: string }>(r),
+  )
+}
+
 export const getJob = (id: string) => fetch(`${API}/jobs/${id}`).then((r) => json<Job>(r))
 
 export const startAudio = (id: number, opts: { replace?: boolean; pause?: number }) =>

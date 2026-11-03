@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AudioBar } from './AudioBar'
-import { cancelJob, getActiveJobs, getJob, getSentences, isActive, startAudio, type BookSentences, type Job } from './api'
+import { cancelJob, getActiveJobs, getJob, getSentences, isActive, startAudio, uploadAudio, type BookSentences, type Job } from './api'
 
 export function BookView({ bookId }: { bookId: number }) {
   const [book, setBook] = useState<BookSentences | null>(null)
@@ -42,6 +42,19 @@ export function BookView({ bookId }: { bookId: number }) {
     }, 700)
     return () => clearInterval(timer)
   }, [jobId, load])
+
+  async function upload(file: File) {
+    if (book?.hasAudio && !window.confirm('Replace the current audio with this file?')) return
+    setError('')
+    try {
+      await uploadAudio(bookId, file)
+      setJob(null)
+      setAudioVersion((v) => v + 1)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
 
   async function cancel() {
     if (job) setJob(await cancelJob(job.id).catch(() => job))
@@ -93,6 +106,19 @@ export function BookView({ bookId }: { bookId: number }) {
       <button disabled={running} onClick={() => generate()}>
         {book?.hasAudio ? 'Regenerate audio' : 'Generate audio'}
       </button>
+      <label className="file-button">
+        <input
+          type="file"
+          accept="audio/*,.m4b,.opus"
+          disabled={running}
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (f) upload(f)
+          }}
+        />
+        <span className={`button secondary${running ? ' disabled' : ''}`}>Use my own audio…</span>
+      </label>
     </>
   )
   return (

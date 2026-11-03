@@ -121,3 +121,8 @@ a.button { padding: 6px 14px; border-radius: 6px; background: var(--accent); col
 .form label { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); gap: 4px; }
 .form input:not([type='file']), .form select, .form textarea, .controls input:not([type='file']) { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 .row-inline { display: flex; gap: 8px; }
+
+.file-button { position: relative; cursor: pointer; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+span.button { display: inline-block; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--line); color: var(--fg); }
+span.button.disabled { opacity: 0.5; }

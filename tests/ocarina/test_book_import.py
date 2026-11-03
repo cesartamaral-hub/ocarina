@@ -3,6 +3,7 @@ Adding a book: extracting text from files and web pages, and saving.
 """
 
 import io
+import os
 
 import requests
 
@@ -135,3 +136,43 @@ def test_extract_pdf_runs_the_pdf_reader(client):
     writer.write(out)
     r = _upload(client, "blank.pdf", out.getvalue())
     assert r.status_code == 400 and "empty" in r.json["error"]
+
+
+def test_upload_audio_to_an_existing_book(app, client):
+    "Own audio is attached; an earlier recording of the user is kept when it is replaced."
+    from tests.ocarina.helpers import make_dutch_book  # pylint: disable=import-outside-toplevel
+
+    with app.app_context():
+        book_id = make_dutch_book("Upload").id
+    url = f"/ocarina/api/books/{book_id}/audio/upload"
+    send = lambda name: client.post(url, data={"audio": (io.BytesIO(b"ID3x"), name)}, content_type="multipart/form-data")  # noqa: E731
+    first = send("mijn.mp3")
+    assert first.status_code == 201
+    with app.app_context():
+        assert BookRepository(db.session).find(book_id).audio_filename == first.json["audio_filename"]
+    assert send("x.exe").status_code == 400
+    assert client.post(url, data={}, content_type="multipart/form-data").status_code == 400
+    assert client.post("/ocarina/api/books/99999/audio/upload", data={}).status_code == 404
+    second = send("tweede.mp3")  # a user's own recording is kept when replaced
+    audio_dir = app.env_config.useraudiopath
+    assert os.path.exists(os.path.join(audio_dir, first.json["audio_filename"]))
+    assert second.json["audio_filename"] != first.json["audio_filename"]
+
+
+def test_upload_audio_replaces_generated_audio_and_removes_it(app, client):
+    "A file made by Ocarina (with timings) is deleted when the user uploads their own."
+    from tests.ocarina.helpers import make_dutch_book, wait_for_job  # pylint: disable=import-outside-toplevel
+
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    with app.app_context():
+        book_id = make_dutch_book("Generated").id
+    job = wait_for_job(client, client.post(f"/ocarina/api/books/{book_id}/audio", json={}).json["id"])
+    generated = os.path.join(app.env_config.useraudiopath, job["audio_filename"])
+    assert os.path.exists(generated) and os.path.exists(generated + ".sentences.json")
+    r = client.post(
+        f"/ocarina/api/books/{book_id}/audio/upload",
+        data={"audio": (io.BytesIO(b"ID3x"), "mine.mp3")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 201
+    assert not os.path.exists(generated) and not os.path.exists(generated + ".sentences.json")

@@ -2,6 +2,7 @@
 JSON API for generating a book's audio.
 
     POST /ocarina/api/books/<id>/audio            start a job
+    POST /ocarina/api/books/<id>/audio/upload     attach your own audio file (form field "audio")
     GET  /ocarina/api/books/<id>/audio/sentences  sentence start times
 """
 
@@ -10,6 +11,8 @@ import os
 
 from flask import Blueprint, current_app, jsonify, request
 
+from lute.book.forms import ALLOWED_AUDIO_EXTENSIONS
+from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
 from ocarina import prefs
@@ -127,6 +130,34 @@ def start_audio(book_id):
         book_id=book_id,
     )
     return jsonify(job), 202
+
+
+@bp.route("/books/<int:book_id>/audio/upload", methods=["POST"])
+def upload_audio(book_id):
+    "Attach an audio file of the user's own; a generated file it replaces is removed, a recording is kept."
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    audio = request.files.get("audio")
+    if not audio or not audio.filename:
+        return jsonify({"error": "Choose an audio file"}), 400
+    if audio.filename.rsplit(".", 1)[-1].lower() not in ALLOWED_AUDIO_EXTENSIONS:
+        return jsonify({"error": "Audio must be one of: " + ", ".join(ALLOWED_AUDIO_EXTENSIONS)}), 400
+    if jobs.active(kind="audio", book_id=book_id):
+        return jsonify({"error": "Audio for this book is being generated. Cancel it first."}), 409
+    audio_dir = current_app.env_config.useraudiopath
+    old = book.audio_filename
+    book.audio_filename = Service().save_audio_file(audio)
+    book.audio_current_pos = 0
+    book.audio_bookmarks = None
+    db.session.add(book)
+    db.session.commit()
+    if old and is_ocarina_audio(audio_dir, old):
+        for suffix in ("", ".sentences.json"):
+            path = os.path.join(audio_dir, old + suffix)
+            if os.path.exists(path):
+                os.remove(path)
+    return jsonify({"audio_filename": book.audio_filename}), 201
 
 
 @bp.route("/books/<int:book_id>/audio/sentences", methods=["GET"])
