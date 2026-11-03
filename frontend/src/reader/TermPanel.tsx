@@ -14,6 +14,7 @@ import {
   type Term,
 } from '../api'
 import { notify } from '../notices'
+import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { STATUS_BUTTONS } from './statuses'
 
 // Dictionary urls contain [LUTE] (older ones ###) where the word goes; a leading * only marked
@@ -113,16 +114,16 @@ export function TermPanel({
     [term, persist, onStatus, onChanged, onError],
   )
 
-  // Keyboard: 1-5, w, i, as long as no text field has focus.
+  // Keyboard status keys, as long as no text field has focus.
   useEffect(() => {
     if (!keysEnabled) return
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
-      const b = STATUS_BUTTONS.find((s) => s.key === e.key.toLowerCase())
-      if (b) {
+      const status = statusForKey(e)
+      if (status !== undefined) {
         e.preventDefault()
-        changeStatus(b.status)
+        changeStatus(status)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -173,7 +174,7 @@ export function TermPanel({
         {STATUS_BUTTONS.map((b) => (
           <button
             key={b.status}
-            title={b.title}
+            title={`${b.title} (${statusKeyLabel(b.status)})`}
             className={`st s${b.status}${term.status === b.status && !isNew ? ' on' : ''}`}
             onClick={() => changeStatus(b.status)}
           >

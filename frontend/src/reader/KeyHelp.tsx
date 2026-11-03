@@ -1,13 +1,9 @@
-const KEYS: [string, string][] = [
+import { ACTIONS, keyLabel, keyOf } from '../shortcutKeys'
+
+const MOUSE: [string, string][] = [
   ['click a word', 'open it in the side panel'],
   ['drag over words', 'make a phrase'],
   ['⌘ or Ctrl + click', 'pick several words for one status change'],
-  ['1 2 3 4 5', 'set the status of the open word (or the picked words)'],
-  ['w', 'well known'],
-  ['i', 'ignore'],
-  ['← →', 'previous or next page'],
-  ['Esc', 'clear the selection'],
-  ['?', 'show or hide this list'],
 ]
 
 export function KeyHelp({ onClose }: { onClose: () => void }) {
@@ -15,16 +11,27 @@ export function KeyHelp({ onClose }: { onClose: () => void }) {
     <section className="panel static key-help" aria-label="Keyboard shortcuts">
       <table>
         <tbody>
-          {KEYS.map(([key, what]) => (
-            <tr key={key}>
+          {MOUSE.map(([how, what]) => (
+            <tr key={how}>
               <th>
-                <kbd>{key}</kbd>
+                <kbd>{how}</kbd>
               </th>
               <td>{what}</td>
             </tr>
           ))}
+          {ACTIONS.map((a) => (
+            <tr key={a.id}>
+              <th>
+                <kbd>{keyLabel(keyOf(a.id))}</kbd>
+              </th>
+              <td>{a.label}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
+      <p className="muted">
+        <a href="#/shortcuts">Change the keys</a>
+      </p>
       <button className="secondary" onClick={onClose}>
         Close
       </button>

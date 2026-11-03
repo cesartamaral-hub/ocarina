@@ -6,12 +6,15 @@ import {
   finishPage,
   getPage,
   getPageText,
+  getPref,
   putPageText,
+  setPref,
   type Item,
   type ReaderPage,
   type Term,
 } from '../api'
 import { KeyHelp } from './KeyHelp'
+import { actionFor, keyLabel, keyOf, statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { STATUS_BUTTONS, statusName } from './statuses'
 import { TermPanel, type Target } from './TermPanel'
 import { useAudioFollow } from './useAudioFollow'
@@ -27,6 +30,13 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [reloadKey, setReloadKey] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
   const [follow, setFollow] = useState(true)
+  const [highlights, setHighlights] = useState(() => getPref('highlights', true))
+  const toggleHighlights = useCallback(() => {
+    setHighlights((on) => {
+      setPref('highlights', !on)
+      return !on
+    })
+  }, [])
   const hoverCard = useHoverCard()
   const shownPage = useRef(0)
   const audio = useAudioFollow(bookId, page, follow)
@@ -122,23 +132,26 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key === 'Escape') {
+      const action = actionFor(e)?.id
+      if (action === 'clear') {
         setSelected(null)
         setMulti(new Set())
         setHelp(false)
-      } else if (e.key === '?') {
+      } else if (action === 'help') {
         setHelp((h) => !h)
-      } else if (e.key === 'ArrowLeft' && pageNumber > 1) {
+      } else if (action === 'highlights') {
+        toggleHighlights()
+      } else if (action === 'prevPage' && pageNumber > 1) {
         window.location.hash = `#/book/${bookId}/read/${pageNumber - 1}`
-      } else if (e.key === 'ArrowRight' && page && pageNumber < page.pageCount) {
+      } else if (action === 'nextPage' && page && pageNumber < page.pageCount) {
         window.location.hash = `#/book/${bookId}/read/${pageNumber + 1}`
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page])
+  }, [bookId, pageNumber, page, toggleHighlights])
 
-  // Keys 1-5, w, i apply to all ctrl-clicked words when there are any.
+  // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
     async (status: number) => {
       const ids = [...multi]
@@ -162,10 +175,10 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
-      const b = STATUS_BUTTONS.find((s) => s.key === e.key.toLowerCase())
-      if (b) {
+      const status = statusForKey(e)
+      if (status !== undefined) {
         e.preventDefault()
-        applyMulti(b.status)
+        applyMulti(status)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -256,6 +269,10 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             Edit text
           </a>{' '}
           ·{' '}
+          <label className="inline">
+            <input type="checkbox" checked={highlights} onChange={toggleHighlights} /> Highlights ({keyLabel(keyOf('highlights'))})
+          </label>{' '}
+          ·{' '}
           <a
             href="#keys"
             onClick={(e) => {
@@ -283,7 +300,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           </div>
         ) : (
           <>
-            <article dir={page.language.rightToLeft ? 'rtl' : 'ltr'} onMouseUp={onMouseUp}>
+            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} onMouseUp={onMouseUp}>
               {page.paragraphs
                 .filter((para) => para.length > 0) // blank lines come as empty paragraphs
                 .map((para, pi) => (
@@ -367,7 +384,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             {multi.size} word{multi.size === 1 ? '' : 's'} selected
           </span>
           {STATUS_BUTTONS.map((b) => (
-            <button key={b.status} title={b.title} className={`st s${b.status}`} onClick={() => applyMulti(b.status)}>
+            <button key={b.status} title={`${b.title} (${statusKeyLabel(b.status)})`} className={`st s${b.status}`} onClick={() => applyMulti(b.status)}>
               {b.label}
             </button>
           ))}
