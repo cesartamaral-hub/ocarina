@@ -86,6 +86,15 @@ User data: ~/Library/Application Support/Ocarina  (db, config, audio, models)
   the worker; the supervisor can retry on another device and unload to give memory back.
 - Audio is generated **sentence by sentence in the background**, saved per sentence (so edits
   re-generate only what changed), and playable as soon as the first sentences are ready.
+- **Pace for learners.** The MLX voice sounds fine but is too fast for a learner (user feedback,
+  2026-11-03). Requirements:
+  - Playback speed control in the reader (about 0.6x to 1.0x), using the browser's
+    pitch-preserving playback (`preservesPitch`). Audio is stored at its natural speed; no
+    regeneration needed to change pace. Remember the chosen speed per language.
+  - Adjustable pause between sentences.
+  - Later: ship a slower, clearer reference voice (the reference clip sets speaking style).
+    Not tested yet. Slowed samples made with ffmpeg `atempo` (0.85x, 0.7x) are in `bench/`;
+    their quality is unchecked.
 - Attach the result to the book via Lute's existing audio mechanism (`lute/useraudio`);
   check whether per-sentence files need a new mapping for sentence-level playback.
 
