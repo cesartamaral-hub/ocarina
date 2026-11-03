@@ -13,6 +13,7 @@ setup(
                 "sqlalchemy",
                 "flask_sqlalchemy",
                 "mlx_audio",
+                "mlx_lm",
                 "soundfile",
                 "_soundfile_data",
                 "huggingface_hub",

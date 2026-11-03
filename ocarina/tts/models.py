@@ -68,17 +68,29 @@ def find_model(model_id):
     return next((m for m in load_catalog() if m["id"] == model_id), None)
 
 
+def kind_of(model):
+    'What a model is for: "speech" (it voices books) or "text" (it translates sentences).'
+    return model.get("kind", "speech")
+
+
+def speech_models():
+    "The models that can voice a book."
+    return [m for m in load_catalog() if kind_of(m) == "speech"]
+
+
 def choose_model(requested_id=None, preferred_id=None):
     """
     The model to voice a book with: the one asked for, else the user's choice
     for the book's language, else the first installed one, else the first in the catalog.
+    Only speech models count; None if the one asked for is unknown or not a speech model.
     """
     if requested_id:
-        return find_model(requested_id)  # None for an unknown id: the caller reports it
+        asked = find_model(requested_id)
+        return asked if asked and kind_of(asked) == "speech" else None  # the caller reports it
     preferred = find_model(preferred_id) if preferred_id else None
-    if preferred:
+    if preferred and kind_of(preferred) == "speech":
         return preferred
-    catalog = load_catalog()
+    catalog = speech_models()
     return next((m for m in catalog if is_installed(m)), catalog[0])
 
 

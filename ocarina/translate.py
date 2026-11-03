@@ -1,8 +1,9 @@
 """
-Sentence translation through an online service you choose (MyMemory: free, no account; or DeepL: your own key).
+Sentence translation: on this Mac with a small model (offline, no limits), or through an online service you choose
+(MyMemory: free, no account; or DeepL: your own key).
 
 Translations are cached on disk, so the same sentence never uses your daily quota twice and works offline once seen.
-The sentence is sent to the service you picked, and nowhere else.
+The sentence goes to the service you picked, and nowhere else (with the local model it does not leave this Mac).
 """
 
 import hashlib
@@ -12,12 +13,20 @@ import re
 
 import requests
 
-from ocarina import keystore
+from ocarina import dictionary, keystore
+from ocarina.localllm import local_model
+from ocarina.tts import models as model_files
 
 TIMEOUT = 10
 USER_AGENT = "Ocarina/1.0 (personal language-learning app)"
-MAX_CHARS = {"mymemory": 500, "deepl": 2000}
+LOCAL_MODEL = "qwen3-4b-instruct-mlx"
+MAX_CHARS = {"mymemory": 500, "deepl": 2000, "local": 1000}
 PROVIDERS = {
+    "local": {
+        "name": "On this Mac",
+        "needsKey": False,
+        "description": "Offline, private and without limits, with a 2.3 GB model you download once. Good for ordinary sentences; it can invent words for rare vocabulary.",
+    },
     "mymemory": {"name": "MyMemory", "needsKey": False, "description": "Free, no account. About 5,000 characters a day (50,000 with an email address)."},
     "deepl": {"name": "DeepL", "needsKey": True, "description": "The best quality. Needs your own free API key from deepl.com (500,000 characters a month)."},
 }
@@ -34,6 +43,12 @@ CODES = {
     "lithuanian": "lt", "estonian": "et", "albanian": "sq", "icelandic": "is", "irish": "ga", "welsh": "cy", "basque": "eu",
 }
 DEEPL_TARGETS = {"en": "EN-GB", "pt": "PT-PT"}
+
+
+LOCAL_PROMPT = (
+    "You translate single sentences for a language learner. "
+    "Reply with the {target} translation only: no notes, no quotes."
+)  # kept short on purpose: longer instructions made the small model's translations stilted
 
 
 class TranslateError(Exception):
@@ -122,10 +137,24 @@ def _deepl(text, source, target, key):
         raise TranslateError("DeepL sent an answer that could not be read.", "failed") from e
 
 
-def translate(datapath, settings, language_name, text, use_cache=True):
+def _local(text, source_name, target, engine):
+    model = model_files.find_model(LOCAL_MODEL)
+    if engine is None and not model_files.is_installed(model):
+        raise TranslateError("Download the translation model in Settings first.", "no_model")
+    try:
+        answer = local_model.complete(model, LOCAL_PROMPT.format(target=TARGETS[target]), f"{source_name} sentence:\n{text}", engine=engine)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise TranslateError(f"The translation model failed ({type(e).__name__}).", "failed") from e
+    answer = answer.strip().strip("\"“”").strip()
+    if not answer:
+        raise TranslateError("The translation model gave no answer.", "failed")
+    return answer
+
+
+def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
     """
     Translate a sentence from a Lute language into the target language. settings: {provider, target, email}.
-    Returns {translation, provider, source, target, cached}. Raises TranslateError. use_cache=False always asks the service (to test a key).
+    Returns {translation, provider, source, target, cached}. Raises TranslateError. use_cache=False always asks the service (to test a key). local_engine overrides the local model's engine (tests).
     """
     text = re.sub(r"\s+", " ", (text or "").replace("​", "")).strip()
     if not text:
@@ -142,7 +171,9 @@ def translate(datapath, settings, language_name, text, use_cache=True):
     cached = _read(path) if use_cache else None
     if cached is not None:
         return {"translation": cached, "provider": provider, "source": source, "target": target, "cached": True}
-    if provider == "deepl":
+    if provider == "local":
+        answer = _local(text, dictionary.section_name(language_name), target, local_engine)
+    elif provider == "deepl":
         key = keystore.get(datapath, "deepl")
         if not key:
             raise TranslateError("Add your DeepL API key in Settings first.", "no_key")

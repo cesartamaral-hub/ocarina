@@ -6,8 +6,8 @@ JSON API for translating a sentence (see ocarina/translate.py) and its settings.
     POST /ocarina/api/translate            {languageId, text} -> {translation, provider, source, target, cached}
     POST /ocarina/api/translate/test       a trial translation with the current settings (asks the service for real)
 
-Errors are {error, code}; code is one of offline, quota, bad_key, no_key, unsupported_language, too_long,
-bad_input, failed.
+Errors are {error, code}; code is one of offline, quota, bad_key, no_key, no_model, unsupported_language,
+too_long, bad_input, failed.
 """
 
 import re
@@ -17,10 +17,11 @@ from flask import Blueprint, current_app, jsonify, request
 from lute.db import db
 from lute.models.language import Language
 from ocarina import keystore, prefs, translate
+from ocarina.tts import models as model_files
 
 bp = Blueprint("ocarina_translate", __name__, url_prefix="/ocarina/api")
 
-STATUS = {"bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "quota": 429, "offline": 502, "failed": 502}
+STATUS = {"no_model": 400, "bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "quota": 429, "offline": 502, "failed": 502}
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -32,8 +33,11 @@ def _settings():
     saved = prefs.load(prefs.path_for(_datapath()))
     provider = saved.get("translate.provider")
     target = saved.get("translate.target")
+    if provider not in translate.PROVIDERS:
+        # Not chosen yet: the model on this Mac once it is downloaded (private, no limits), else the free online service.
+        provider = "local" if model_files.is_installed(model_files.find_model(translate.LOCAL_MODEL)) else "mymemory"
     return {
-        "provider": provider if provider in translate.PROVIDERS else "mymemory",
+        "provider": provider,
         "target": target if target in translate.TARGETS else "en",
         "email": saved.get("translate.email") or "",
     }
@@ -45,8 +49,19 @@ def _settings_json():
         "hasDeeplKey": keystore.get(_datapath(), "deepl") is not None,
         "deeplKeyHint": keystore.hint(_datapath(), "deepl"),
         "providers": [{"id": k, **v} for k, v in translate.PROVIDERS.items()],
+        "localModel": _local_model_json(),
         "targets": [{"code": k, "name": v} for k, v in translate.TARGETS.items()],
     }
+
+
+def _local_model_json():
+    model = model_files.find_model(translate.LOCAL_MODEL)
+    return {"id": model["id"], "name": model["name"], "installed": model_files.is_installed(model), "sizeBytes": model_files.total_bytes(model)}
+
+
+def _local_engine():
+    "The tests use a fake engine for the local model, the way they do for the voices."
+    return current_app.config.get("OCARINA_TTS_ENGINE")
 
 
 def _failure(e):
@@ -95,7 +110,7 @@ def translate_sentence():
     if language is None:
         return jsonify({"error": "Unknown language", "code": "bad_input"}), 404
     try:
-        return jsonify(translate.translate(_datapath(), _settings(), language.name, body.get("text")))
+        return jsonify(translate.translate(_datapath(), _settings(), language.name, body.get("text"), local_engine=_local_engine()))
     except translate.TranslateError as e:
         return _failure(e)
 
@@ -104,7 +119,7 @@ def translate_sentence():
 def test_translation():
     "Try the current settings with a short Dutch sentence, asking the service for real."
     try:
-        result = translate.translate(_datapath(), _settings(), "Dutch", "Goedemorgen, hoe gaat het met je?", use_cache=False)
+        result = translate.translate(_datapath(), _settings(), "Dutch", "Goedemorgen, hoe gaat het met je?", use_cache=False, local_engine=_local_engine())
     except translate.TranslateError as e:
         return _failure(e)
     return jsonify(result)

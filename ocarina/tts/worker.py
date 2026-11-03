@@ -6,6 +6,7 @@ only takes down this worker. Speaks line-delimited JSON on the
 original stdout; anything the model libraries print goes to stderr.
 
 Requests:  {"id": 1, "op": "load", "engine": "mlx-chatterbox", "repo": "owner/name" or null}
+           {"id": 4, "op": "complete", "system": ..., "user": ..., "max_tokens": 300}   (text engines)
            {"id": 2, "op": "synth", "text": ..., "lang": ..., "voice": path, "out": path}
            {"id": 3, "op": "quit"}
 Responses: {"id": 1, "ok": true, ...} or {"id": 1, "ok": false, "error": "..."}
@@ -21,6 +22,7 @@ import wave
 
 MLX_CHATTERBOX_REPO = "mlx-community/chatterbox-multilingual-v3"
 MLX_AUDIO8_REPO = "nativ-community/Audio8-TTS-Realistic-0.6b-bf16"
+MLX_LM_REPO = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
 
 
 class FakeEngine:
@@ -30,6 +32,10 @@ class FakeEngine:
 
     def __init__(self, repo=None):
         self.repo = repo
+
+    def complete(self, system, user, max_tokens=300):  # pylint: disable=unused-argument
+        "A predictable stand-in for a language model: echoes the sentence, so tests can see what was sent."
+        return "[fake translation] " + user.split("\n", 1)[-1]
 
     def synth(self, text, lang, voice, out, ref_text=None):  # pylint: disable=unused-argument
         "Write a tone whose length depends on the text length."
@@ -71,6 +77,28 @@ class MlxChatterboxEngine:
         return len(wav) / self.sample_rate
 
 
+class MlxLmEngine:
+    "A small language model via mlx-lm, used to translate sentences on this Mac (no speech)."
+
+    sample_rate = None
+
+    def __init__(self, repo=None):
+        # pylint: disable=import-outside-toplevel
+        from mlx_lm import load
+
+        self.model, self.tokenizer = load(repo or MLX_LM_REPO)
+
+    def complete(self, system, user, max_tokens=300):
+        "The model's answer to a system and a user message (greedy, so the same sentence gives the same answer)."
+        # pylint: disable=import-outside-toplevel
+        from mlx_lm import generate
+        from mlx_lm.sample_utils import make_sampler
+
+        messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False, enable_thinking=False)
+        return generate(self.model, self.tokenizer, prompt=prompt, max_tokens=max_tokens, sampler=make_sampler(temp=0.0)).strip()
+
+
 class MlxAudio8Engine:
     """
     Audio8 TTS via mlx-audio. It imitates a voice only when given the words spoken in the clip
@@ -97,7 +125,7 @@ class MlxAudio8Engine:
         return len(wav) / self.sample_rate
 
 
-ENGINES = {"fake": FakeEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine}
+ENGINES = {"fake": FakeEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine, "mlx-lm": MlxLmEngine}
 
 
 def _handle(engine, req):
@@ -106,6 +134,10 @@ def _handle(engine, req):
     if op == "load":
         engine = ENGINES[req["engine"]](req.get("repo"))
         return {"sample_rate": engine.sample_rate}, engine
+    if op == "complete":
+        if engine is None:
+            raise RuntimeError("No model loaded")
+        return {"text": engine.complete(req["system"], req["user"], req.get("max_tokens", 300))}, engine
     if op == "synth":
         if engine is None:
             raise RuntimeError("No model loaded")

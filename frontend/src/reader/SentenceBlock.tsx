@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { translateSentence, type Translation } from '../api'
 
+const PROVIDER_NAMES: Record<string, string> = { local: 'On this Mac', mymemory: 'MyMemory', deepl: 'DeepL' }
+
 // The sentence the word is in, with a translation on request. Nothing is sent anywhere until you press Translate
 // (the sentence goes to the service chosen in Settings). Keyed by the sentence, so a new sentence starts clean.
 export function SentenceBlock({
@@ -33,7 +35,7 @@ export function SentenceBlock({
     }
   }
 
-  const needsSettings = error && ['no_key', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
+  const needsSettings = error && ['no_key', 'no_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
   return (
     <section className="sentence-block" aria-label="The sentence">
       <p className="sentence-text">{text}</p>
@@ -53,8 +55,8 @@ export function SentenceBlock({
             {result.translation}
             <span className="muted">
               {' '}
-              {result.provider === 'deepl' ? 'DeepL' : 'MyMemory'}
-              {result.cached ? ' · saved' : ''}
+              {PROVIDER_NAMES[result.provider] ?? result.provider}
+              {result.cached ? ' · saved' : ''} · machine translation, may be wrong
             </span>
           </p>
         )}

@@ -7,6 +7,7 @@ export type TranslateSettings = {
   hasDeeplKey: boolean
   deeplKeyHint: string | null
   providers: { id: string; name: string; needsKey: boolean; description: string }[]
+  localModel: { id: string; name: string; installed: boolean; sizeBytes: number }
   targets: { code: string; name: string }[]
 }
 

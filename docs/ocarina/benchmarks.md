@@ -26,3 +26,16 @@ Chatterbox Multilingual, about 25 words of Dutch, Polish and French, run after a
 - A whole 3-page, 77-sentence Polish book voices in about two minutes.
 - Licenses: `mlx-audio` MIT; model MIT. Check each model's license before adding it to the catalog.
 - Raw scripts and results from this round live outside the repo in `~/Lute-Ocarina/bench`.
+
+## Local language model for translation (2026-11-03, M1 Max)
+
+- **Qwen3-4B-Instruct-2507, 4-bit (mlx-lm, Apache-2.0, 2.3 GB):** loads in 0.6 s, translates a sentence in 0.2 to 0.4 s
+  (about 45 tokens/s), about 2.5 GB of memory while loaded. Good for ordinary sentences in Polish, Dutch and French.
+  It invents words for rare vocabulary ("Smoczy Skarb", dragon treasure, became "Silver Coin") and mangles names
+  ("Boucle d'or" became "Orloop"). A short prompt works best: adding "stay close to the original wording" made the
+  translations stilted.
+- **Qwen3-8B (4.6 GB):** about twice as slow, not noticeably more reliable on names or grammar notes.
+- **Not shipped, on purpose:** free-form "explain this word and its grammar" (it gave wrong base forms: *szkole* from
+  "szkolić", *af* in *zich afvragen*, *entra* as passé composé) and "pick the right dictionary sense" (it chose
+  "to ice (cover with icing)" for *une glace*). Wrong grammar notes would mislead a learner; definitions come from Wiktionary.
+- Setup for the packaged app: `pip install mlx-lm` in `.venv` and `.venv-build`; `mlx_lm` is in `desktop/setup.py`.

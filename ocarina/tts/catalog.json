@@ -78,6 +78,45 @@
         "secondsPerSecondOfAudio": 0.7,
         "loadSeconds": 0.2
       }
+    },
+    {
+      "id": "qwen3-4b-instruct-mlx",
+      "name": "Qwen3 4B (translation, MLX)",
+      "kind": "text",
+      "description": "Translates sentences on this Mac, offline and without limits. Good for ordinary sentences; it can invent words for rare vocabulary, so use DeepL when it matters.",
+      "engine": "mlx-lm",
+      "repositories": [
+        {
+          "id": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+          "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+          "files": {
+            "added_tokens.json": 707,
+            "chat_template.jinja": 4040,
+            "config.json": 938,
+            "generation_config.json": 238,
+            "merges.txt": 1671853,
+            "model.safetensors": 2263022417,
+            "model.safetensors.index.json": 63964,
+            "special_tokens_map.json": 613,
+            "tokenizer.json": 11422654,
+            "tokenizer_config.json": 5440,
+            "vocab.json": 2776833
+          }
+        }
+      ],
+      "license": "apache-2.0",
+      "family": "qwen3",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ],
+      "benchmark": {
+        "machine": "M1 Max 32GB",
+        "secondsPerSentence": 0.3,
+        "loadSeconds": 0.6
+      }
     }
   ]
 }

@@ -14,3 +14,5 @@
   `iconutil -c icns`). Colours: paper `#fbfaf8`, green `#3d8b74` to `#265b4d`.
 - Bundle size ~470 MB. Not done: signing and notarization (decided: unsigned for now), checking
   the window by double-click from Finder, first run without the model cached (Settings downloads it).
+
+- The translation model needs `mlx-lm` in both venvs (`pip install mlx-lm`), and `mlx_lm` is listed in `desktop/setup.py`. The packaged worker loads it from the same HF cache as the voices (about 2.5 GB of memory while loaded, 7 MB more in the bundle).

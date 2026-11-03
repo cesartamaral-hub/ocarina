@@ -84,6 +84,21 @@ class Supervisor:
             raise TtsError(resp["error"])
         return resp
 
+    def complete(self, system, user, max_tokens=300):
+        "Ask a text model (engine mlx-lm) a question; returns its answer."
+        with self._lock:
+            for attempt in (1, 2):
+                try:
+                    if not self._alive():
+                        self._start()
+                    return self._request({"op": "complete", "system": system, "user": user, "max_tokens": max_tokens})["text"]
+                except TtsError as e:
+                    if attempt == 2 or self._alive():
+                        raise
+                    self._kill()
+                    print(f"Text worker restarted: {e}", file=sys.stderr)
+        raise TtsError("unreachable")
+
     def synth(self, text, lang, voice, out, ref_text=None):
         """
         Synthesize one sentence to the wav at out; returns its duration in seconds.

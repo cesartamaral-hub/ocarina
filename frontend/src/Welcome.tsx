@@ -33,7 +33,7 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   }
 
   const shown = available.filter((n) => n.toLowerCase().includes(filter.trim().toLowerCase()))
-  const hasVoice = models.some((m) => m.installed)
+  const hasVoice = models.some((m) => m.kind !== 'text' && m.installed)
 
   if (step === 'voice') {
     return (

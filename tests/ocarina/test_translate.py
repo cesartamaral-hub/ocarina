@@ -55,6 +55,7 @@ def net(app, monkeypatch):
             raise requests.exceptions.ConnectionError("offline")
         return state["deepl"]
 
+    monkeypatch.setattr(translate.model_files, "is_installed", lambda m: False)  # the real cache of this Mac must not matter
     monkeypatch.setattr(translate.requests, "get", fake_get)
     monkeypatch.setattr(translate.requests, "post", fake_post)
     yield state
@@ -74,7 +75,8 @@ def test_default_settings_and_choices(client):
     "Out of the box: MyMemory, into English, no key."
     s = client.get(f"{URL}/settings").json
     assert (s["provider"], s["target"], s["hasDeeplKey"], s["email"]) == ("mymemory", "en", False, "")
-    assert [p["id"] for p in s["providers"]] == ["mymemory", "deepl"] and "en" in [t["code"] for t in s["targets"]]
+    assert [p["id"] for p in s["providers"]] == ["local", "mymemory", "deepl"] and "en" in [t["code"] for t in s["targets"]]
+    assert s["localModel"]["id"] == "qwen3-4b-instruct-mlx" and s["localModel"]["installed"] is False
 
 
 def test_mymemory_translates_and_the_second_time_comes_from_the_cache(app, client, net):
@@ -179,3 +181,60 @@ def test_the_test_button_really_asks_the_service(app, client, net):
     client.put(f"{URL}/settings", json={"provider": "deepl", "deeplKey": "bad:fx"})
     net["deepl"] = Reply(403)
     assert client.post(f"{URL}/test").json["code"] == "bad_key"
+
+
+def test_the_local_model_translates_through_its_worker(app, client, net, monkeypatch):
+    "With the model on this Mac, nothing goes over the network; the answer is cached like any other."
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    client.put(f"{URL}/settings", json={"provider": "local"})
+    first = _ask(client, app, "Hoe gaat het?")
+    assert first.status_code == 200 and first.json["provider"] == "local"
+    assert first.json["translation"] == "[fake translation] Hoe gaat het?"
+    assert net["calls"] == []
+    asked = []
+    real = translate.local_model.complete
+    monkeypatch.setattr(translate.local_model, "complete", lambda *a, **k: (asked.append(1), real(*a, **k))[1])
+    assert _ask(client, app, "Hoe gaat het?").json["cached"] is True and asked == []
+    translate.local_model.unload()
+
+
+def test_the_local_model_must_be_downloaded_first(app, client):
+    "Without the files (and without the test engine) the answer says to download it."
+    client.put(f"{URL}/settings", json={"provider": "local"})
+    r = _ask(client, app)
+    assert r.status_code == 400 and r.json["code"] == "no_model" and "Download" in r.json["error"]
+
+
+def test_local_becomes_the_default_once_it_is_downloaded(client, monkeypatch):
+    "Before the model is installed the default is MyMemory; after, the model on this Mac, unless you chose."
+    assert client.get(f"{URL}/settings").json["provider"] == "mymemory"
+    monkeypatch.setattr(translate.model_files, "is_installed", lambda m: True)
+    assert client.get(f"{URL}/settings").json["provider"] == "local"
+    client.put(f"{URL}/settings", json={"provider": "deepl"})
+    assert client.get(f"{URL}/settings").json["provider"] == "deepl"
+
+
+def test_text_models_are_not_offered_for_voicing_books(client):
+    "Speech choices ignore the translation model, and a text model cannot be asked to voice a book."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    assert model_files.choose_model("qwen3-4b-instruct-mlx") is None
+    assert all(model_files.kind_of(m) == "speech" for m in model_files.speech_models())
+    listed = {m["id"]: m["kind"] for m in client.get("/ocarina/api/tts/models").json}
+    assert listed["qwen3-4b-instruct-mlx"] == "text" and listed["chatterbox-multilingual-v3-mlx"] == "speech"
+
+
+def test_the_local_model_unloads_after_a_quiet_spell(app):
+    "It stays loaded between requests and gives its memory back when idle."
+    import time  # pylint: disable=import-outside-toplevel
+    from ocarina.localllm import LocalModel  # pylint: disable=import-outside-toplevel
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    model = model_files.find_model("qwen3-4b-instruct-mlx")
+    runner = LocalModel(idle_seconds=0.3)
+    assert runner.complete(model, "system", "Dutch sentence:\nHallo", engine="fake") == "[fake translation] Hallo"
+    first = runner._supervisor  # pylint: disable=protected-access
+    runner.complete(model, "system", "Dutch sentence:\nTot ziens", engine="fake")
+    assert runner._supervisor is first  # pylint: disable=protected-access
+    time.sleep(0.8)
+    assert runner._supervisor is None  # pylint: disable=protected-access

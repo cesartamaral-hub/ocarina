@@ -23,6 +23,7 @@ export type Model = {
   license: string
   languages: string[]
   installed: boolean
+  kind?: 'speech' | 'text'
   custom?: boolean
   sizeBytes: number
   downloadJob: string | null

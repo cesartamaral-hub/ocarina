@@ -41,6 +41,7 @@ def models():
         [
             {
                 **m,
+                "kind": model_files.kind_of(m),
                 "installed": model_files.is_installed(m),
                 "sizeBytes": model_files.total_bytes(m),
                 "downloadJob": next((j["id"] for j in active if j["model_id"] == m["id"]), None),

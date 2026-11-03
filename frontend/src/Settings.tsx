@@ -130,20 +130,8 @@ export function Settings() {
 
   if (!models) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>
   const busy = isActive(job)
-  return (
-    <>
-      <h1>Settings</h1>
-      <p className="settings-links">
-        <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
-        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a>
-      </p>
-      <h2>Voice models</h2>
-      <p className="muted">
-        Models are downloaded once and run on this Mac. Audio generation needs one installed.
-      </p>
-      {error && <p className="error">{error}</p>}
-      <ul className="models">
-        {models.map((m) => {
+
+  const renderModel = (m: Model) => {
           // Matched by model, not by the list's downloadJob: that field is stale right after you press Download.
           const mine = job?.model_id === m.id ? job : null
           const downloading = mine !== null && isActive(mine)
@@ -198,8 +186,27 @@ export function Settings() {
               {mine?.state === 'cancelled' && <p className="muted">Cancelled. Files already downloaded are kept, so downloading again continues from there.</p>}
             </li>
           )
-        })}
-      </ul>
+  }
+  return (
+    <>
+      <h1>Settings</h1>
+      <p className="settings-links">
+        <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
+        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a>
+      </p>
+      <h2>Voice models</h2>
+      <p className="muted">
+        Models are downloaded once and run on this Mac. Audio generation needs one installed.
+      </p>
+      {error && <p className="error">{error}</p>}
+      <ul className="models">{models.filter((m) => m.kind !== 'text').map(renderModel)}</ul>
+
+      <h2>Translation model</h2>
+      <p className="muted">
+        Translates sentences on this Mac, offline and without limits. Choose it under Translation once it is downloaded. It runs only while you
+        translate, and is unloaded after a few minutes.
+      </p>
+      <ul className="models">{models.filter((m) => m.kind === 'text').map(renderModel)}</ul>
 
       <AddModel onAdded={load} />
 
@@ -207,7 +214,7 @@ export function Settings() {
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
         {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
-          const options = models.filter((m) => m.installed && m.languages.includes(code))
+          const options = models.filter((m) => m.kind !== 'text' && m.installed && m.languages.includes(code))
           const value = chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
           const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (

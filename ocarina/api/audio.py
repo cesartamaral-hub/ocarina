@@ -179,7 +179,7 @@ def audio_options(book_id):
             "defaultVoice": default_voice["id"],
             "models": [
                 {"id": m["id"], "name": m["name"], "installed": model_files.is_installed(m), "custom": bool(m.get("custom"))}
-                for m in model_files.load_catalog()
+                for m in model_files.speech_models()
                 if code in m.get("languages", [])
             ],
             "voices": [{"id": v["id"], "name": v["name"], "builtin": v["builtin"]} for v in voice_list],

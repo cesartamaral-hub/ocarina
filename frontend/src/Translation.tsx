@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTranslateSettings, putTranslateSettings, testTranslation, type TranslateSettings, type Translation as Result } from './api'
+import { formatBytes } from './format'
 import { notify } from './notices'
 
 export function Translation() {
@@ -54,15 +55,24 @@ export function Translation() {
 
       <fieldset className="choices">
         <legend>Service</legend>
-        {s.providers.map((p) => (
-          <label key={p.id} className="choice">
-            <input type="radio" name="provider" checked={s.provider === p.id} onChange={() => save({ provider: p.id })} />
-            <span>
-              <strong>{p.name}</strong>
-              <span className="muted"> {p.description}</span>
-            </span>
-          </label>
-        ))}
+        {s.providers.map((p) => {
+          const missing = p.id === 'local' && !s.localModel.installed
+          return (
+            <label key={p.id} className={`choice${missing ? ' unavailable' : ''}`}>
+              <input type="radio" name="provider" disabled={missing} checked={s.provider === p.id} onChange={() => save({ provider: p.id })} />
+              <span>
+                <strong>{p.name}</strong>
+                <span className="muted"> {p.description}</span>
+                {missing && (
+                  <span className="choice-note">
+                    {' '}
+                    Not downloaded yet ({formatBytes(s.localModel.sizeBytes)}). <a href="#/settings">Download it in Settings</a>.
+                  </span>
+                )}
+              </span>
+            </label>
+          )
+        })}
       </fieldset>
 
       <div className="form translation-form">
