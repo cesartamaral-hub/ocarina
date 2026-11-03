@@ -9,5 +9,5 @@ export default defineConfig({
   base: '/ocarina/app/',
   plugins: [react()],
   build: { outDir: '../ocarina/web/dist', emptyOutDir: true },
-  server: { proxy: { '/ocarina/api': backend, '/useraudio': backend } },
+  server: { proxy: { '/ocarina/api': backend, '/useraudio': backend, '/userimages': backend } },
 })

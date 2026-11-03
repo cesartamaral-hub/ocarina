@@ -7,3 +7,6 @@ export const STATUS_BUTTONS: { status: number; label: string; key: string; title
   { status: 99, label: '✓', key: 'w', title: 'Well known (w)' },
   { status: 98, label: '✕', key: 'i', title: 'Ignore (i)' },
 ]
+
+export const statusName = (status: number) =>
+  status === 99 ? 'well known' : status === 98 ? 'ignored' : `status ${status}`

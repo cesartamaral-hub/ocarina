@@ -13,6 +13,7 @@ import {
   type References,
   type Term,
 } from '../api'
+import { notify } from '../notices'
 import { STATUS_BUTTONS } from './statuses'
 
 // Dictionary urls contain [LUTE] (older ones ###) where the word goes; a leading * only marked
@@ -150,6 +151,7 @@ export function TermPanel({
       const { image } = await uploadImage(term.id, file)
       setTerm({ ...term, image })
       onChanged(term.id)
+      notify('Picture added')
     } catch (e) {
       onError((e as Error).message)
     }
@@ -159,6 +161,7 @@ export function TermPanel({
     await deleteImage(term.id)
     setTerm({ ...term, image: null })
     onChanged(term.id)
+    notify('Picture removed')
   }
 
   const isNew = term.id === null
@@ -278,11 +281,34 @@ export function TermPanel({
             <button className="secondary" onClick={() => fileInput.current?.click()}>
               {term.image ? 'Change picture' : 'Add picture'}
             </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                openExternal(`https://www.bing.com/images/search?q=${encodeURIComponent(term.displayText)}`).catch((e) =>
+                  onError(e.message),
+                )
+              }
+            >
+              Find pictures
+            </button>
             {term.image && (
               <button className="secondary" onClick={removeImage}>
                 Remove
               </button>
             )}
+          </div>
+          <div
+            className="paste-target"
+            tabIndex={0}
+            onPaste={(e) => {
+              const file = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'))
+              if (file) {
+                e.preventDefault()
+                pickImage(file)
+              }
+            }}
+          >
+            Copy a picture from your browser, click here and paste it (⌘V).
           </div>
           <input
             ref={fileInput}

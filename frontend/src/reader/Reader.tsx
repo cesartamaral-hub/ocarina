@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AudioBar } from '../AudioBar'
+import { notify } from '../notices'
 import {
   bulkStatus,
   finishPage,
@@ -10,7 +11,8 @@ import {
   type ReaderPage,
   type Term,
 } from '../api'
-import { STATUS_BUTTONS } from './statuses'
+import { KeyHelp } from './KeyHelp'
+import { STATUS_BUTTONS, statusName } from './statuses'
 import { TermPanel, type Target } from './TermPanel'
 import { useAudioFollow } from './useAudioFollow'
 import { useHoverCard } from './useHoverCard'
@@ -18,6 +20,7 @@ import { useHoverCard } from './useHoverCard'
 export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: number }) {
   const [page, setPage] = useState<ReaderPage | null>(null)
   const [error, setError] = useState('')
+  const [help, setHelp] = useState(false)
   const [selected, setSelected] = useState<Target | null>(null)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [multi, setMulti] = useState<Set<number>>(new Set())
@@ -122,6 +125,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       if (e.key === 'Escape') {
         setSelected(null)
         setMulti(new Set())
+        setHelp(false)
+      } else if (e.key === '?') {
+        setHelp((h) => !h)
       } else if (e.key === 'ArrowLeft' && pageNumber > 1) {
         window.location.hash = `#/book/${bookId}/read/${pageNumber - 1}`
       } else if (e.key === 'ArrowRight' && page && pageNumber < page.pageCount) {
@@ -144,6 +150,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           hoverCard.forget(id)
         })
         setMulti(new Set())
+        notify(`${ids.length} ${ids.length === 1 ? 'word' : 'words'} set to ${statusName(status)}`)
       } catch (e) {
         setError((e as Error).message)
       }
@@ -169,6 +176,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     if (!page) return
     try {
       await finishPage(page.bookId, page.page, restAsKnown)
+      notify(restAsKnown ? 'Page finished, the rest marked as known' : 'Page finished')
       window.location.hash =
         page.page < page.pageCount ? `#/book/${bookId}/read/${page.page + 1}` : `#/book/${bookId}`
     } catch (e) {
@@ -188,6 +196,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     if (!page || editing === null) return
     try {
       await putPageText(bookId, page.page, editing)
+      notify('Text saved')
       setEditing(null)
       setSelected(null)
       hoverCard.forgetAll()
@@ -245,8 +254,19 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             }}
           >
             Edit text
+          </a>{' '}
+          ·{' '}
+          <a
+            href="#keys"
+            onClick={(e) => {
+              e.preventDefault()
+              setHelp(true)
+            }}
+          >
+            Keys
           </a>
         </p>
+        {help && <KeyHelp onClose={() => setHelp(false)} />}
         {error && <p className="error">{error}</p>}
         {editing !== null ? (
           <div className="edit-text">

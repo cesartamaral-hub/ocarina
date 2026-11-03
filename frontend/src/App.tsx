@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loadPrefs, runDueBackup } from './api'
 import { Backups } from './Backups'
+import { NoticeList } from './NoticeList'
 import { BookList } from './BookList'
 import { BookView } from './BookView'
 import { LanguageEditor, LanguageList } from './Languages'
@@ -89,6 +90,7 @@ export default function App() {
           <BookView key={bookId} bookId={bookId} />
         )}
       </main>
+      <NoticeList />
     </>
   )
 }
