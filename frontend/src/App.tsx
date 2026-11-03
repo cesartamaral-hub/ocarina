@@ -5,6 +5,7 @@ import { BookView } from './BookView'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
+import { TermList } from './TermList'
 
 // Tiny hash router: "#/" is the book list, "#/book/12" a book.
 function useRoute() {
@@ -21,6 +22,7 @@ function useRoute() {
     readPage: r ? Number(r[2]) : null,
     settings: hash === '#/settings',
     newBook: hash === '#/new',
+    terms: hash === '#/terms',
   }
 }
 
@@ -37,7 +39,7 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook } = useRoute()
+  const { bookId, readPage, settings, newBook, terms } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => setReady(true))
@@ -49,11 +51,16 @@ export default function App() {
           <Logo />
           Ocarina
         </a>
-        <a href="#/settings">Settings</a>
+        <nav>
+          <a href="#/terms">Terms</a>
+          <a href="#/settings">Settings</a>
+        </nav>
       </header>
       <main>
         {!ready ? null : settings ? (
           <Settings />
+        ) : terms ? (
+          <TermList />
         ) : newBook ? (
           <NewBook />
         ) : bookId !== null && readPage !== null ? (

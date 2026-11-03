@@ -9,6 +9,7 @@ from ocarina.api import (
     jobs,
     pages,
     system,
+    term_list,
     terms,
     tts_models,
     web,
@@ -17,5 +18,5 @@ from ocarina.api import (
 
 def register(app):
     "Register all Ocarina blueprints."
-    for module in (audio, book_import, books, jobs, pages, system, terms, tts_models, web):
+    for module in (audio, book_import, books, jobs, pages, system, term_list, terms, tts_models, web):
         app.register_blueprint(module.bp)
