@@ -26,7 +26,7 @@ export const getBooks = () => fetch(`${API}/books`).then((r) => json<Book[]>(r))
 export const getSentences = (id: number) =>
   fetch(`${API}/books/${id}/sentences`).then((r) => json<BookSentences>(r))
 
-export type Language = { id: number; name: string }
+export type Language = { id: number; name: string; books?: number; terms?: number }
 
 export type Extracted = { title: string; text: string; sourceUri: string; note: string | null }
 

@@ -22,7 +22,8 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
 | `audio.py` also: `POST /books/<id>/audio/upload` (own audio file; removes a replaced generated file, keeps recordings) |
 | `term_list.py` | `GET /term-list` (filters, sort, paging), `GET /term-list/export` (CSV), `GET /tags`, `POST /terms/bulk` (status, tags, parent, delete) |
-| `book_import.py` | `GET /languages`, `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
+| `languages.py` | `GET /languages` (with counts), `GET/PUT/DELETE /languages/<id>`, `POST /languages`, `GET /languages/template` (blank or predefined), `GET /languages/parsers`; delete needs `force=true` when it holds books or terms |
+| `book_import.py` | `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |
 | `web.py` | serves the built frontend at `/ocarina/app/` (any sub-path gets `index.html`) |
 

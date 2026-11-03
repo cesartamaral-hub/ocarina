@@ -145,3 +145,10 @@ table.terms tr.open td { background: var(--panel); }
 .term-edit { max-width: 640px; padding: 8px 0; }
 .term-edit .actions { display: flex; gap: 10px; }
 a.button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+
+table.dicts { width: 100%; border-collapse: collapse; }
+table.dicts th, table.dicts td { text-align: left; padding: 4px 6px; vertical-align: middle; }
+table.dicts input.wide { width: 100%; min-width: 260px; }
+table.dicts select, table.dicts input:not([type='checkbox']) { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.language-form { max-width: 900px; }
+.form label.inline { flex-direction: row; align-items: center; gap: 8px; }

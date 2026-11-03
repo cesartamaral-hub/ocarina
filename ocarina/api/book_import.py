@@ -1,7 +1,6 @@
 """
 JSON API for adding a book.
 
-    GET  /ocarina/api/languages      languages to choose from
     POST /ocarina/api/books/extract  text of an uploaded file (txt, epub, pdf, srt, vtt)
                                      or of a web page ({"url": ...}); nothing is saved
     POST /ocarina/api/books          save a book (form fields: title, languageId, text,
@@ -30,13 +29,6 @@ PDF_NOTE = "PDF text can be inaccurate because of how PDFs are encoded. Check it
 
 def _error(message, status=400, **extra):
     return jsonify({"error": message, **extra}), status
-
-
-@bp.route("/languages", methods=["GET"])
-def languages():
-    "Languages that books can be written in."
-    rows = db.session.execute(sql("select LgID, LgName from languages order by LgName"))
-    return jsonify([{"id": r[0], "name": r[1]} for r in rows])
 
 
 @bp.route("/books/extract", methods=["POST"])

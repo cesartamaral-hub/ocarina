@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { loadPrefs } from './api'
 import { BookList } from './BookList'
 import { BookView } from './BookView'
+import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
@@ -23,6 +24,8 @@ function useRoute() {
     settings: hash === '#/settings',
     newBook: hash === '#/new',
     terms: hash === '#/terms',
+    languages: hash === '#/languages',
+    languageId: hash === '#/languages/new' ? 'new' : (hash.match(/^#\/languages\/(\d+)$/)?.[1] ?? null),
   }
 }
 
@@ -39,7 +42,7 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms } = useRoute()
+  const { bookId, readPage, settings, newBook, terms, languages, languageId } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => setReady(true))
@@ -53,12 +56,17 @@ export default function App() {
         </a>
         <nav>
           <a href="#/terms">Terms</a>
+          <a href="#/languages">Languages</a>
           <a href="#/settings">Settings</a>
         </nav>
       </header>
       <main>
         {!ready ? null : settings ? (
           <Settings />
+        ) : languages ? (
+          <LanguageList />
+        ) : languageId ? (
+          <LanguageEditor key={languageId} languageId={languageId === 'new' ? null : Number(languageId)} />
         ) : terms ? (
           <TermList />
         ) : newBook ? (
