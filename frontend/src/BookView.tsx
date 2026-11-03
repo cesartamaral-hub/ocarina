@@ -128,8 +128,7 @@ export function BookView({ bookId }: { bookId: number }) {
       </p>
       <h1>{book.title}</h1>
       <p className="muted">
-        {book.language} · <a href={`#/book/${book.id}/read/${book.currentPage}`}>Read</a> ·{' '}
-        <a href={`/read/${book.id}`}>Open in Lute reader</a>
+        {book.language} · <a href={`#/book/${book.id}/read/${book.currentPage}`}>Read</a>
       </p>
 
       <section className="panel">

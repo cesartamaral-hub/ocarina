@@ -39,4 +39,4 @@ def test_init_no_existing_database(testconfig):
 
     client = app.test_client()
     response = client.get("/")
-    assert b"Lute" in response.data
+    assert response.status_code == 302 and response.headers["Location"].endswith("/ocarina/app/")

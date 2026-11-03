@@ -45,22 +45,9 @@ from lute.models.repositories import UserSettingRepository
 from lute.book.stats import Service as StatsService
 from lute.stats.service import get_reading_streak
 
-from lute.ankiexport.routes import bp as anki_bp
-from lute.book.routes import bp as book_bp
-from lute.bookmarks.routes import bp as bookmarks_bp
-from lute.language.routes import bp as language_bp
-from lute.term.routes import bp as term_bp
-from lute.termtag.routes import bp as termtag_bp
-from lute.read.routes import bp as read_bp
-from lute.bing.routes import bp as bing_bp
 from lute.userimage.routes import bp as userimage_bp
 from lute.useraudio.routes import bp as useraudio_bp
-from lute.termimport.routes import bp as termimport_bp
-from lute.backup.routes import bp as backup_bp
 from lute.dev_api.routes import bp as dev_api_bp
-from lute.settings.routes import bp as settings_bp
-from lute.themes.routes import bp as themes_bp
-from lute.stats.routes import bp as stats_bp
 from lute.cli.commands import bp as cli_bp
 from ocarina.api import register as register_ocarina
 
@@ -111,123 +98,14 @@ def _setup_app_dirs(app_config):
         _setup_app_dir(rec[0], rec[1])
 
 
-def _add_base_routes(app, app_config):
+def _add_base_routes(app, app_config):  # pylint: disable=unused-argument
     """
-    Add some basic routes.
+    Add some basic routes. The screens themselves are the React app (see ocarina/web and ocarina/api).
     """
-
-    @app.context_processor
-    def inject_menu_bar_vars():
-        """
-        Inject backup settings into the all templates for the menu bar.
-        """
-        us_repo = UserSettingRepository(db.session)
-        bs = us_repo.get_backup_settings()
-        have_languages = len(db.session.query(Language).all()) > 0
-        ret = {
-            "have_languages": have_languages,
-            "backup_enabled": bs.backup_enabled,
-            "backup_directory": bs.backup_dir,
-            "backup_last_display_date": bs.last_backup_display_date,
-            "backup_time_since": bs.time_since_last_backup,
-            "user_settings": json.dumps(current_settings),
-            "user_hotkeys": json.dumps(current_hotkeys),
-        }
-        return ret
 
     @app.route("/")
     def index():
-        demosvc = DemoService(db.session)
-        is_production = not demosvc.contains_demo_data()
-        us_repo = UserSettingRepository(db.session)
-        bkp_settings = us_repo.get_backup_settings()
-
-        have_books = len(db.session.query(Book).all()) > 0
-        have_languages = len(db.session.query(Language).all()) > 0
-        language_choices = lute.utils.formutils.language_choices(
-            db.session, "(all languages)"
-        )
-        current_language_id = lute.utils.formutils.valid_current_language_id(db.session)
-
-        bs = BackupService(db.session)
-        should_run_auto_backup = bs.should_run_auto_backup(bkp_settings)
-        # Only back up if we have books, otherwise the backup is
-        # kicked off when the user empties the demo database.
-        if is_production and have_books and should_run_auto_backup:
-            return redirect("/backup/backup", 302)
-
-        warning_msg = bs.backup_warning(bkp_settings)
-        backup_show_warning = (
-            bkp_settings.backup_warn
-            and bkp_settings.backup_enabled
-            and warning_msg != ""
-        )
-
-        demosvc = DemoService(db.session)
-        response = make_response(
-            render_template(
-                "index.html",
-                hide_homelink=True,
-                dbname=app_config.dbname,
-                datapath=app_config.datapath,
-                tutorial_book_id=demosvc.tutorial_book_id(),
-                have_books=have_books,
-                have_languages=have_languages,
-                language_choices=language_choices,
-                current_language_id=current_language_id,
-                is_production_data=is_production,
-                backup_show_warning=backup_show_warning,
-                backup_warning_msg=warning_msg,
-                reading_streak=get_reading_streak(db.session),
-                show_streak_on_home=current_settings.get("show_streak_on_home", False),
-            )
-        )
-        return response
-
-    @app.route("/refresh_all_stats")
-    def refresh_all_stats():
-        books_to_update = db.session.query(Book).filter(Book.archived == 0).all()
-        svc = StatsService(db.session)
-        for book in books_to_update:
-            svc.mark_stale(book)
-        return redirect("/", 302)
-
-    @app.route("/wipe_database")
-    def wipe_db():
-        demosvc = DemoService(db.session)
-        if demosvc.contains_demo_data():
-            demosvc.delete_demo_data()
-            msg = """
-            The database has been wiped clean.  Have fun! <br /><br />
-            <i>(Lute has automatically enabled backups --
-            change your <a href="/settings/index">Settings</a> as needed.)</i>
-            """
-            flash(msg)
-        return redirect("/", 302)
-
-    @app.route("/remove_demo_flag")
-    def remove_demo():
-        demosvc = DemoService(db.session)
-        if demosvc.contains_demo_data():
-            demosvc.remove_flag()
-            msg = """
-            Demo mode deactivated. Have fun! <br /><br />
-            <i>(Lute has automatically enabled backups --
-            change your <a href="/settings/index">Settings</a> as needed.)</i>
-                        """
-            flash(msg)
-        return redirect("/", 302)
-
-    @app.route("/version")
-    def show_version():
-        ac = current_app.env_config
-        return render_template(
-            "version.html",
-            version=lute.__version__,
-            datapath=ac.datapath,
-            database=ac.dbfilename,
-            is_docker=ac.is_docker,
-        )
+        return redirect("/ocarina/app/", 302)
 
     @app.route("/info")
     def show_info():
@@ -235,9 +113,6 @@ def _add_base_routes(app, app_config):
         Json return of some data.
 
         Used in lute.verify module for tests.
-
-        This likely belongs in a different 'api' location,
-        but leaving it here for now.
         """
         ret = {
             "version": lute.__version__,
@@ -246,48 +121,20 @@ def _add_base_routes(app, app_config):
         }
         return jsonify(ret)
 
-    @app.route("/static/js/never_cache/<path:filename>")
-    def custom_js(filename):
-        """
-        Some files should never be cached.
-        """
-        response = make_response(send_from_directory("static/js", filename))
-        response.headers[
-            "Cache-Control"
-        ] = "no-store, no-cache, must-revalidate, max-age=0"
-        return response
-
     @app.errorhandler(500)
     def _internal_server_error(e):  # pylint: disable=unused-argument
-        """
-        Custom error handler for 500 Internal Server Error
-        """
-        exception_info = traceback.format_exc()
-        # Should add logging ...
-        # app.logger.error(exception_info)
-        return (
-            render_template(
-                "errors/500_error.html",
-                exception_info=exception_info,
-                version=lute.__version__,
-                platform=platform.platform(),
-                is_docker=current_app.env_config.is_docker,
-            ),
-            500,
-        )
+        "A server error: JSON for the app's own calls (the message is shown by the app), plain text elsewhere."
+        detail = traceback.format_exc()
+        if request.path.startswith("/ocarina/api/"):
+            return jsonify({"error": "Something went wrong on the server", "detail": detail}), 500
+        return f"Something went wrong.\n\n{detail}", 500, {"Content-Type": "text/plain; charset=utf-8"}
 
     @app.errorhandler(404)
     def _page_not_found(e):  # pylint: disable=unused-argument
-        "Show custom error page on 404."
-        return (
-            render_template(
-                "errors/404_error.html",
-                version=lute.__version__,
-                requested_url=request.url,
-                referring_page=request.referrer,
-            ),
-            404,
-        )
+        "Not found: JSON for the app's own calls, plain text elsewhere."
+        if request.path.startswith("/ocarina/api/"):
+            return jsonify({"error": "Not found"}), 404
+        return "Not found", 404, {"Content-Type": "text/plain; charset=utf-8"}
 
 
 def _create_app(app_config, extra_config):
@@ -334,21 +181,8 @@ def _create_app(app_config, extra_config):
     app.db = db
 
     _add_base_routes(app, app_config)
-    app.register_blueprint(language_bp)
-    app.register_blueprint(anki_bp)
-    app.register_blueprint(book_bp)
-    app.register_blueprint(bookmarks_bp)
-    app.register_blueprint(term_bp)
-    app.register_blueprint(termtag_bp)
-    app.register_blueprint(read_bp)
-    app.register_blueprint(bing_bp)
     app.register_blueprint(userimage_bp)
     app.register_blueprint(useraudio_bp)
-    app.register_blueprint(termimport_bp)
-    app.register_blueprint(backup_bp)
-    app.register_blueprint(settings_bp)
-    app.register_blueprint(themes_bp)
-    app.register_blueprint(stats_bp)
     app.register_blueprint(cli_bp)
     register_ocarina(app)
     if app_config.is_test_db:
