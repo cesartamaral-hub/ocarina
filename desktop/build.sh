@@ -10,3 +10,11 @@ $PY setup.py py2app
 # copy it, with its native libraries and Metal shaders, into the bundle by hand.
 SP=$($PY -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
 cp -R "$SP/mlx" dist/Ocarina.app/Contents/Resources/lib/python3.12/mlx
+
+# Trim what the app never loads: test suites bundled inside packages, MLX's C++ headers and cmake files, type stubs.
+# (The 214 MB mlx.metallib holds the Metal shaders and must stay.)
+LIB=dist/Ocarina.app/Contents/Resources/lib/python3.12
+rm -rf "$LIB/mlx/include" "$LIB/mlx/lib/cmake"
+find "$LIB" -type d \( -name tests -o -name test \) -prune -exec rm -rf {} +
+find "$LIB" -name "*.pyi" -delete
+du -sh dist/Ocarina.app

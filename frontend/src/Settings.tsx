@@ -11,11 +11,13 @@ import {
   importModel,
   isActive,
   pickFolder,
+  removeModelEntry,
   setPref,
   type Job,
   type Model,
   type Voice,
 } from './api'
+import { AddModel } from './AddModel'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 import { Voices } from './Voices'
 
@@ -89,6 +91,17 @@ export function Settings() {
     setChosen((cur) => ({ ...cur, [key]: value }))
   }
 
+  async function forget(m: Model) {
+    if (!window.confirm(`Remove ${m.name} from the list? Its downloaded files are deleted too.`)) return
+    setError('')
+    try {
+      await removeModelEntry(m.id)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function remove(m: Model) {
     if (!window.confirm(`Delete ${m.name} (${formatBytes(m.sizeBytes)})? You can download it again.`)) return
     setError('')
@@ -106,8 +119,9 @@ export function Settings() {
   return (
     <>
       <h1>Settings</h1>
-      <p>
-        <a href="#/backups">Backups</a>
+      <p className="settings-links">
+        <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
+        <a href="#/languages">Languages</a> · <a href="#/backups">Backups</a>
       </p>
       <h2>Voice models</h2>
       <p className="muted">
@@ -129,6 +143,11 @@ export function Settings() {
                   </div>
                 </div>
                 <div className="actions">
+                  {m.custom && (
+                    <button className="secondary" disabled={busy} onClick={() => forget(m)}>
+                      Remove from list
+                    </button>
+                  )}
                   {m.installed ? (
                     <>
                       <span className="muted">Installed</span>
@@ -170,6 +189,8 @@ export function Settings() {
         })}
       </ul>
 
+      <AddModel onAdded={load} />
+
       <h2>Voice per language</h2>
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
@@ -190,14 +211,12 @@ export function Settings() {
                   ))}
                 </select>
                 <select value={voice} onChange={(e) => choose(`voice.${code}`, e.target.value)} aria-label={`Voice for ${name}`}>
-                  <option value="">Default voice</option>
-                  {voices
-                    .filter((v) => !v.builtin)
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
+                  <option value="">Automatic</option>
+                  {voices.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </li>

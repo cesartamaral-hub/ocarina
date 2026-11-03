@@ -22,6 +22,7 @@ export type Model = {
   license: string
   languages: string[]
   installed: boolean
+  custom?: boolean
   sizeBytes: number
   downloadJob: string | null
   benchmark?: { secondsPerSecondOfAudio: number; machine: string }
@@ -88,3 +89,16 @@ export const previewVoice = (voice: string, language: string) =>
   send<Job>('POST', `${API}/tts/voices/preview`, { voice, language })
 
 export const previewUrl = (name: string) => `${API}/tts/previews/${name}`
+
+export type HubLookup = { repo: string; revision: string; license: string; files: number; totalBytes: number }
+
+export const getEngines = () =>
+  fetch(`${API}/tts/engines`).then((r) => json<{ engines: { id: string; name: string }[]; languages: string[] }>(r))
+
+export const lookupModel = (repo: string) => send<HubLookup>('POST', `${API}/tts/models/lookup`, { repo })
+
+export const addCustomModel = (m: { repo: string; engine: string; languages: string[]; name: string }) =>
+  send<Model>('POST', `${API}/tts/models/custom`, m)
+
+export const removeModelEntry = (id: string) =>
+  fetch(`${API}/tts/models/${id}/entry`, { method: 'DELETE' }).then((r) => json<{ removed: string }>(r))

@@ -19,12 +19,14 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `terms.py` | `GET /terms/<id>`, `POST /terms`, `GET /terms/lookup`, `PATCH /terms/<id>/status`, `POST /terms/bulk-status`, `GET /terms/<id>/popup`, `GET /terms/<id>/references`, `POST/DELETE /terms/<id>/image` |
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
 | `jobs.py` | `GET /jobs`, `GET /jobs/<id>`, `POST /jobs/<id>/cancel`; a FIFO queue run one job at a time by one thread (audio and downloads share it); jobs call `check()` to notice cancelling |
-| `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
+| `tts_models.py` | `GET /tts/models`, `GET /tts/engines`, `POST /tts/models/lookup`, `POST /tts/models/custom`, `DELETE /tts/models/<id>/entry`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
 | `audio.py` also: `POST /books/<id>/audio/upload` (own audio file; removes a replaced generated file, keeps recordings) |
 | `term_list.py` | `GET /term-list` (filters, sort, paging), `GET /term-list/export` (CSV), `GET /tags`, `POST /terms/bulk` (status, tags, parent, delete) |
 | `backups.py` | `GET /backups`, `PUT /backups/settings`, `POST /backups` (now; `manual` keeps it), `POST /backups/skip`, `GET /backups/<name>/download`; the app makes a due backup when it opens |
 | `stats.py` | `GET /stats` (streak, words read per language and period, daily history) |
 | `voices.py` | `GET/POST /tts/voices`, `DELETE /tts/voices/<id>`, `POST /tts/voices/preview` (a job), `GET /tts/previews/<name>`; clips in `<data>/voices/` as mono wav with an optional `.txt` of the words spoken |
+| `languages.py` also `POST /languages/predefined` (first run) |
+| `tags.py` | `GET /tag-list/<term|book>`, `PATCH/DELETE /tag-list/<kind>/<id>` |
 | `languages.py` | `GET /languages` (with counts), `GET/PUT/DELETE /languages/<id>`, `POST /languages`, `GET /languages/template` (blank or predefined), `GET /languages/parsers`; delete needs `force=true` when it holds books or terms |
 | `book_import.py` | `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |

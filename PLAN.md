@@ -8,29 +8,24 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 
 | Area | State |
 |---|---|
-| Environment, test baseline | Done. Whole suite passes (554). Japanese tests need `brew install mecab mecab-ipadic`. |
-| TTS service (`ocarina/tts`) | Done: MLX Chatterbox, worker process, sentence cache, CLI, model downloads. |
-| Book audio API | Done: whole-book jobs, sentence timings, never overwrites your recordings without `replace`. |
-| React app: books, book view, Settings (models), reader | Working. Reader: word panel, statuses, hover card, phrases, bulk status, audio following, page text edit, pictures, other examples, dictionaries (frame shown blank in preview, unverified). |
-| Model management | Download, import from folder, delete; voice per language (Settings). |
-| Packaged `Ocarina.app` | Builds and ran an audio job. Window itself and double-click not checked; unsigned. |
+| Screens (all React) | Books (edit, archive, delete, tags, progress), add a book (file, web page, own audio), reader, terms (search, filters, bulk, export), languages, tags, reading stats, backups, appearance (theme, text size, font), keyboard shortcuts, first-run welcome, Settings. |
+| Reader | Word panel, statuses, hover card, phrases, bulk status, audio following (high-contrast outline), page text edit, term pictures (find or paste), other examples, dictionaries, highlights toggle, notices, key help. |
+| TTS | Two engines: Chatterbox (clones a clip) and Audio8 (own voice, clones with a transcript). Voice library with previews, a shipped Dutch voice, a voice and a model per language, custom models from Hugging Face, job queue with cancel. |
+| Lute | Its pages, templates and static files are gone; its services (parsing, terms, books, backups, stats) stay behind the API. `/` redirects to the app. |
+| Packaged `Ocarina.app` | 444 MB, unsigned. Window, first-run screen, API and a bundled-worker preview checked. |
+| Tests | 479 pass. Japanese tests need `brew install mecab mecab-ipadic`. |
 
-## Next (rough order)
-1. Model choice: per-language voice pref and import from folder are done; custom catalog entries (`models.json` in the data folder, then a Hugging Face form) wait for a second engine.
-2. Port what is left of Lute's screens: Lute's own user settings (theme, keyboard shortcuts); managing tags as a list. Book edit, archive and delete are done. Already in React: book import, term list, languages, backups, stats.
-3. Audio: done: voice library with preview and a voice per language, a second engine (Audio8). To try: listen and compare the two engines; add custom catalog entries (`models.json`) and a Hugging Face form.
-4. Reader polish: done (page is remembered, notices, keys help with ?, find and paste term pictures).
-5. Packaging: check the window, trim the 470 MB bundle, first-run flow, then retire Lute's Flask templates.
-6. Later: speech-to-text for pronunciation practice (Handy-style).
+## Next
+1. Listen and compare Chatterbox and Audio8 on your own books (quality is unjudged); decide which to make the default.
+2. Check by hand what could not be driven from here: the folder dialog ("Import from folder"), a Finder double-click, the Dock icon.
+3. Later: speech-to-text for pronunciation practice (Handy-style).
+4. Housekeeping: `tasks.py` is Lute's old task runner (it still mentions the deleted acceptance tests); remove or trim it.
 
 ## Decisions
-- **No early playback** (2026-11-03): audio plays once the whole book is voiced.
-- **No baked-in slow voice** (2026-11-03): the model's pace can't be steered (see benchmarks); playback speed in the player is the learner control.
-- **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; change or delete Lute modules once their React replacement exists.
+- **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; Lute code is deleted once its React replacement exists.
+- **Dropped with Lute's pages** (2026-11-03, recoverable from git history before the commit "Retire Lute's pages"): Anki export, term CSV import, audio bookmarks, Lute themes and its own settings screens (replaced by Appearance and Keyboard shortcuts), Lute's Bing image search (replaced by "Find pictures").
+- **A new library starts empty** and shows the welcome screen; Lute's list of predefined languages is kept (65), also for "Add a language".
+- **Second engine: Audio8** (2026-11-03), not CosyVoice2 (see benchmarks). **Dutch voice shipped**: your sample, with its transcript, is the default for Dutch books.
+- **No early playback**: audio plays once the whole book is voiced. **No baked-in slow voice**: the model's pace can't be steered; use the player's speed. Audio8 happens to speak slower on its own.
 - **Unsigned app** for now (open with right-click, Open). Revisit later.
-- **App icon** (2026-11-03): ocarina glyph, paper white on green; sources in `assets/`.
 - **Preferences on the server** (`ocarina_prefs.json`), not in the web view: its storage is lost with every new port.
-
-## Open questions
-- Which reference voice(s) to ship? (Pace can't be changed through the reference voice; only timbre.)
-- Keep Lute's language definitions (`lute/db/language_defs`) or trim the language list?

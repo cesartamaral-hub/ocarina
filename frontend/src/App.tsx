@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loadPrefs, runDueBackup } from './api'
+import { Appearance } from './Appearance'
+import { applyAppearance } from './appearanceSettings'
 import { Backups } from './Backups'
 import { NoticeList } from './NoticeList'
 import { BookList } from './BookList'
@@ -8,6 +10,8 @@ import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
+import { Shortcuts } from './Shortcuts'
+import { Tags } from './Tags'
 import { Stats } from './Stats'
 import { TermList } from './TermList'
 
@@ -28,6 +32,9 @@ function useRoute() {
     newBook: hash === '#/new',
     terms: hash === '#/terms',
     stats: hash === '#/stats',
+    tags: hash === '#/tags',
+    shortcuts: hash === '#/shortcuts',
+    appearance: hash === '#/appearance',
     backups: hash === '#/backups',
     languages: hash === '#/languages',
     languageId: hash === '#/languages/new' ? 'new' : (hash.match(/^#\/languages\/(\d+)$/)?.[1] ?? null),
@@ -47,10 +54,13 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms, stats, backups, languages, languageId } = useRoute()
+  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, appearance, backups, languages, languageId } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    loadPrefs().then(() => setReady(true))
+    loadPrefs().then(() => {
+      applyAppearance()
+      setReady(true)
+    })
     runDueBackup()
   }, [])
   return (
@@ -70,6 +80,12 @@ export default function App() {
       <main>
         {!ready ? null : settings ? (
           <Settings />
+        ) : tags ? (
+          <Tags />
+        ) : shortcuts ? (
+          <Shortcuts />
+        ) : appearance ? (
+          <Appearance />
         ) : stats ? (
           <Stats />
         ) : backups ? (

@@ -1,7 +1,7 @@
 # Ocarina
 
 Personal macOS app for studying Dutch, Polish and French. Hard fork of Lute v3 (MIT): Lute's
-Python backend (`lute/`) is kept; the screens are being replaced by a React app (`frontend/`);
+Python backend (`lute/`) is kept; the screens are a React app (`frontend/`) and Lute's own pages are gone;
 text-to-speech for books lives in `ocarina/`; `desktop/` packages it all as `Ocarina.app`.
 
 Start here, then read only what the task needs:
@@ -13,7 +13,7 @@ Start here, then read only what the task needs:
 ./desktop/dev.sh              # backend + Vite on a COPY of the library -> http://localhost:5173/ocarina/app/
 ./desktop/dev.sh --fresh      # new copy from the real library;  --real = the real library (careful)
 source .venv/bin/activate && pytest tests/ocarina -q       # Ocarina tests, ~2 s
-pytest --ignore=tests/acceptance --ignore=tests/playwright  # everything; all pass (Japanese tests need `brew install mecab mecab-ipadic`)
+pytest  # everything; all pass (Japanese tests need `brew install mecab mecab-ipadic`)
 cd frontend && npx tsc -b && npm run lint && npm run build   # build goes to ocarina/web/dist (git-ignored)
 cd desktop && ./build.sh      # builds desktop/dist/Ocarina.app (minutes); needs ../.venv-build
 python -m ocarina.tts say --lang nl --out /tmp/x.wav "Hallo wereld."   # TTS from the command line
@@ -25,7 +25,7 @@ and `.venv-build` (pyenv Python 3.12: only py2app can package that one). Tests n
 ## Layout
 - `ocarina/api/` one Flask blueprint per area (audio, books, jobs, pages, system, terms, tts_models, web); `__init__.register` wires them. Keep route functions thin; logic goes in `ocarina/tts/` or a service module.
 - `ocarina/tts/` model-free TTS pipeline: sentences, cache, stitch, supervisor (worker process), worker, models (download), book_audio. `catalog.json` lists the voice models.
-- `ocarina/prefs.py` preferences file in the data folder. `lute/` is Lute; change it only when a React screen replaces its behaviour; the only hook today is `register_ocarina(app)` in `lute/app_factory.py`.
+- `ocarina/prefs.py` preferences file in the data folder. `lute/` is Lute's engine (parsing, terms, books, backups, stats, database) without its pages; `ocarina/startup.py` opens a library (a new one starts empty); the only hook is `register_ocarina(app)` in `lute/app_factory.py`.
 - `frontend/src/`: `api/` (one file per area, import from `./api`), `reader/` (Reader, TermPanel, hooks), `BookList`, `BookView`, `Settings`, `AudioBar`. Hash routes: `#/`, `#/book/<id>`, `#/book/<id>/read/<page>`, `#/settings`.
 - `desktop/` pywebview launcher, py2app `setup.py`, `build.sh`, dev scripts. `assets/` icon sources. `tests/ocarina/` our tests (use `helpers.py`).
 
