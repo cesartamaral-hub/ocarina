@@ -13,6 +13,7 @@ import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
 import { Shortcuts } from './Shortcuts'
 import { Tags } from './Tags'
+import { Translation } from './Translation'
 import { Stats } from './Stats'
 import { TermList } from './TermList'
 
@@ -35,6 +36,7 @@ function useRoute() {
     stats: hash === '#/stats',
     tags: hash === '#/tags',
     shortcuts: hash === '#/shortcuts',
+    translation: hash === '#/translation',
     appearance: hash === '#/appearance',
     backups: hash === '#/backups',
     languages: hash === '#/languages',
@@ -55,7 +57,7 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, appearance, backups, languages, languageId } = useRoute()
+  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, languages, languageId } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => {
@@ -84,6 +86,8 @@ export default function App() {
           <Settings />
         ) : tags ? (
           <Tags />
+        ) : translation ? (
+          <Translation />
         ) : shortcuts ? (
           <Shortcuts />
         ) : appearance ? (

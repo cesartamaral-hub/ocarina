@@ -135,7 +135,7 @@ export function Settings() {
       <h1>Settings</h1>
       <p className="settings-links">
         <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
-        <a href="#/languages">Languages</a> · <a href="#/backups">Backups</a>
+        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a>
       </p>
       <h2>Voice models</h2>
       <p className="muted">

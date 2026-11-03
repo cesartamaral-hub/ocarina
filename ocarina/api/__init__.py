@@ -18,6 +18,7 @@ from ocarina.api import (
     tags,
     term_list,
     terms,
+    translate,
     tts_models,
     voices,
     web,
@@ -27,5 +28,5 @@ from ocarina.api import (
 def register(app):
     "Register all Ocarina blueprints."
     models.configure(getattr(getattr(app, "env_config", None), "datapath", None))
-    for module in (audio, audio_versions, backups, book_import, books, dictionary, jobs, languages, pages, stats, system, tags, term_list, terms, tts_models, voices, web):
+    for module in (audio, audio_versions, backups, book_import, books, dictionary, jobs, languages, pages, stats, system, tags, term_list, terms, translate, tts_models, voices, web):
         app.register_blueprint(module.bp)

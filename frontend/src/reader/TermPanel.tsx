@@ -16,6 +16,7 @@ import {
 import { notify } from '../notices'
 import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { Definition } from './Definition'
+import { SentenceBlock } from './SentenceBlock'
 import { STATUS_BUTTONS } from './statuses'
 
 // Dictionary urls contain [LUTE] (older ones ###) where the word goes; a leading * only marked
@@ -190,6 +191,17 @@ export function TermPanel({
         />
       ) : null}
 
+      {sentenceText && (
+        <SentenceBlock
+          key={sentenceText}
+          languageId={page.language.id}
+          text={sentenceText}
+          playStart={playStart}
+          onPlay={onPlay}
+          onOpenInBrowser={page.language.sentenceDictionaries[0] ? () => openOutside(page.language.sentenceDictionaries[0], sentenceText) : undefined}
+        />
+      )}
+
       <div className="dicts">
         <span className="muted">Open in browser:</span>
         {page.language.dictionaries.map((d, i) => (
@@ -197,16 +209,6 @@ export function TermPanel({
             {dictName(d)} ↗
           </button>
         ))}
-        {sentenceText && page.language.sentenceDictionaries[0] && (
-          <button className="secondary" onClick={() => openOutside(page.language.sentenceDictionaries[0], sentenceText)}>
-            Translate sentence ↗
-          </button>
-        )}
-        {playStart !== undefined && (
-          <button className="secondary" onClick={() => onPlay(playStart)}>
-            ▶ Play sentence
-          </button>
-        )}
       </div>
 
       <label>
@@ -310,7 +312,6 @@ export function TermPanel({
         </div>
       )}
 
-      {sentenceText && <p className="muted sentence-preview">{sentenceText}</p>}
     </div>
   )
 }

@@ -285,3 +285,20 @@ button.link-button { background: none; border: 0; padding: 0; color: var(--accen
 .def-lemma { margin-bottom: 8px; }
 .this-form { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .def-lemma-title { font-size: 0.8rem; color: var(--muted); }
+
+/* The sentence a word is in, with its translation */
+.sentence-block { margin: 12px 0; padding: 10px 12px; border-left: 3px solid var(--line); }
+.sentence-text { margin: 0 0 8px; }
+.sentence-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sentence-translation { margin: 8px 0 0; font-weight: 500; }
+.sentence-block .muted { margin: 6px 0 0; }
+
+/* Translation settings */
+fieldset.choices { border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px 12px; margin: 14px 0; max-width: 640px; }
+fieldset.choices legend { padding: 0 6px; color: var(--muted); font-size: 0.85rem; }
+label.choice { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+label.choice input { margin-top: 5px; }
+.translation-form { max-width: 640px; }
+.translation-form input, .translation-form select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.translation-form .row-inline { align-items: center; }
+.translation-form .row-inline input { flex: 1; }

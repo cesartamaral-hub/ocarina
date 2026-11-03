@@ -27,7 +27,7 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 
 **3. Dictionary inside the app.** Lute's embedded dictionaries cannot work: Vandale (`X-Frame-Options: DENY`), DeepL (frame-ancestors itself), Google Translate (same origin) and WordReference (HTTP 418) refuse frames. So show data, not pages.
 - a. **(done)** **Word definitions** from the Wiktionary API (English definitions; tested for nl, pl, fr) in the word panel and hover card, cached locally, with a "Full entry" link to the browser. Inflected words (szkoły, huizen, maisons) also show their base form's meaning first; "Use" copies a meaning into the translation. Lute's dictionary list stays, every entry becomes an "Open in browser" link.
-- b. **Online sentence translation** (MyMemory free; DeepL with your own key), chosen per language in Settings.
+- b. **(done)** **Online sentence translation** (MyMemory free; DeepL with your own key), one service and one target language for the whole app (Settings → Translation); cached, with a Try it button.
 - c. **Local model** (Qwen3-4B 4-bit via `mlx-lm`, Apache-2.0, 2.3 GB, installed through the model manager like the voices): translates a sentence and explains the word in that sentence, offline. Local is the default, online the option.
 
 **Other**
