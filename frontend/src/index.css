@@ -7,7 +7,8 @@
   --accent: #2f6f5e;
   --accent-fg: #fff;
   --current: #fff1b8;
-  --follow: #c4001a;
+  --follow: #9a3412;   /* the sentence being read aloud: a calm burnt orange */
+  --select: #1f1d1a;   /* the word or phrase you picked: the strongest contrast available */
   --error: #b3261e;
   --s0: #cfe3ff; --s1: #f6b8ad; --s2: #f7d2a6; --s3: #f6e8a2; --s4: #d5e9ac; --s5: #c3e6cd;
   color-scheme: light dark;
@@ -23,7 +24,8 @@
     --accent: #6cc3a8;
     --accent-fg: #11201b;
     --current: #4a4220;
-    --follow: #ffd60a;
+    --follow: #e6c45a;
+    --select: #ffffff;
     --error: #ff8a80;
     --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46;
     color-scheme: dark;
@@ -38,7 +40,8 @@
   --accent: #6cc3a8;
   --accent-fg: #11201b;
   --current: #4a4220;
-  --follow: #ffd60a;
+  --follow: #e6c45a;
+  --select: #ffffff;
   --error: #ff8a80;
   --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46;
   color-scheme: dark;
@@ -76,7 +79,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sentences li { padding: 4px 8px; border-radius: 6px; cursor: pointer; }
 .sentences li::marker { color: var(--muted); font-size: 0.8em; }
 .sentences li:hover { background: var(--panel); }
-.sentences li.current { background: var(--current); box-shadow: inset 4px 0 0 var(--follow); padding-left: 10px; }
+.sentences li.current { background: color-mix(in srgb, var(--follow) 12%, transparent); box-shadow: inset 3px 0 0 var(--follow); padding-left: 10px; }
 .models { list-style: none; padding: 0; }
 .models li { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: var(--panel); }
 .models .name { font-weight: 600; }
@@ -94,7 +97,7 @@ button.secondary { background: transparent; color: var(--fg); border: 1px solid 
 .w.s3 { background: var(--s3); } .w.s4 { background: var(--s4); } .w.s5 { background: var(--s5); }
 .w.s98 { border-bottom: 1px dotted var(--muted); }
 .w.s99 { background: none; }
-.w.sel { outline: 2px solid var(--accent); }
+.w.sel { outline: 2px solid var(--select); outline-offset: 1px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--select) 22%, transparent); position: relative; }
 .pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .reader-side { position: sticky; top: 8px; align-self: start; max-height: calc(100vh - 16px); overflow: auto; }
 .term { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -113,15 +116,19 @@ button.st.on { border-color: var(--fg); }
 /* Reader extras */
 .audio-sticky { position: sticky; top: 8px; z-index: 2; margin-top: 0; }
 label.inline { flex-direction: row; align-items: center; gap: 6px; }
-/* The sentence being read aloud: a thick outline and underline in a colour that stands out from every word colour. */
+/*
+ * Two states share one visual language: an outline. The word you picked has a strong neutral outline with a soft
+ * halo; the sentence being read aloud has a thinner outline in a different colour and a faint tint; the sentence
+ * around your selection only gets a faint band, so you can see which sentence "translate" would use.
+ */
+.sentence { border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.sentence.active { background: color-mix(in srgb, var(--select) 7%, transparent); }
 .sentence.playing {
-  outline: 3px solid var(--follow);
+  outline: 2px solid var(--follow);
   outline-offset: 3px;
-  border-radius: 4px;
-  text-decoration: underline 3px var(--follow);
-  text-underline-offset: 5px;
+  background: color-mix(in srgb, var(--follow) 12%, transparent);
 }
-.w.multi { outline: 2px dashed var(--accent); }
+.w.multi { outline: 2px dashed var(--select); outline-offset: 1px; }
 .bulk-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 5; }
 .hover-card { position: fixed; z-index: 10; max-width: 270px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem; box-shadow: 0 6px 24px rgba(0,0,0,0.25); pointer-events: none; }
 .hover-card img { display: block; max-width: 100%; max-height: 140px; margin-top: 6px; border-radius: 4px; }

@@ -15,11 +15,25 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 | Packaged `Ocarina.app` | 444 MB, unsigned. Window, first-run screen, API and a bundled-worker preview checked. |
 | Tests | 479 pass. Japanese tests need `brew install mecab mecab-ipadic`. |
 
-## Next
-1. Listen and compare Chatterbox and Audio8 on your own books (quality is unjudged); decide which to make the default.
-2. Check by hand what could not be driven from here: the folder dialog ("Import from folder"), a Finder double-click, the Dock icon.
-3. Later: speech-to-text for pronunciation practice (Handy-style).
-4. Housekeeping: `tasks.py` is Lute's old task runner (it still mentions the deleted acceptance tests); remove or trim it.
+## Next (agreed 2026-11-03, build in this order)
+
+**1. Selection stands out in the dark theme (done).** The clicked word or dragged phrase gets a thick outline in a neutral high-contrast colour (white in dark, near-black in light, with a soft halo). The playing sentence now has a calmer outline in another hue (gold in dark, burnt orange in light) and a faint tint, and the sentence around the selection gets a subtle band, so you see which sentence "translate" will use.
+
+**2. Audio versions per book.** A book keeps several audio versions; generating never replaces yours.
+- New table of versions per book (label, own or generated, model, voice, pause, timings file, created); the book points at the selected one, which the player and sentence following use. A migration turns each book's existing audio into its first version.
+- Generating adds a version; the same model + voice + pause replaces that generated version only. "Use my own audio…" also adds a version. Deleting a version asks first.
+- UI: a selector in the audio panel with rename and delete.
+- Later: timings for your own recordings with Whisper, so sentence following works on originals.
+
+**3. Dictionary inside the app.** Lute's embedded dictionaries cannot work: Vandale (`X-Frame-Options: DENY`), DeepL (frame-ancestors itself), Google Translate (same origin) and WordReference (HTTP 418) refuse frames. So show data, not pages.
+- a. **Word definitions** from the Wiktionary API (English definitions; tested for nl, pl, fr) in the word panel and hover card, cached locally, with a "Full entry" link to the browser. Lute's dictionary list stays, every entry becomes an "Open in browser" link.
+- b. **Online sentence translation** (MyMemory free; DeepL with your own key), chosen per language in Settings.
+- c. **Local model** (Qwen3-4B 4-bit via `mlx-lm`, Apache-2.0, 2.3 GB, installed through the model manager like the voices): translates a sentence and explains the word in that sentence, offline. Local is the default, online the option.
+
+**Other**
+- Listen and compare Chatterbox and Audio8 on your own books; decide the default.
+- Check by hand: the folder dialog ("Import from folder"), a Finder double-click, the Dock icon.
+- Later: speech-to-text for pronunciation practice (Handy-style). Housekeeping: remove Lute's `tasks.py`.
 
 ## Decisions
 - **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; Lute code is deleted once its React replacement exists.

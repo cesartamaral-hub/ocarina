@@ -309,7 +309,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                       <span
                         key={si}
                         data-sent={sent[0]?.sentence}
-                        className={`sentence${sent[0]?.sentence === audio.playing ? ' playing' : ''}`}
+                        className={`sentence${sent[0]?.sentence === audio.playing ? ' playing' : ''}${selected?.sentence === sent[0]?.sentence ? ' active' : ''}`}
                       >
                         {sent.map((it) =>
                           it.isWord ? (
