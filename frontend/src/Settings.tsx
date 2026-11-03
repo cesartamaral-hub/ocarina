@@ -18,17 +18,17 @@ import {
   type Voice,
 } from './api'
 import { AddModel } from './AddModel'
+import { formatBytes } from './format'
+import { notify } from './notices'
+import { TransferProgress } from './TransferProgress'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 import { Voices } from './Voices'
-
-function formatBytes(n: number): string {
-  return n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`
-}
 
 export function Settings() {
   const [models, setModels] = useState<Model[] | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
+  const [speed, setSpeed] = useState(0)
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const [voices, setVoices] = useState<Voice[]>([])
   const loadVoices = useCallback(() => getVoices().then(setVoices, () => undefined), [])
@@ -56,16 +56,30 @@ export function Settings() {
   const jobId = isActive(job) ? job!.id : null
   useEffect(() => {
     if (!jobId) return
+    // Speed is measured between polls and smoothed, so the time left does not jump around.
+    const sample = { t: 0, done: 0, smooth: 0 }
     const timer = setInterval(async () => {
       const j = await getJob(jobId)
+      const now = Date.now()
+      if (sample.t && now > sample.t) {
+        const instant = ((j.done - sample.done) * 1000) / (now - sample.t)
+        sample.smooth = sample.smooth ? 0.7 * sample.smooth + 0.3 * instant : instant
+      }
+      sample.t = now
+      sample.done = j.done
+      setSpeed(sample.smooth)
       setJob(j)
-      if (!isActive(j)) load()
+      if (!isActive(j)) {
+        load()
+        if (j.state === 'done') notify(`${j.title ?? 'The model'} is ready to use`)
+      }
     }, 700)
     return () => clearInterval(timer)
   }, [jobId, load])
 
   async function download(id: string) {
     setError('')
+    setSpeed(0)
     try {
       setJob(await downloadModel(id))
     } catch (e) {
@@ -130,7 +144,9 @@ export function Settings() {
       {error && <p className="error">{error}</p>}
       <ul className="models">
         {models.map((m) => {
-          const downloading = busy && job?.id === m.downloadJob
+          // Matched by model, not by the list's downloadJob: that field is stale right after you press Download.
+          const mine = job?.model_id === m.id ? job : null
+          const downloading = mine !== null && isActive(mine)
           return (
             <li key={m.id}>
               <div className="row">
@@ -167,23 +183,19 @@ export function Settings() {
                   )}
                 </div>
               </div>
-              {downloading && job && (
-                <div className="progress">
-                  <progress value={job.done} max={job.total || 1} />
-                  <span className="muted">
-                    {job.state === 'queued'
-                      ? 'Waiting for the job before it…'
-                      : `${formatBytes(job.done)} / ${formatBytes(job.total)}`}
-                  </span>
-                  <button className="secondary" onClick={() => cancelJob(job.id).then(setJob, () => undefined)}>
-                    Cancel
-                  </button>
-                </div>
+              {downloading && mine && (
+                <TransferProgress job={mine} speed={speed} onCancel={() => cancelJob(mine.id).then(setJob, () => undefined)} />
               )}
-              {job?.state === 'error' && job.id === m.downloadJob && <p className="error">{job.error}</p>}
-              {job?.state === 'cancelled' && job.model_id === m.id && (
-                <p className="muted">Cancelled. Files already copied or downloaded are kept.</p>
+              {mine?.state === 'error' && (
+                <p className="error">
+                  {mine.error}{' '}
+                  <button className="secondary" onClick={() => download(m.id)}>
+                    Try again
+                  </button>{' '}
+                  <span className="muted">Files already downloaded are kept.</span>
+                </p>
               )}
+              {mine?.state === 'cancelled' && <p className="muted">Cancelled. Files already downloaded are kept, so downloading again continues from there.</p>}
             </li>
           )
         })}

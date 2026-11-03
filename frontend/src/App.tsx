@@ -3,6 +3,7 @@ import { loadPrefs, runDueBackup } from './api'
 import { Appearance } from './Appearance'
 import { applyAppearance } from './appearanceSettings'
 import { Backups } from './Backups'
+import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
 import { BookList } from './BookList'
 import { BookView } from './BookView'
@@ -70,6 +71,7 @@ export default function App() {
           <Logo />
           Ocarina
         </a>
+        <JobChip />
         <nav>
           <a href="#/terms">Terms</a>
           <a href="#/languages">Languages</a>

@@ -64,6 +64,7 @@ def download_model(model_id):
         "download",
         lambda job, check: _run_download(job, check, model),
         model_id=model_id,
+        title=model["name"],
         total=model_files.total_bytes(model),
     )
     return jsonify(job), 202
@@ -88,6 +89,7 @@ def import_model(model_id):
         "download",
         lambda job, check: _run_download(job, check, model, folder),
         model_id=model_id,
+        title=model["name"],
         total=model_files.total_bytes(model),
     )
     return jsonify(job), 202

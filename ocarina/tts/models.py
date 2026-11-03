@@ -110,11 +110,14 @@ def is_installed(model):
 
 def _progress_class(state, on_progress):
     class Progress(tqdm):
-        "Counts bytes of the file downloads only (not the 'N files' bar)."
+        """
+        Counts bytes of the file downloads only: not the 'N files' bar, and not the "Reconstructing"
+        bar that Hugging Face's fast downloader shows for the same bytes a second time.
+        """
 
         def update(self, n=1):
             result = super().update(n)
-            if self.unit == "B":
+            if self.unit == "B" and not str(self.desc or "").startswith("Reconstructing"):
                 state["done"] += n
                 on_progress(min(state["done"], state["total"]), state["total"])
             return result

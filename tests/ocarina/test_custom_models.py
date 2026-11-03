@@ -98,3 +98,18 @@ def test_a_broken_models_file_does_not_hide_the_shipped_models(client, app):
         f.write("{not json")
     assert len(client.get(MODELS).json) >= 2
     assert [e["id"] for e in client.get("/ocarina/api/tts/engines").json["engines"]] == ["mlx-chatterbox", "mlx-audio8"]
+
+
+def test_download_progress_ignores_the_reconstructing_bar():
+    "Hugging Face shows the same bytes twice (downloading and reconstructing); only one may count."
+    seen = []
+    progress = model_files._progress_class({"done": 0, "total": 100}, lambda d, t: seen.append(d))  # pylint: disable=protected-access
+    download = progress(total=100, unit="B", desc="Downloading bytes", disable=False)
+    rebuild = progress(total=100, unit="B", desc="Reconstructing (incomplete total...)", disable=False)
+    download.update(40)
+    rebuild.update(40)
+    download.update(30)
+    assert seen == [40, 70]
+    files = progress(total=3, unit="it", desc="Fetching 3 files", disable=False)
+    files.update(1)
+    assert seen == [40, 70]
