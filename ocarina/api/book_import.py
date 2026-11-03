@@ -22,7 +22,7 @@ from lute.models.repositories import BookRepository
 
 bp = Blueprint("ocarina_book_import", __name__, url_prefix="/ocarina/api")
 
-MAX_TITLE = 255
+MAX_TITLE = 200  # the size of the title column
 MAX_SOURCE = 1000
 PDF_NOTE = "PDF text can be inaccurate because of how PDFs are encoded. Check it before saving."
 

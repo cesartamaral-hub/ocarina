@@ -7,6 +7,10 @@ export type Book = {
   hasAudio: boolean
   ocarinaAudio: boolean
   pages: number
+  currentPage: number
+  sourceUri: string
+  tags: string[]
+  archived: boolean
 }
 
 export type Sentence = { page: number; text: string; start?: number }
@@ -21,7 +25,12 @@ export type BookSentences = {
   sentences: Sentence[]
 }
 
-export const getBooks = () => fetch(`${API}/books`).then((r) => json<Book[]>(r))
+export const getBooks = (archived = false) => fetch(`${API}/books?archived=${archived}`).then((r) => json<Book[]>(r))
+
+export const changeBook = (id: number, change: Partial<Pick<Book, 'title' | 'sourceUri' | 'tags' | 'archived'>>) =>
+  send<Book>('PATCH', `${API}/books/${id}`, change)
+
+export const deleteBook = (id: number) => fetch(`${API}/books/${id}`, { method: 'DELETE' }).then((r) => json<{ deleted: number }>(r))
 
 export const getSentences = (id: number) =>
   fetch(`${API}/books/${id}/sentences`).then((r) => json<BookSentences>(r))

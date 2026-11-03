@@ -1,50 +1,105 @@
 """
 JSON API for books.
 
-    GET /ocarina/api/books                  all books
-    GET /ocarina/api/books/<id>/sentences   sentences, with start times if audio was generated
+    GET    /ocarina/api/books                  books (?archived=true for the archived ones)
+    PATCH  /ocarina/api/books/<id>             change title, source, tags or archived
+    DELETE /ocarina/api/books/<id>             delete a book (and audio Ocarina made for it)
+    GET    /ocarina/api/books/<id>/sentences   sentences, with start times if audio was generated
 """
 
 import json
 import os
 
-from flask import Blueprint, current_app, jsonify
-from sqlalchemy import text
+from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
+from lute.models.book import Book as DBBook, BookTag
 from lute.models.repositories import BookRepository
 from ocarina.tts.book_audio import book_sentences, is_ocarina_audio, timings_path
 
 bp = Blueprint("ocarina_books", __name__, url_prefix="/ocarina/api")
 
 
+MAX_TITLE, MAX_SOURCE, MAX_TAG = 200, 1000, 20
+
+
+def _book_json(book, audio_dir):
+    page = next((t.order for t in book.texts if t.id == book.current_tx_id), 1)
+    return {
+        "id": book.id,
+        "title": book.title,
+        "language": book.language.name,
+        "hasAudio": bool(book.audio_filename),
+        "ocarinaAudio": is_ocarina_audio(audio_dir, book.audio_filename),
+        "archived": bool(book.archived),
+        "pages": book.page_count,
+        "currentPage": page,
+        "sourceUri": book.source_uri or "",
+        "tags": sorted(t.text for t in book.book_tags),
+    }
+
+
 @bp.route("/books", methods=["GET"])
 def books():
-    "All non-archived books with language and audio info."
+    "Books with language, audio and reading progress; the archived ones only with ?archived=true."
+    archived = request.args.get("archived") == "true"
     audio_dir = current_app.env_config.useraudiopath
-    rows = db.session.execute(
-        text(
-            "select b.BkID, b.BkTitle, l.LgName, b.BkAudioFilename, b.BkArchived, "
-            "(select count(*) from texts t where t.TxBkID = b.BkID) "
-            "from books b inner join languages l on l.LgID = b.BkLgID "
-            "order by b.BkTitle"
-        )
-    )
-    return jsonify(
-        [
-            {
-                "id": r[0],
-                "title": r[1],
-                "language": r[2],
-                "hasAudio": bool(r[3]),
-                "ocarinaAudio": is_ocarina_audio(audio_dir, r[3]),
-                "archived": bool(r[4]),
-                "pages": r[5],
-            }
-            for r in rows
-            if not r[4]
-        ]
-    )
+    found = db.session.query(DBBook).filter(DBBook.archived == archived).all()
+    found.sort(key=lambda b: (b.language.name.lower(), b.title.lower()))
+    return jsonify([_book_json(b, audio_dir) for b in found])
+
+
+@bp.route("/books/<int:book_id>", methods=["PATCH"])
+def change_book(book_id):
+    "Change a book's title, source address, tags, or whether it is archived."
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    body = request.get_json(silent=True) or {}
+    if "title" in body:
+        title = (body["title"] or "").strip()
+        if not title or len(title) > MAX_TITLE:
+            return jsonify({"error": f"The title is required and at most {MAX_TITLE} characters"}), 400
+        same = BookRepository(db.session).find_by_title(title, book.language_id)
+        if same is not None and same.id != book.id:
+            return jsonify({"error": "A book with this title already exists in this language"}), 409
+        book.title = title
+    if "sourceUri" in body:
+        source = (body["sourceUri"] or "").strip()
+        if len(source) > MAX_SOURCE:
+            return jsonify({"error": f"The source address is at most {MAX_SOURCE} characters"}), 400
+        book.source_uri = source or None
+    if "tags" in body:
+        tags = sorted({t.strip() for t in body["tags"] if t.strip()})
+        if any(len(t) > MAX_TAG for t in tags):
+            return jsonify({"error": f"A tag is at most {MAX_TAG} characters"}), 400
+        book.remove_all_book_tags()
+        for text_ in tags:
+            tag = db.session.query(BookTag).filter(BookTag.text == text_).first() or BookTag.make_book_tag(text_)
+            book.add_book_tag(tag)
+    if "archived" in body:
+        book.archived = bool(body["archived"])
+    db.session.add(book)
+    db.session.commit()
+    return jsonify(_book_json(book, current_app.env_config.useraudiopath))
+
+
+@bp.route("/books/<int:book_id>", methods=["DELETE"])
+def delete_book(book_id):
+    "Delete a book with its pages. Audio Ocarina generated for it goes too; your own recordings stay."
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    audio_dir = current_app.env_config.useraudiopath
+    generated = book.audio_filename if is_ocarina_audio(audio_dir, book.audio_filename) else None
+    db.session.delete(book)
+    db.session.commit()
+    if generated:
+        for suffix in ("", ".sentences.json"):
+            path = os.path.join(audio_dir, generated + suffix)
+            if os.path.exists(path):
+                os.remove(path)
+    return jsonify({"deleted": book_id})
 
 
 @bp.route("/books/<int:book_id>/sentences", methods=["GET"])
