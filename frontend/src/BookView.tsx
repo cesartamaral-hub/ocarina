@@ -1,33 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AudioBar } from './AudioBar'
 import { getJob, getSentences, startAudio, type BookSentences, type Job } from './api'
-
-const SPEED_KEY = 'ocarina.speed'
-const MIN_SPEED = 0.5
-
-function loadSpeed(language: string): number {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SPEED_KEY) ?? '{}')
-    return saved[language] ?? 1
-  } catch {
-    return 1
-  }
-}
-
-function saveSpeed(language: string, speed: number) {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SPEED_KEY) ?? '{}')
-    localStorage.setItem(SPEED_KEY, JSON.stringify({ ...saved, [language]: speed }))
-  } catch {
-    // Storage can be unavailable; the speed just won't be remembered.
-  }
-}
 
 export function BookView({ bookId }: { bookId: number }) {
   const [book, setBook] = useState<BookSentences | null>(null)
   const [error, setError] = useState('')
   const [job, setJob] = useState<Job | null>(null)
   const [audioVersion, setAudioVersion] = useState(0)
-  const [speed, setSpeed] = useState(1)
   const [pause, setPause] = useState(0.5)
   const [current, setCurrent] = useState(-1)
   const [needsModel, setNeedsModel] = useState(false)
@@ -35,22 +14,11 @@ export function BookView({ bookId }: { bookId: number }) {
 
   const load = useCallback(() => {
     getSentences(bookId).then(
-      (b) => {
-        setBook(b)
-        setSpeed(loadSpeed(b.language))
-      },
+      (b) => setBook(b),
       (e) => setError(e.message),
     )
   }, [bookId])
   useEffect(load, [load])
-
-  // Pitch-preserving slow playback; applied again whenever the audio element is replaced.
-  useEffect(() => {
-    const el = audio.current
-    if (!el) return
-    el.playbackRate = speed
-    el.preservesPitch = true
-  }, [speed, audioVersion, book?.hasAudio])
 
   // Poll a running job until it finishes.
   useEffect(() => {
@@ -83,9 +51,8 @@ export function BookView({ bookId }: { bookId: number }) {
     }
   }
 
-  function onTimeUpdate() {
-    if (!book?.hasTimings || !audio.current) return
-    const t = audio.current.currentTime
+  function onTime(t: number) {
+    if (!book?.hasTimings) return
     let idx = -1
     book.sentences.forEach((s, i) => {
       if (s.start !== undefined && s.start <= t) idx = i
@@ -104,6 +71,17 @@ export function BookView({ bookId }: { bookId: number }) {
   if (!book) return <p className="muted">Loading…</p>
 
   const running = job?.state === 'running'
+  const pauseAndGenerate = (
+    <>
+      <label>
+        Pause between sentences {pause.toFixed(1)} s
+        <input type="range" min={0.2} max={2} step={0.1} value={pause} onChange={(e) => setPause(Number(e.target.value))} />
+      </label>
+      <button disabled={running} onClick={() => generate()}>
+        {book?.hasAudio ? 'Regenerate audio' : 'Generate audio'}
+      </button>
+    </>
+  )
   return (
     <>
       <p>
@@ -111,56 +89,20 @@ export function BookView({ bookId }: { bookId: number }) {
       </p>
       <h1>{book.title}</h1>
       <p className="muted">
-        {book.language} · <a href={`/read/${book.id}`}>Open in Lute reader</a>
+        {book.language} · <a href={`#/book/${book.id}/read/${book.currentPage}`}>Read</a> ·{' '}
+        <a href={`/read/${book.id}`}>Open in Lute reader</a>
       </p>
 
       <section className="panel">
-        {book.hasAudio && (
-          <audio
-            ref={audio}
-            key={audioVersion}
-            controls
-            src={`/useraudio/stream/${book.id}?v=${audioVersion}`}
-            onTimeUpdate={onTimeUpdate}
-            onLoadedMetadata={() => {
-              if (audio.current) {
-                audio.current.playbackRate = speed
-                audio.current.preservesPitch = true
-              }
-            }}
-          />
+        {book.hasAudio ? (
+          <AudioBar bookId={book.id} language={book.language} version={audioVersion} audioRef={audio} onTime={onTime}>
+            {pauseAndGenerate}
+          </AudioBar>
+        ) : (
+          <div className="controls">
+            {pauseAndGenerate}
+          </div>
         )}
-        <div className="controls">
-          <label>
-            Speed {speed.toFixed(2)}×
-            <input
-              type="range"
-              min={MIN_SPEED}
-              max={1}
-              step={0.05}
-              value={speed}
-              onChange={(e) => {
-                const s = Number(e.target.value)
-                setSpeed(s)
-                saveSpeed(book.language, s)
-              }}
-            />
-          </label>
-          <label>
-            Pause between sentences {pause.toFixed(1)} s
-            <input
-              type="range"
-              min={0.2}
-              max={2}
-              step={0.1}
-              value={pause}
-              onChange={(e) => setPause(Number(e.target.value))}
-            />
-          </label>
-          <button disabled={running} onClick={() => generate()}>
-            {book.hasAudio ? 'Regenerate audio' : 'Generate audio'}
-          </button>
-        </div>
         {job && running && (
           <div className="progress">
             <progress value={job.done} max={job.total || 1} />

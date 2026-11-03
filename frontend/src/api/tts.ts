@@ -1,0 +1,38 @@
+import { API, json } from './client'
+
+export type Job = {
+  id: string
+  state: 'running' | 'done' | 'error'
+  done: number
+  total: number
+  error?: string
+}
+
+export type Model = {
+  id: string
+  name: string
+  description: string
+  license: string
+  languages: string[]
+  installed: boolean
+  sizeBytes: number
+  downloadJob: string | null
+  benchmark?: { secondsPerSecondOfAudio: number; machine: string }
+}
+
+export const getModels = () => fetch(`${API}/tts/models`).then((r) => json<Model[]>(r))
+
+export const downloadModel = (id: string) =>
+  fetch(`${API}/tts/models/${id}/download`, { method: 'POST' }).then((r) => json<Job>(r))
+
+export const deleteModel = (id: string) =>
+  fetch(`${API}/tts/models/${id}`, { method: 'DELETE' }).then((r) => json<{ ok: boolean }>(r))
+
+export const getJob = (id: string) => fetch(`${API}/jobs/${id}`).then((r) => json<Job>(r))
+
+export const startAudio = (id: number, opts: { replace?: boolean; pause?: number }) =>
+  fetch(`${API}/books/${id}/audio`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts),
+  }).then((r) => json<Job>(r))
