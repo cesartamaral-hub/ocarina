@@ -1,188 +1,33 @@
 # Ocarina plan
 
-Personal macOS app for studying Dutch, Polish and French. Fork of Lute v3 (MIT).
-Fork: `cesartamaral-hub/ocarina` (remote `upstream` = `LuteOrg/lute-v3`).
+Personal macOS app for studying Dutch, Polish and French (hard fork of Lute v3).
+How to work on it: `CLAUDE.md`. How it fits together: `docs/ocarina/architecture.md`.
+Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2app).
 
-## Goals
+## Status (2026-11-03)
 
-1. Double-clickable Mac app: no terminal, no visible localhost.
-2. Keep Lute's Python backend; replace the Flask HTML screens with a React frontend.
-3. Generate audio for texts with a local TTS engine, with a model picker.
+| Area | State |
+|---|---|
+| Environment, test baseline | Done. 12 Japanese/MeCab tests fail on purpose (not studying Japanese). |
+| TTS service (`ocarina/tts`) | Done: MLX Chatterbox, worker process, sentence cache, CLI, model downloads. |
+| Book audio API | Done: whole-book jobs, sentence timings, never overwrites your recordings without `replace`. |
+| React app: books, book view, Settings (models), reader | Working. Reader: word panel, statuses, hover card, phrases, bulk status, audio following, page text edit, pictures, other examples, dictionaries (frame shown blank in preview, unverified). |
+| Packaged `Ocarina.app` | Builds and ran an audio job. Window itself and double-click not checked; unsigned. |
 
-Not goals: Japanese (MeCab not installed, those tests are ignored), Windows/Linux, App Store.
-
-## Environment (verified 2026-11-03)
-
-- M1 Max, 32 GB, macOS 27.0, Xcode installed. ffmpeg 9.0.2, uv, pyenv, brew present.
-- Node 26.13.0 / npm 11.20.0 (Homebrew), for the React frontend.
-- Project: `~/Lute-Ocarina/ocarina` (branch `develop`).
-- Submodule `lute/db/language_defs` is initialized. `.gitmodules` uses an SSH URL that fails
-  here; the local git config overrides it to HTTPS. Decide whether to commit the HTTPS URL.
-- Python venvs:
-  - `.venv`: uv Python 3.12.13, for development and tests. **Cannot be packaged by py2app.**
-  - `.venv-build`: pyenv Python 3.12.13 (`--enable-shared`), for py2app builds.
-- Tests need `lute/config/config.yml` (git-ignored) with `ENV: dev`, a `DATAPATH`, and
-  `DBNAME: test_lute.db` (same three lines as Lute's CI).
-
-### Test baseline
-
-`pytest --ignore=tests/acceptance --ignore=tests/playwright`: **495 passed, 12 failed.**
-
-- All 12 failures are Japanese/MeCab. Ignore them.
-  Unconfirmed: `test_rendering.py::test_bug_fix_ru_at_end_of_sentence` (assumed Japanese).
-- pytest must be `<9` (venv has 8.4.2): pytest-bdd 7.3 breaks on pytest 9. This pin is only in
-  the venv, not in `pyproject.toml` (kept out to stay merge-friendly with upstream).
-
-## Packaging spike (done, `spike/`)
-
-`spike/ocarina_app.py` writes its own `config.yml` to `~/Library/Application Support/Ocarina`,
-runs waitress on `127.0.0.1` on a random free port in a thread, and opens a pywebview window.
-`spike/setup.py` builds it with py2app.
-
-- Result: `Ocarina.app`, 56 MB. Opened with `open`, it served the index page and static CSS (HTTP 200).
-- **Not verified:** the window itself (no screenshot possible), code signing, notarization.
-- Gotchas:
-  - py2app 0.28.10 fails on uv's standalone Python (`zlib` has no `__file__`). Use the pyenv build.
-  - perth (a Chatterbox dependency) needs `setuptools<81`.
-
-## TTS benchmark (done, `~/Lute-Ocarina/bench`)
-
-Test: Chatterbox Multilingual, ~25-word text per language, second (post-warmup) run.
-
-| Engine | Dutch | Polish | French | Time per second of audio | Load | Peak RAM |
-|---|---|---|---|---|---|---|
-| MLX (`mlx-audio`, `mlx-community/chatterbox-multilingual-v3`) | 3.3 s | 3.8 s | 3.3 s | **~0.54** | 2.5 s | 3.5 GB |
-| PyTorch MPS | 27.7 s | 30.3 s | 27.0 s | ~4.2 | 11.5 s | 5.3 GB |
-| PyTorch CPU | 33.2 s | 37.5 s | 33.0 s | ~5.3 | 11.7 s | 7.2 GB |
-
-- **Decision: MLX is the default engine.** Faster than real time; PyTorch MPS is only ~20% faster than CPU.
-- Licenses: `mlx-audio` MIT; model MIT (based on `ResembleAI/chatterbox`).
-- The MLX model has **no built-in voice**; it needs a reference clip (`ref_audio`). Ocarina must
-  ship a default reference clip and let the user choose others (voice cloning is built in).
-  The benchmark used `out_cpu_nl.wav` for all three languages.
-- **Not verified:** audio quality (nobody has listened to the clips yet), long texts, whether the
-  MLX model works in a worker process, first-launch weight download (88 s on this connection).
-
-## Architecture
-
-```
-Ocarina.app (py2app)
- ├─ pywebview window ──► React frontend (built static files)
- ├─ Flask/waitress backend on 127.0.0.1:<random port>  (Lute, JSON API added)
- └─ TTS worker process (MLX by default) ◄── job queue ── backend
-User data: ~/Library/Application Support/Ocarina  (db, config, audio, models)
-```
-
-- **Frontend:** React, built with Node/Vite, served as static files by Flask. Screens are replaced
-  one at a time; Lute's HTML routes stay until their React replacement exists.
-- **Backend:** keep Lute's models and services. Add JSON endpoints beside the existing routes
-  instead of rewriting them, so upstream merges stay manageable.
-- **Models are not bundled.** Weights download on demand into the user data folder.
-
-### TTS service
-
-- Interface: `load(model)`, `synthesize(text, language, voice)`, `unload()`.
-- Runs in a **child process** (idea from Handy): a crash or out-of-memory kill takes down only
-  the worker; the supervisor can retry on another device and unload to give memory back.
-- Audio is generated **sentence by sentence in the background**, saved per sentence (so edits
-  re-generate only what changed), and playable as soon as the first sentences are ready.
-- **Pace for learners.** The MLX voice sounds fine but is too fast for a learner (user feedback,
-  2026-11-03). Requirements:
-  - Playback speed control in the reader (about 0.6x to 1.0x), using the browser's
-    pitch-preserving playback (`preservesPitch`). Audio is stored at its natural speed; no
-    regeneration needed to change pace. Remember the chosen speed per language.
-  - Adjustable pause between sentences.
-  - Later: ship a slower, clearer reference voice (the reference clip sets speaking style).
-    Not tested yet. Slowed samples made with ffmpeg `atempo` (0.85x, 0.7x) are in `bench/`;
-    their quality is unchecked.
-- Attach the result to the book via Lute's existing audio mechanism (`lute/useraudio`);
-  check whether per-sentence files need a new mapping for sentence-level playback.
-
-### Model catalog (inspired by Handy's `catalog.json`)
-
-`tts_catalog.json`, one entry per engine/model: `id`, `name`, `description`, `languages`,
-`license`, `family`, `repository`, pinned `revision`, `files` (size, sha256), `device`
-(`mlx` / `mps` / `cpu` / `auto`), and measured speed from our benchmark. The Settings screen
-filters by the text's language and offers download, progress, delete, and "preview voice".
-
-| Engine | Role | Notes |
-|---|---|---|
-| Chatterbox Multilingual v3 (MLX) | Default | nl, pl, fr; MIT; measured above |
-| Chatterbox Multilingual (PyTorch) | Fallback | Slower; keep only if MLX proves unreliable |
-| CosyVoice2 | Backup | Not benchmarked yet |
-| Parkiet | Optional, Dutch only | Not benchmarked yet |
-| Voxtral TTS (MLX) | Candidate | Lists nl and fr but not pl; not tested |
-
-Check each model's license before recommending or bundling it.
-
-## Milestones
-
-1. **Listen and decide.** DONE: all three MLX voices sound OK; too fast for a learner (see Pace).
-2. **Housekeeping.** DONE: Node 26.13.0 / npm 11.20.0 installed (Homebrew). `.gitmodules` left
-   as upstream (SSH); the HTTPS override stays in local git config only, to keep upstream merges
-   clean. Test leftover `tests/zz_bkp/` is excluded via `.git/info/exclude`. Old Lute data
-   (3 languages, 7 books, 543 terms, 5 audio files) was imported into
-   `~/Library/Application Support/Ocarina`.
-3. **TTS service.** DONE (`ocarina/tts/`): worker process with restart, MLX engine, reference
-   voice, per-sentence cache, CLI (`python -m ocarina.tts say ...`). Still open: a long-text
-   test and a first-run model download manager (dev venv downloads from Hugging Face).
-4. **Backend API.** IN PROGRESS. Done (`ocarina/api/tts_routes.py`, registered with 2 lines in
-   `lute/app_factory.py`): `GET /ocarina/api/tts/models`, `POST /ocarina/api/books/<id>/audio`
-   (background job, one at a time; refuses to overwrite a user's own audio without
-   `replace=true`), `GET /ocarina/api/jobs/<id>`, `GET /ocarina/api/books/<id>/audio/sentences`.
-   Sentences come from Lute's language parser. The book's mp3 goes in Lute's single audio slot;
-   sentence start times go in a sidecar `<audio>.sentences.json` (Lute's bookmarks stay the
-   user's). Checked end to end with the real model on a scratch copy of your data (17 sentences
-   of "Mijn naam is Carla", 36 s). Language to TTS code is by name (Dutch, Polish/Polski,
-   French only). Still open: audio is only playable when the whole job finishes (no early
-   playback), JSON endpoints for books/terms, cancel/queue, and `soundfile` MP3 writing must be
-   checked inside the py2app bundle.
-5. **React shell.** IN PROGRESS. Done: Vite + React + TypeScript in `frontend/`, built into
-   `ocarina/web/dist` (git-ignored) and served by Flask at `/ocarina/app/`. Screens: book list
-   (by language) and a book view with generate-audio button and progress, audio player with
-   playback speed (0.5x to 1.0x, pitch preserved, remembered per language), pause setting,
-   sentence list that highlights while playing and seeks on click. Checked in the browser on a
-   scratch copy of your data: playback at 0.7x, click-to-seek, and a full generate job (23
-   sentences). Still open: the real reader (word click, terms, statuses) still lives in Lute's
-   screens (link "Open in Lute reader"). Build with `cd frontend && npm run build`.
-   **Packaged app now includes the frontend and TTS** (`spike/build.sh`): the launcher opens
-   `/ocarina/app/`, and a full audio job (23 sentences, real model) ran inside `Ocarina.app`
-   on a scratch copy of the data (`OCARINA_APP_DIR` overrides the data folder for testing).
-   Lessons: (1) mlx is a namespace package, so `build.sh` copies it into the bundle by hand and
-   `setup.py` excludes it; (2) the TTS worker must run on the bundle's bare interpreter
-   (`Contents/MacOS/python`, UTF-8 mode, with `PYTHONPATH` set from `RESOURCEPATH`), not through
-   the app launcher, which starts Python in ASCII mode and breaks `mlx_audio`;
-   (3) the bundle is 550 MB (transformers, scipy and others): trim later. Not yet checked: the
-   window itself by eye, double-clicking from Finder, code signing, a Mac without the Hugging
-   Face cache (first run must download the 2.7 GB model).
-6. **Settings: TTS model catalog.** MOSTLY DONE. Settings screen (`#/settings`) lists catalog
-   models with language, license, size and speed; Download (with byte progress), Delete, and an
-   "Installed" state. Backend: `ocarina/tts/models.py`, `POST /tts/models/<id>/download`,
-   `DELETE /tts/models/<id>`; generating audio without the model returns
-   `model_not_installed` and the book page links to Settings. Files go in the standard Hugging
-   Face cache (the MLX library looks there); after a download `refs/main` is pointed at the
-   pinned revision and the TTS worker runs with `HF_HUB_OFFLINE=1`, so it never downloads by
-   itself. Checked: a fresh 3.2 GB download from the UI into an empty cache, then audio
-   generated offline from it, then delete (refused audio again). Catalog now lists
-   `repositories` with exact files and sizes (the installed check compares file sizes, not
-   hashes). Still open: voice preview, a second model (CosyVoice2/Parkiet, only the catalog
-   entry plus an engine), reference-voice picker, rebuild of `Ocarina.app` with these changes.
-7. **Packaging for real.** Add the React build and TTS worker to the py2app bundle, confirm the
-   window opens by double-click, then sign and (optionally) notarize.
-8. **Port the remaining screens**, then retire the Flask templates one by one.
+## Next (rough order)
+1. Commit the current work in small commits (a large pile is uncommitted).
+2. Port remaining Lute screens to React: term list and bulk edit, term tags, language settings, book import (text, epub, pdf, URL), backups, stats.
+3. Audio: early playback while a book is still being voiced, cancel/queue jobs, voice preview and reference-voice picker, a slower learner voice, a second engine (CosyVoice2 or Parkiet).
+4. Reader polish: remember current page on leaving, Bing image search, flash messages, keyboard help.
+5. Packaging: check the window, trim the 470 MB bundle, first-run flow, then retire Lute's Flask templates.
+6. Later: speech-to-text for pronunciation practice (Handy-style).
 
 ## Decisions
-
-- **Hard fork (2026-11-03).** Ocarina does not track upstream `lute-v3`. The `upstream` remote
-  stays only to read or cherry-pick upstream fixes by hand. So we no longer need to keep edits to
-  Lute's own code small: change or delete Lute modules, templates and tests freely when the
-  React replacement exists. (Earlier notes about keeping upstream merges clean no longer apply.)
-- **Unsigned for now (2026-11-03).** No code signing or notarization yet; the app is opened with
-  right-click, Open. Revisit later.
+- **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; change or delete Lute modules once their React replacement exists.
+- **Unsigned app** for now (open with right-click, Open). Revisit later.
+- **App icon** (2026-11-03): ocarina glyph, paper white on green; sources in `assets/`.
+- **Preferences on the server** (`ocarina_prefs.json`), not in the web view: its storage is lost with every new port.
 
 ## Open questions
-
-- Do the MLX clips sound good in all three languages, and which reference voice(s) to ship?
-- Is `lute/db/language_defs` still the right place for Dutch, Polish and French definitions, or
-  do we want to trim the language list?
-- Later, optional: speech-to-text for pronunciation or shadowing practice (Handy-style).
+- Which reference voice(s) to ship, and is a slower one clearer for learning?
+- Keep Lute's language definitions (`lute/db/language_defs`) or trim the language list?
