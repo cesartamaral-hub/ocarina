@@ -24,7 +24,7 @@ else
   fi
 fi
 
-.venv/bin/python spike/dev_server.py "$DATA" 5001 &
+.venv/bin/python desktop/dev_server.py "$DATA" 5001 &
 BACKEND=$!
 trap 'kill $BACKEND 2>/dev/null' EXIT
 cd frontend

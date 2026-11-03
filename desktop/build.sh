@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build dist/Ocarina.app. Run from the spike/ folder.
+# Build dist/Ocarina.app. Run from the desktop/ folder.
 # Needs ../.venv-build (pyenv Python 3.12) and a built frontend (cd ../frontend && npm run build).
 set -e
 cd "$(dirname "$0")"

@@ -23,9 +23,10 @@ setup(
             ],
             "includes": ["sqlite3", "yaml"],
             "excludes": ["mlx"],  # copied by hand in build.sh, see there
+            "iconfile": "../assets/Ocarina.icns",
             "plist": {
                 "CFBundleName": "Ocarina",
-                "CFBundleIdentifier": "app.ocarina.spike",
+                "CFBundleIdentifier": "app.ocarina.Ocarina",
                 "NSHighResolutionCapable": True,
             },
         }

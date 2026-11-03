@@ -1,5 +1,5 @@
 """
-Packaging spike: Lute's Flask backend in a native pywebview window.
+The desktop app: Lute's Flask backend and the React frontend in a native pywebview window.
 No terminal, no visible localhost URL (loopback only, random free port).
 """
 import os
