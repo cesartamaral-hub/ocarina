@@ -16,6 +16,7 @@ import math
 import os
 import struct
 import sys
+import traceback
 import wave
 
 MLX_CHATTERBOX_REPO = "mlx-community/chatterbox-multilingual-v3"
@@ -100,6 +101,7 @@ def main():
             fields, engine = _handle(engine, req)
             resp = {"id": req["id"], "ok": True, **fields}
         except Exception as e:  # pylint: disable=broad-exception-caught
+            traceback.print_exc()  # stderr: the parent only gets the one-line message
             resp = {"id": req["id"], "ok": False, "error": f"{type(e).__name__}: {e}"}
         proto_out.write(json.dumps(resp) + "\n")
         proto_out.flush()

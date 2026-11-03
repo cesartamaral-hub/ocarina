@@ -1,0 +1,56 @@
+:root {
+  --bg: #fbfaf8;
+  --fg: #1f1d1a;
+  --muted: #6d675f;
+  --panel: #f1eee8;
+  --line: #ded9d0;
+  --accent: #2f6f5e;
+  --accent-fg: #fff;
+  --current: #fff1b8;
+  --error: #b3261e;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1917;
+    --fg: #ece8e0;
+    --muted: #9b958a;
+    --panel: #24221f;
+    --line: #3a3733;
+    --accent: #6cc3a8;
+    --accent-fg: #11201b;
+    --current: #4a4220;
+    --error: #ff8a80;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.top { padding: 12px 24px; border-bottom: 1px solid var(--line); }
+.brand { font-weight: 600; color: var(--fg); letter-spacing: 0.02em; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.6rem; margin: 0.4em 0 0.2em; }
+h2 { font-size: 1rem; margin: 1.6em 0 0.4em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.error { color: var(--error); }
+.books { list-style: none; padding: 0; margin: 0; }
+.books li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: 16px 0 20px; position: sticky; top: 8px; z-index: 1; }
+audio { width: 100%; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: end; margin-top: 10px; }
+.controls label { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); gap: 2px; }
+button { font: inherit; padding: 6px 14px; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: default; }
+.progress { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.progress progress { flex: 1; }
+.sentences { padding-left: 1.6em; }
+.sentences li { padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.sentences li::marker { color: var(--muted); font-size: 0.8em; }
+.sentences li:hover { background: var(--panel); }
+.sentences li.current { background: var(--current); }

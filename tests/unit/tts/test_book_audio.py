@@ -81,3 +81,24 @@ def test_book_with_own_audio_needs_replace(app, client):
     r = client.post(f"/ocarina/api/books/{book_id}/audio", json={"replace": True})
     assert r.status_code == 202
     assert _wait(client, r.json["id"])["state"] == "done"
+
+
+def test_books_and_sentences_api(app, client):
+    "The book list and per-book sentences are served as JSON."
+    with app.app_context():
+        book_id = _dutch_book("Api book").id
+    books = client.get("/ocarina/api/books").json
+    mine = next(b for b in books if b["id"] == book_id)
+    assert mine["language"] == "Dutch" and mine["pages"] == 2 and not mine["hasAudio"]
+    got = client.get(f"/ocarina/api/books/{book_id}/sentences").json
+    assert got["hasTimings"] is False
+    assert [s["text"] for s in got["sentences"]][0] == "Hallo!"
+    assert client.get("/ocarina/api/books/99999/sentences").status_code == 404
+
+
+def test_frontend_is_served_with_client_routes(client):
+    "Any path under /ocarina/app/ gets the single-page app (when it has been built)."
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), "..", "..", "..", "ocarina", "web", "dist")):
+        return
+    assert client.get("/ocarina/app/").status_code == 200
+    assert b"<div id=\"root\">" in client.get("/ocarina/app/book/1").data

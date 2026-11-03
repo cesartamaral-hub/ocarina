@@ -137,8 +137,24 @@ Check each model's license before recommending or bundling it.
    French only). Still open: audio is only playable when the whole job finishes (no early
    playback), JSON endpoints for books/terms, cancel/queue, and `soundfile` MP3 writing must be
    checked inside the py2app bundle.
-5. **React shell.** Vite project, served by Flask, loaded in the pywebview window; first screen:
-   book list and reader.
+5. **React shell.** IN PROGRESS. Done: Vite + React + TypeScript in `frontend/`, built into
+   `ocarina/web/dist` (git-ignored) and served by Flask at `/ocarina/app/`. Screens: book list
+   (by language) and a book view with generate-audio button and progress, audio player with
+   playback speed (0.5x to 1.0x, pitch preserved, remembered per language), pause setting,
+   sentence list that highlights while playing and seeks on click. Checked in the browser on a
+   scratch copy of your data: playback at 0.7x, click-to-seek, and a full generate job (23
+   sentences). Still open: the real reader (word click, terms, statuses) still lives in Lute's
+   screens (link "Open in Lute reader"). Build with `cd frontend && npm run build`.
+   **Packaged app now includes the frontend and TTS** (`spike/build.sh`): the launcher opens
+   `/ocarina/app/`, and a full audio job (23 sentences, real model) ran inside `Ocarina.app`
+   on a scratch copy of the data (`OCARINA_APP_DIR` overrides the data folder for testing).
+   Lessons: (1) mlx is a namespace package, so `build.sh` copies it into the bundle by hand and
+   `setup.py` excludes it; (2) the TTS worker must run on the bundle's bare interpreter
+   (`Contents/MacOS/python`, UTF-8 mode, with `PYTHONPATH` set from `RESOURCEPATH`), not through
+   the app launcher, which starts Python in ASCII mode and breaks `mlx_audio`;
+   (3) the bundle is 550 MB (transformers, scipy and others): trim later. Not yet checked: the
+   window itself by eye, double-clicking from Finder, code signing, a Mac without the Hugging
+   Face cache (first run must download the 2.7 GB model).
 6. **Settings: TTS model catalog.** Picker, download manager, voice preview.
 7. **Packaging for real.** Add the React build and TTS worker to the py2app bundle, confirm the
    window opens by double-click, then sign and (optionally) notarize.

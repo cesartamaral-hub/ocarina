@@ -5,8 +5,24 @@ setup(
     name="Ocarina",
     options={
         "py2app": {
-            "packages": ["lute", "webview", "waitress", "sqlalchemy", "flask_sqlalchemy"],
+            "packages": [
+                "lute",
+                "ocarina",
+                "webview",
+                "waitress",
+                "sqlalchemy",
+                "flask_sqlalchemy",
+                "mlx_audio",
+                "soundfile",
+                "_soundfile_data",
+                "huggingface_hub",
+                "transformers",
+                "tokenizers",
+                "safetensors",
+                "numpy",
+            ],
             "includes": ["sqlite3", "yaml"],
+            "excludes": ["mlx"],  # copied by hand in build.sh, see there
             "plist": {
                 "CFBundleName": "Ocarina",
                 "CFBundleIdentifier": "app.ocarina.spike",

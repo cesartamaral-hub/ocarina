@@ -11,6 +11,28 @@ import sys
 import threading
 
 
+def worker_command_and_env():
+    """
+    Command and environment that start a worker process.
+
+    Inside a py2app bundle the bare interpreter (sys.executable, in
+    UTF-8 mode) is used with the bundle's library folders on its path.
+    The app's own launcher is not used: it starts Python in ASCII mode,
+    which breaks libraries that read files without an encoding.
+    """
+    env = {**os.environ, "PYTORCH_ENABLE_MPS_FALLBACK": "1", "PYTHONUTF8": "1"}
+    if getattr(sys, "frozen", False):
+        lib = os.path.join(os.environ["RESOURCEPATH"], "lib")
+        env["PYTHONPATH"] = os.pathsep.join(
+            [
+                os.path.join(lib, "python3.12"),
+                os.path.join(lib, "python312.zip"),
+                os.path.join(lib, "python3.12", "lib-dynload"),
+            ]
+        )
+    return [sys.executable, "-m", "ocarina.tts.worker"], env
+
+
 class TtsError(Exception):
     "The worker reported an error or could not be used."
 
@@ -26,12 +48,9 @@ class Supervisor:
         self._lock = threading.Lock()
 
     def _start(self):
+        command, env = worker_command_and_env()
         self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
-            [sys.executable, "-m", "ocarina.tts.worker"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            text=True,
-            env={**os.environ, "PYTORCH_ENABLE_MPS_FALLBACK": "1"},
+            command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env
         )
         self._request({"op": "load", "engine": self.engine})
 

@@ -15,7 +15,9 @@ from waitress import create_server
 from lute.app_factory import create_app, data_initialization
 from lute.db import db
 
-APP_DIR = os.path.expanduser("~/Library/Application Support/Ocarina")
+APP_DIR = os.environ.get("OCARINA_APP_DIR") or os.path.expanduser(
+    "~/Library/Application Support/Ocarina"
+)
 
 
 def _write_config():
@@ -50,7 +52,7 @@ def main():
     port = _free_port()
     server = create_server(app, host="127.0.0.1", port=port)
     threading.Thread(target=server.run, daemon=True).start()
-    url = f"http://127.0.0.1:{port}/"
+    url = f"http://127.0.0.1:{port}/ocarina/app/"
     if not _wait_until_up(url):
         sys.exit("Backend did not start")
 
