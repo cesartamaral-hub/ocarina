@@ -113,3 +113,11 @@ button.secondary.on { border-color: var(--accent); }
 .chip.s0 { background: var(--s0); } .chip.s1 { background: var(--s1); } .chip.s2 { background: var(--s2); }
 .chip.s3 { background: var(--s3); } .chip.s4 { background: var(--s4); } .chip.s5 { background: var(--s5); }
 .refs .ref { margin: 0 0 10px; font-size: 0.9rem; }
+
+.title-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+a.button { padding: 6px 14px; border-radius: 6px; background: var(--accent); color: var(--accent-fg); text-decoration: none; }
+.panel.static { position: static; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form label { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); gap: 4px; }
+.form input:not([type='file']), .form select, .form textarea, .controls input:not([type='file']) { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.row-inline { display: flex; gap: 8px; }

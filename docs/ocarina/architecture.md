@@ -20,6 +20,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `audio.py` | `POST /books/<id>/audio` (job), `GET /books/<id>/audio/sentences` |
 | `jobs.py` | `GET /jobs/<id>`; one job at a time, in memory (audio and downloads share it) |
 | `tts_models.py` | `GET /tts/models`, `POST /tts/models/<id>/download`, `POST /tts/models/<id>/import` (copy from a folder, matched by file name and size), `DELETE /tts/models/<id>` |
+| `book_import.py` | `GET /languages`, `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |
 | `web.py` | serves the built frontend at `/ocarina/app/` (any sub-path gets `index.html`) |
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { loadPrefs } from './api'
 import { BookList } from './BookList'
 import { BookView } from './BookView'
+import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
 
@@ -19,6 +20,7 @@ function useRoute() {
     bookId: m ? Number(m[1]) : null,
     readPage: r ? Number(r[2]) : null,
     settings: hash === '#/settings',
+    newBook: hash === '#/new',
   }
 }
 
@@ -35,7 +37,7 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings } = useRoute()
+  const { bookId, readPage, settings, newBook } = useRoute()
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => setReady(true))
@@ -52,6 +54,8 @@ export default function App() {
       <main>
         {!ready ? null : settings ? (
           <Settings />
+        ) : newBook ? (
+          <NewBook />
         ) : bookId !== null && readPage !== null ? (
           <Reader key={bookId} bookId={bookId} pageNumber={readPage} />
         ) : bookId === null ? (

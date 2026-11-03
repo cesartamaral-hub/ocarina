@@ -15,7 +15,12 @@ export function BookList() {
   const languages = [...new Set(books.map((b) => b.language))]
   return (
     <>
-      <h1>Books</h1>
+      <div className="title-row">
+        <h1>Books</h1>
+        <a href="#/new" className="button">
+          Add a book
+        </a>
+      </div>
       {languages.map((lang) => (
         <section key={lang}>
           <h2>{lang}</h2>
