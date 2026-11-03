@@ -1,23 +1,19 @@
 """
-JSON API for generating book audio.
+JSON API for generating a book's audio.
 
-    GET  /ocarina/api/tts/models                 model catalog with install status
-    POST /ocarina/api/tts/models/<id>/download   download a model (a job)
-    DELETE /ocarina/api/tts/models/<id>          delete a model's files
-    POST /ocarina/api/books/<id>/audio           start a job (one at a time)
-    GET  /ocarina/api/jobs/<job_id>              job progress
-    GET  /ocarina/api/books/<id>/audio/sentences sentence start times
+    POST /ocarina/api/books/<id>/audio            start a job
+    GET  /ocarina/api/books/<id>/audio/sentences  sentence start times
 """
 
 import json
 import os
 import threading
-import uuid
 
 from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
+from ocarina.api import jobs
 from ocarina.tts import models as model_files
 from ocarina.tts.book_audio import (
     generate_book_audio,
@@ -28,23 +24,12 @@ from ocarina.tts.cache import SentenceCache
 from ocarina.tts.service import DEFAULT_VOICE
 from ocarina.tts.supervisor import Supervisor
 
-bp = Blueprint("ocarina_tts", __name__, url_prefix="/ocarina/api")
-
-_jobs = {}
-_lock = threading.Lock()
-
-
-def _catalog():
-    return model_files.load_catalog()
+bp = Blueprint("ocarina_audio", __name__, url_prefix="/ocarina/api")
 
 
 def _uses_real_engine(app):
     "False when tests swap in the fake engine, which needs no model files."
     return "OCARINA_TTS_ENGINE" not in app.config
-
-
-def _running_job():
-    return next((j for j in _jobs.values() if j["state"] == "running"), None)
 
 
 def _run_job(app, job, book_id, model, voice, pause):
@@ -83,82 +68,6 @@ def _run_job(app, job, book_id, model, voice, pause):
             supervisor.unload()
 
 
-def _run_download(job, model):
-    "Background thread: download a model's files."
-
-    def progress(done, total):
-        job["done"], job["total"] = done, total
-
-    try:
-        model_files.download(model, progress)
-        job["state"] = "done"
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        job["state"], job["error"] = "error", f"{type(e).__name__}: {e}"
-
-
-def _new_job(kind, **fields):
-    "Register a running job, or None if another one is already running."
-    with _lock:
-        if _running_job() is not None:
-            return None
-        job = {
-            "id": uuid.uuid4().hex,
-            "kind": kind,
-            "state": "running",
-            "done": 0,
-            "total": 0,
-            **fields,
-        }
-        _jobs[job["id"]] = job
-        return job
-
-
-@bp.route("/tts/models", methods=["GET"])
-def models():
-    "The model catalog, with whether each model is installed and its download size."
-    active = _running_job()
-    return jsonify(
-        [
-            {
-                **m,
-                "installed": model_files.is_installed(m),
-                "sizeBytes": model_files.total_bytes(m),
-                "downloadJob": active["id"]
-                if active and active.get("model_id") == m["id"]
-                else None,
-            }
-            for m in _catalog()
-        ]
-    )
-
-
-@bp.route("/tts/models/<model_id>/download", methods=["POST"])
-def download_model(model_id):
-    "Start downloading a model; returns the job."
-    model = model_files.find_model(model_id)
-    if model is None:
-        return jsonify({"error": "Unknown model"}), 404
-    if model_files.is_installed(model):
-        return jsonify({"error": "Model is already installed"}), 409
-    job = _new_job("download", model_id=model_id, total=model_files.total_bytes(model))
-    if job is None:
-        return jsonify({"error": "Another job is running"}), 409
-    threading.Thread(target=_run_download, args=(job, model), daemon=True).start()
-    return jsonify(job), 202
-
-
-@bp.route("/tts/models/<model_id>", methods=["DELETE"])
-def delete_model(model_id):
-    "Delete a model's files."
-    model = model_files.find_model(model_id)
-    if model is None:
-        return jsonify({"error": "Unknown model"}), 404
-    if _running_job() is not None:
-        return jsonify({"error": "Another job is running"}), 409
-    model_files.delete(model)
-    return jsonify({"ok": True})
-
-
 @bp.route("/books/<int:book_id>/audio", methods=["POST"])
 def start_audio(book_id):
     "Start generating audio for a book; returns the job."
@@ -178,7 +87,7 @@ def start_audio(book_id):
                 ),
                 409,
             )
-    model = model_files.find_model(body.get("model", _catalog()[0]["id"]))
+    model = model_files.find_model(body.get("model", model_files.load_catalog()[0]["id"]))
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
     # pylint: disable=protected-access
@@ -197,7 +106,7 @@ def start_audio(book_id):
     voice = body.get("voice") or DEFAULT_VOICE
     if not os.path.exists(voice):
         return jsonify({"error": "Voice file not found"}), 400
-    job = _new_job("audio", book_id=book_id)
+    job = jobs.new_job("audio", book_id=book_id)
     if job is None:
         return jsonify({"error": "Another job is running"}), 409
     threading.Thread(
@@ -206,15 +115,6 @@ def start_audio(book_id):
         daemon=True,
     ).start()
     return jsonify(job), 202
-
-
-@bp.route("/jobs/<job_id>", methods=["GET"])
-def job_status(job_id):
-    "Progress of a job."
-    job = _jobs.get(job_id)
-    if job is None:
-        return jsonify({"error": "No such job"}), 404
-    return jsonify(job)
 
 
 @bp.route("/books/<int:book_id>/audio/sentences", methods=["GET"])

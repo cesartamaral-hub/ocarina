@@ -59,6 +59,7 @@ def sentences(book_id):
         "language": book.language.name,
         "hasAudio": bool(book.audio_filename),
         "hasTimings": False,
+        "currentPage": next((t.order for t in book.texts if t.id == book.current_tx_id), 1),
         "sentences": book_sentences(book),
     }
     if book.audio_filename:
