@@ -323,7 +323,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                                 selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
                               }${it.termId !== null && multi.has(it.termId) ? ' multi' : ''}`}
                               onClick={(e) => onWordClick(e, it)}
-                              onMouseEnter={(e) => hoverCard.start(it, e.currentTarget)}
+                              onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
                               onMouseLeave={hoverCard.end}
                             >
                               {it.display}

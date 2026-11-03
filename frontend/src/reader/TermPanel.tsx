@@ -15,6 +15,7 @@ import {
 } from '../api'
 import { notify } from '../notices'
 import { statusForKey, statusKeyLabel } from '../shortcutKeys'
+import { Definition } from './Definition'
 import { STATUS_BUTTONS } from './statuses'
 
 // Dictionary urls contain [LUTE] (older ones ###) where the word goes; a leading * only marked
@@ -32,8 +33,6 @@ function dictName(d: Dictionary): string {
   }
 }
 
-// Dictionary types Lute shows inside its own window; the others are meant for a separate window.
-const canEmbed = (d: Dictionary) => d.dicttype.startsWith('embedded')
 
 export type Target = { termId: number | null; text: string; sentence: number }
 
@@ -62,7 +61,6 @@ export function TermPanel({
 }) {
   const [term, setTerm] = useState<Term | null>(null)
   const [saved, setSaved] = useState(true)
-  const [viewing, setViewing] = useState<Dictionary | null>(null)
   const [refs, setRefs] = useState<References | null>(null)
   const [showRefs, setShowRefs] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -183,21 +181,21 @@ export function TermPanel({
         ))}
       </div>
 
+      {!isNew || term.text ? (
+        <Definition
+          languageId={page.language.id}
+          text={term.displayText}
+          onUse={(meaning) => edit({ translation: term.translation.trim() ? `${term.translation.trim()}; ${meaning}` : meaning })}
+          onError={onError}
+        />
+      ) : null}
+
       <div className="dicts">
+        <span className="muted">Open in browser:</span>
         {page.language.dictionaries.map((d, i) => (
-          <span key={i} className="dict">
-            <button
-              className={`secondary${viewing === d ? ' on' : ''}`}
-              onClick={() => (canEmbed(d) ? setViewing(viewing === d ? null : d) : openOutside(d, term.displayText))}
-            >
-              {dictName(d)}
-            </button>
-            {canEmbed(d) && (
-              <button className="secondary" title="Open in browser" onClick={() => openOutside(d, term.displayText)}>
-                ↗
-              </button>
-            )}
-          </span>
+          <button key={i} className="secondary" title={`Open ${dictName(d)} in your browser`} onClick={() => openOutside(d, term.displayText)}>
+            {dictName(d)} ↗
+          </button>
         ))}
         {sentenceText && page.language.sentenceDictionaries[0] && (
           <button className="secondary" onClick={() => openOutside(page.language.sentenceDictionaries[0], sentenceText)}>
@@ -210,28 +208,6 @@ export function TermPanel({
           </button>
         )}
       </div>
-      {viewing && (
-        <div className="dict-view">
-          <iframe
-            title={dictName(viewing)}
-            src={dictUrl(viewing, term.displayText)}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            referrerPolicy="no-referrer"
-          />
-          <p className="muted">
-            Blank? This site doesn't allow being shown here.{' '}
-            <a
-              href={dictUrl(viewing, term.displayText)}
-              onClick={(e) => {
-                e.preventDefault()
-                openOutside(viewing, term.displayText)
-              }}
-            >
-              Open in browser
-            </a>
-          </p>
-        </div>
-      )}
 
       <label>
         Translation

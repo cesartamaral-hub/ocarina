@@ -271,3 +271,17 @@ button.link-button { background: none; border: 0; padding: 0; color: var(--accen
 .audio-versions label.inline { gap: 10px; }
 .audio-versions label.inline > .muted { padding-right: 4px; }
 .audio-versions .row-actions button { padding: 3px 10px; font-size: 0.85rem; }
+
+/* Word definition card in the side panel */
+.definition { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 0.92rem; }
+.definition ol { margin: 2px 0 6px; padding-left: 1.3em; }
+.definition li { margin: 3px 0; }
+.def-pos { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 6px; }
+.def-example { color: var(--muted); font-style: italic; font-size: 0.85rem; }
+.def-source { margin: 6px 0 0; }
+.definition button.use { font-size: 0.8rem; opacity: 0.8; }
+.definition button.use:hover, .definition button.use:focus-visible { opacity: 1; }
+.dicts > .muted { align-self: center; font-size: 0.8rem; }
+.def-lemma { margin-bottom: 8px; }
+.this-form { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.def-lemma-title { font-size: 0.8rem; color: var(--muted); }
