@@ -1,14 +1,15 @@
-import { API, json } from './client'
+import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download'
+  kind: 'audio' | 'download' | 'preview'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number
   queuePosition?: number
   book_id?: number
   model_id?: string
+  preview?: string
   error?: string
 }
 
@@ -67,3 +68,23 @@ export const startAudio = (id: number, opts: { replace?: boolean; pause?: number
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(opts),
   }).then((r) => json<Job>(r))
+
+export type Voice = { id: string; name: string; builtin: boolean; seconds: number; transcript: string }
+
+export const getVoices = () => fetch(`${API}/tts/voices`).then((r) => json<Voice[]>(r))
+
+export const addVoice = (clip: File, name: string, transcript: string) => {
+  const form = new FormData()
+  form.append('clip', clip)
+  if (name.trim()) form.append('name', name.trim())
+  if (transcript.trim()) form.append('transcript', transcript.trim())
+  return fetch(`${API}/tts/voices`, { method: 'POST', body: form }).then((r) => json<Voice>(r))
+}
+
+export const deleteVoice = (id: string) =>
+  fetch(`${API}/tts/voices/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) => json<{ deleted: string }>(r))
+
+export const previewVoice = (voice: string, language: string) =>
+  send<Job>('POST', `${API}/tts/voices/preview`, { voice, language })
+
+export const previewUrl = (name: string) => `${API}/tts/previews/${name}`

@@ -41,6 +41,43 @@
         "loadSeconds": 2.5,
         "peakRamGb": 3.5
       }
+    },
+    {
+      "id": "audio8-realistic-mlx",
+      "name": "Audio8 TTS Realistic 0.6B (MLX)",
+      "description": "Second engine, small and quick. Speaks in its own voice; to imitate a voice it needs a clip together with the words spoken in it.",
+      "engine": "mlx-audio8",
+      "repositories": [
+        {
+          "id": "nativ-community/Audio8-TTS-Realistic-0.6b-bf16",
+          "revision": "37f809124d2cefa8f517828d9de1d27584510b5b",
+          "files": {
+            "model.safetensors": 2551987536,
+            "model.safetensors.index.json": 53698,
+            "config.json": 1709,
+            "tokenizer.json": 12217872,
+            "tokenizer_config.json": 860832,
+            "special_tokens_map.json": 101864,
+            "LICENSE": 11357,
+            "NOTICE": 95
+          }
+        }
+      ],
+      "license": "apache-2.0",
+      "family": "audio8",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ],
+      "needsReferenceVoice": false,
+      "needsReferenceText": true,
+      "benchmark": {
+        "machine": "M1 Max 32GB",
+        "secondsPerSecondOfAudio": 0.7,
+        "loadSeconds": 0.2
+      }
     }
   ]
 }

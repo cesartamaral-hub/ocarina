@@ -20,6 +20,7 @@ import traceback
 import wave
 
 MLX_CHATTERBOX_REPO = "mlx-community/chatterbox-multilingual-v3"
+MLX_AUDIO8_REPO = "nativ-community/Audio8-TTS-Realistic-0.6b-bf16"
 
 
 class FakeEngine:
@@ -30,7 +31,7 @@ class FakeEngine:
     def __init__(self, repo=None):
         self.repo = repo
 
-    def synth(self, text, lang, voice, out):  # pylint: disable=unused-argument
+    def synth(self, text, lang, voice, out, ref_text=None):  # pylint: disable=unused-argument
         "Write a tone whose length depends on the text length."
         n = int(self.sample_rate * 0.02 * max(len(text), 1))
         with wave.open(out, "wb") as w:
@@ -55,7 +56,7 @@ class MlxChatterboxEngine:
         self.model = load_model(repo or MLX_CHATTERBOX_REPO)
         self.sample_rate = self.model.sample_rate
 
-    def synth(self, text, lang, voice, out):
+    def synth(self, text, lang, voice, out, ref_text=None):  # pylint: disable=unused-argument
         "Generate speech for one sentence and write it to out as wav."
         # pylint: disable=import-outside-toplevel
         import numpy as np
@@ -70,7 +71,33 @@ class MlxChatterboxEngine:
         return len(wav) / self.sample_rate
 
 
-ENGINES = {"fake": FakeEngine, "mlx-chatterbox": MlxChatterboxEngine}
+class MlxAudio8Engine:
+    """
+    Audio8 TTS via mlx-audio. It imitates a voice only when given the words spoken in the clip
+    (ref_text); without that it speaks in its own voice.
+    """
+
+    def __init__(self, repo=None):
+        # pylint: disable=import-outside-toplevel
+        from mlx_audio.tts.utils import load_model
+
+        self.model = load_model(repo or MLX_AUDIO8_REPO)
+        self.sample_rate = self.model.sample_rate
+
+    def synth(self, text, lang, voice, out, ref_text=None):  # pylint: disable=unused-argument
+        "Generate speech for one sentence and write it to out as wav; the language follows the text."
+        # pylint: disable=import-outside-toplevel
+        import numpy as np
+        import soundfile as sf
+
+        clone = {"ref_audio": voice, "ref_text": ref_text} if voice and ref_text else {}
+        chunks = [np.array(r.audio) for r in self.model.generate(text=text, **clone)]
+        wav = np.concatenate(chunks)
+        sf.write(out, wav, self.sample_rate)
+        return len(wav) / self.sample_rate
+
+
+ENGINES = {"fake": FakeEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine}
 
 
 def _handle(engine, req):
@@ -85,7 +112,7 @@ def _handle(engine, req):
         os.makedirs(os.path.dirname(req["out"]), exist_ok=True)
         root, ext = os.path.splitext(req["out"])
         tmp = f"{root}.part{ext}"  # keep the extension: soundfile picks the format from it
-        seconds = engine.synth(req["text"], req["lang"], req["voice"], tmp)
+        seconds = engine.synth(req["text"], req["lang"], req["voice"], tmp, req.get("ref_text"))
         os.replace(tmp, req["out"])
         return {"seconds": seconds}, engine
     raise ValueError(f"Unknown op {op}")

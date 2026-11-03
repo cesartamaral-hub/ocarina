@@ -84,8 +84,11 @@ class Supervisor:
             raise TtsError(resp["error"])
         return resp
 
-    def synth(self, text, lang, voice, out):
-        "Synthesize one sentence to the wav at out; returns its duration in seconds."
+    def synth(self, text, lang, voice, out, ref_text=None):
+        """
+        Synthesize one sentence to the wav at out; returns its duration in seconds.
+        ref_text: the words spoken in the voice clip (only some engines need it).
+        """
         with self._lock:
             for attempt in (1, 2):
                 try:
@@ -97,6 +100,7 @@ class Supervisor:
                         "lang": lang,
                         "voice": voice,
                         "out": out,
+                        "ref_text": ref_text,
                     }
                     return self._request(req)["seconds"]
                 except TtsError as e:

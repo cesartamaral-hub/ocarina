@@ -6,6 +6,7 @@ import {
   downloadModel,
   getJob,
   getModels,
+  getVoices,
   getPref,
   importModel,
   isActive,
@@ -13,9 +14,10 @@ import {
   setPref,
   type Job,
   type Model,
+  type Voice,
 } from './api'
-
-const LANGUAGES: Record<string, string> = { nl: 'Dutch', pl: 'Polish', fr: 'French' }
+import { SPEECH_LANGUAGES } from './speechLanguages'
+import { Voices } from './Voices'
 
 function formatBytes(n: number): string {
   return n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`
@@ -26,6 +28,11 @@ export function Settings() {
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
   const [chosen, setChosen] = useState<Record<string, string>>({})
+  const [voices, setVoices] = useState<Voice[]>([])
+  const loadVoices = useCallback(() => getVoices().then(setVoices, () => undefined), [])
+  useEffect(() => {
+    loadVoices()
+  }, [loadVoices])
 
   const load = useCallback(
     () =>
@@ -77,9 +84,9 @@ export function Settings() {
     }
   }
 
-  function choose(code: string, modelId: string) {
-    setPref(`model.${code}`, modelId)
-    setChosen((cur) => ({ ...cur, [code]: modelId }))
+  function choose(key: string, value: string) {
+    setPref(key, value)
+    setChosen((cur) => ({ ...cur, [key]: value }))
   }
 
   async function remove(m: Model) {
@@ -164,16 +171,17 @@ export function Settings() {
       </ul>
 
       <h2>Voice per language</h2>
-      <p className="muted">Which installed model voices the audio of books in each language.</p>
+      <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
-        {Object.entries(LANGUAGES).map(([code, name]) => {
+        {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
           const options = models.filter((m) => m.installed && m.languages.includes(code))
-          const value = chosen[code] ?? getPref<string>(`model.${code}`, '')
+          const value = chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
+          const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (
             <li key={code}>
               <div className="row">
                 <div className="name">{name}</div>
-                <select value={value} onChange={(e) => choose(code, e.target.value)}>
+                <select value={value} onChange={(e) => choose(`model.${code}`, e.target.value)}>
                   <option value="">Automatic (first installed)</option>
                   {options.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -181,11 +189,22 @@ export function Settings() {
                     </option>
                   ))}
                 </select>
+                <select value={voice} onChange={(e) => choose(`voice.${code}`, e.target.value)} aria-label={`Voice for ${name}`}>
+                  <option value="">Default voice</option>
+                  {voices
+                    .filter((v) => !v.builtin)
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                </select>
               </div>
             </li>
           )
         })}
       </ul>
+      <Voices voices={voices} onChange={loadVoices} />
     </>
   )
 }

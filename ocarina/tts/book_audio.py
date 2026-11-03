@@ -64,7 +64,7 @@ def is_ocarina_audio(audio_dir, audio_filename):
 
 
 def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    book, supervisor, cache, model_id, audio_dir, voice, pause=0.5, on_progress=None
+    book, supervisor, cache, model_id, audio_dir, voice, pause=0.5, on_progress=None, ref_text=None
 ):
     """
     Voice the whole book, write the mp3 and timings into audio_dir,
@@ -84,6 +84,7 @@ def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-position
         lang,
         voice,
         lambda i, total: on_progress and on_progress(i + 1, total),
+        ref_text,
     )
     audio, rate, starts = stitch(paths, pause)
     os.makedirs(audio_dir, exist_ok=True)

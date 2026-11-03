@@ -16,7 +16,13 @@ Chatterbox Multilingual, about 25 words of Dutch, Polish and French, run after a
   controllable in the model (2026-11-03, Dutch sentence, 3.8 s at default): `speed` is ignored by
   Chatterbox, `cfg_weight` 0.0 gives +8%, and a reference clip slowed to 0.8x gives only +4%.
   So a "slow voice" can only come from stretching the audio, which the player already does live.
-- Not benchmarked: CosyVoice2, Parkiet (Dutch only), Voxtral (nl, fr, not pl).
+- Second engine, chosen 2026-11-03: **Audio8 TTS Realistic 0.6B** (mlx-audio, Apache-2.0, 2.6 GB,
+  nl/pl/fr among 23 languages, 44.1 kHz). CosyVoice2 was dropped: it is not in mlx-audio and does not cover
+  nl/pl/fr. On the M1 Max it voices a 23-sentence Dutch book in 46 s (about 0.7 s per second of audio; single
+  sentences 0.8 to 1.1) and loads in 0.2 s. It speaks about 40% slower than Chatterbox by itself (the same Dutch
+  sentence is 5.3 s against 3.8 s), which suits a learner. It speaks in its own voice; it only imitates a clip when
+  given the exact words spoken in it. Quality of the voices was not judged by ear: listen and compare.
+- Not benchmarked: Parkiet (Dutch only), Voxtral (nl, fr, not pl), KugelAudio (7B, 24 languages).
 - A whole 3-page, 77-sentence Polish book voices in about two minutes.
 - Licenses: `mlx-audio` MIT; model MIT. Check each model's license before adding it to the catalog.
 - Raw scripts and results from this round live outside the repo in `~/Lute-Ocarina/bench`.

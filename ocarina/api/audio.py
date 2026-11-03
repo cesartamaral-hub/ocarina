@@ -25,7 +25,7 @@ from ocarina.tts.book_audio import (
     tts_lang,
 )
 from ocarina.tts.cache import SentenceCache
-from ocarina.tts.service import DEFAULT_VOICE
+from ocarina.tts import voices
 from ocarina.tts.supervisor import Supervisor
 
 bp = Blueprint("ocarina_audio", __name__, url_prefix="/ocarina/api")
@@ -36,7 +36,7 @@ def _uses_real_engine(app):
     return "OCARINA_TTS_ENGINE" not in app.config
 
 
-def _run_job(app, job, check, book_id, model, voice, pause):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     "Queued job: generate and attach the audio. Finished sentences stay cached if it is cancelled."
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
@@ -55,7 +55,7 @@ def _run_job(app, job, check, book_id, model, voice, pause):  # pylint: disable=
             book = BookRepository(db.session).find(book_id)
             old = book.audio_filename
             name = generate_book_audio(
-                book, supervisor, cache, model["id"], cfg.useraudiopath, voice, pause, progress
+                book, supervisor, cache, model["id"], cfg.useraudiopath, voice, pause, progress, ref_text
             )
             book.audio_filename = name
             book.audio_current_pos = 0
@@ -96,9 +96,10 @@ def start_audio(book_id):
             )
     saved = prefs.load(prefs.path_for(cfg.datapath))
     try:
-        preferred = saved.get(f"model.{tts_lang(book.language)}")
+        code = tts_lang(book.language)
     except ValueError:
-        preferred = None
+        code = None
+    preferred = saved.get(f"model.{code}") if code else None
     model = model_files.choose_model(body.get("model"), preferred)
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
@@ -115,18 +116,23 @@ def start_audio(book_id):
             ),
             409,
         )
-    voice = body.get("voice") or DEFAULT_VOICE
-    if not os.path.exists(voice):
-        return jsonify({"error": "Voice file not found"}), 400
+    voice_id = body.get("voice") or saved.get(f"voice.{code}") or voices.BUILTIN_ID
+    voice = voices.path_of(cfg.datapath, voice_id)
+    if voice is None:
+        if body.get("voice"):
+            return jsonify({"error": "Voice not found"}), 400
+        voice_id = voices.BUILTIN_ID  # the chosen voice was deleted: use the default
+        voice = voices.path_of(cfg.datapath, voice_id)
     if jobs.active(kind="audio", book_id=book_id):
         return (
             jsonify({"error": "Audio for this book is already queued or running", "code": "already_queued"}),
             409,
         )
     pause = float(body.get("pause", 0.5))
+    ref_text = voices.transcript_of(cfg.datapath, voice_id)
     job = jobs.submit(
         "audio",
-        lambda job, check: _run_job(app, job, check, book_id, model, voice, pause),
+        lambda job, check: _run_job(app, job, check, book_id, model, voice, pause, ref_text),
         book_id=book_id,
     )
     return jsonify(job), 202
