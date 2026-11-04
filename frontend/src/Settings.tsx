@@ -172,7 +172,7 @@ export function Settings() {
                       <button className="secondary" disabled={busy} onClick={() => test(m)}>
                         {m.check ? 'Test again' : 'Test'}
                       </button>
-                      <button className="secondary" disabled={busy} onClick={() => remove(m)}>
+                      <button className="danger" disabled={busy} onClick={() => remove(m)}>
                         Delete
                       </button>
                     </>

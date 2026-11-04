@@ -13,7 +13,7 @@ function SpeakerIcon() {
 }
 
 // The "more" menu of a row: closes on Esc, on a click outside and after a choice.
-function MoreMenu({ title, items }: { title: string; items: { label: string; onChoose: () => void }[] }) {
+function MoreMenu({ title, items }: { title: string; items: { label: string; onChoose: () => void; danger?: boolean }[] }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLSpanElement>(null)
   useEscape(open, () => setOpen(false))
@@ -38,7 +38,7 @@ function MoreMenu({ title, items }: { title: string; items: { label: string; onC
             <li key={i.label} role="none">
               <button
                 role="menuitem"
-                className="link-button"
+                className={i.danger ? 'link-button danger-text' : 'link-button'}
                 onClick={() => {
                   setOpen(false)
                   i.onChoose()
@@ -119,7 +119,7 @@ export function BookRow({
           items={[
             { label: 'Edit', onChoose: onEdit },
             { label: book.archived ? 'Unarchive' : 'Archive', onChoose: onArchive },
-            { label: 'Delete…', onChoose: onDelete },
+            { label: 'Delete…', onChoose: onDelete, danger: true },
           ]}
         />
       </span>

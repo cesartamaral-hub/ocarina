@@ -7,8 +7,6 @@ import { keyLabel, keyOf } from '../shortcutKeys'
 export function ReaderToolbar({
   bookId,
   title,
-  page,
-  pageCount,
   highlights,
   onToggleHighlights,
   onEdit,
@@ -16,8 +14,6 @@ export function ReaderToolbar({
 }: {
   bookId: number
   title: string
-  page: number
-  pageCount: number
   highlights: boolean
   onToggleHighlights: () => void
   onEdit: () => void
@@ -37,24 +33,19 @@ export function ReaderToolbar({
     }
   }, [open])
   return (
-    <p className="muted reader-toolbar">
-      <a href={`#/book/${bookId}`}>← {title}</a> · page {page} of {pageCount} ·{' '}
-      <a
-        href="#edit"
-        onClick={(e) => {
-          e.preventDefault()
-          onEdit()
-        }}
-      >
+    <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
+      <a className="button quiet back" href={`#/book/${bookId}`} title={`Back to ${title}`}>
+        ← {title}
+      </a>
+      <span className="spacer" />
+      <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
+        Highlights
+      </button>
+      <button className="quiet" onClick={onEdit}>
         Edit text
-      </a>{' '}
-      ·{' '}
-      <label className="inline">
-        <input type="checkbox" checked={highlights} onChange={onToggleHighlights} /> Highlights ({keyLabel(keyOf('highlights'))})
-      </label>{' '}
-      ·{' '}
+      </button>
       <span className="aa-box" ref={box}>
-        <button type="button" className="secondary aa-button" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)} title="Text appearance">
+        <button className="quiet aa-button" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)} title="Text appearance">
           Aa
         </button>
         {open && (
@@ -62,17 +53,10 @@ export function ReaderToolbar({
             <TypographyControls />
           </div>
         )}
-      </span>{' '}
-      ·{' '}
-      <a
-        href="#keys"
-        onClick={(e) => {
-          e.preventDefault()
-          onHelp()
-        }}
-      >
+      </span>
+      <button className="quiet" onClick={onHelp} title="Keyboard shortcuts">
         Keys
-      </a>
-    </p>
+      </button>
+    </div>
   )
 }

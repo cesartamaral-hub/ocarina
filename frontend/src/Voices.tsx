@@ -90,7 +90,7 @@ export function Voices({ voices, onChange }: { voices: Voice[]; onChange: () => 
                     {waiting ? (job?.job.state === 'queued' ? 'Waiting…' : 'Speaking…') : '▶ Preview'}
                   </button>
                   {!v.builtin && (
-                    <button className="secondary" onClick={() => remove(v)}>
+                    <button className="danger" onClick={() => remove(v)}>
                       Remove
                     </button>
                   )}

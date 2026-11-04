@@ -88,3 +88,7 @@ Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 ## The Esc key
 
 `frontend/src/escape.ts`: one capture-phase handler on the window (installed in `App.tsx`) always cancels Esc's default (so the window does not leave full screen). It closes the innermost open thing, and when nothing is open it blurs a focused text field, else goes to the route's parent (reader -> book -> list; settings pages -> settings). Anything that can be dismissed registers with `useEscape(active, close)` while it is open (the Aa popover, the book ⋯ menu, the audio options menu, the key-recording mode, the reader's selection, and the text editor, which asks before discarding changes). New popovers and dialogs should do the same.
+
+## Buttons
+
+One system in `index.css` ("Buttons" section at the end): tokens `--control-h` (34 px), `--control-h-sm` (28 px), `--radius`. A plain `button` or `a.button` is the primary action; `.secondary` is outlined; `.quiet` has no border until hovered (toolbars; `aria-pressed` shows a toggle as on); `.danger` is for destructive actions; `.small` is for rows; `.icon` is a square. `.link-button` is a text link that acts. Use links only to navigate. The reader's toolbar (`ReaderToolbar.tsx`) and the page bar pinned to the bottom of the reading area (previous at the left edge, page count in the middle, finish at the right edge) are built from these.

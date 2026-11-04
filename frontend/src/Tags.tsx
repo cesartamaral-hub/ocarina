@@ -39,7 +39,7 @@ function TagRowEditor({ kind, tag, onChanged }: { kind: TagKind; tag: TagRow; on
         <button disabled={!dirty || !text.trim()} onClick={save}>
           Save
         </button>
-        <button className="secondary" onClick={remove}>
+        <button className="danger" onClick={remove}>
           Delete
         </button>
         {error && <span className="error">{error}</span>}

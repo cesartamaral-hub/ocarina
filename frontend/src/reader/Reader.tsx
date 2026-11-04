@@ -316,8 +316,6 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             <ReaderToolbar
               bookId={bookId}
               title={page.title}
-              page={page.page}
-              pageCount={page.pageCount}
               highlights={highlights}
               onToggleHighlights={toggleHighlights}
               onEdit={startEditing}
@@ -379,28 +377,28 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                   </p>
                 ))}
             </article>
-            <nav className="pager">
-              <button
-                className="secondary"
-                disabled={page.page <= 1}
-                onClick={() => (window.location.hash = `#/book/${bookId}/read/${page.page - 1}`)}
-              >
-                ← Previous
-              </button>
-              <button onClick={() => finish(false)}>
-                {page.page < page.pageCount ? 'Finish page → next' : 'Finish book'}
-              </button>
-              <button className="secondary" onClick={() => finish(true)} title="Unknown words become well-known">
-                Finish, rest as known →
-              </button>
-            </nav>
             <p className="muted">
-              Arrow keys turn pages. Drag over several words (or shift-click) to make a phrase. Ctrl/⌘-click
-              words to set their status together.
+              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.
             </p>
           </>
               )}
             </div>
+            {editing === null && (
+              <nav className="page-bar" aria-label="Pages">
+                <button className="secondary" disabled={page.page <= 1} onClick={() => (window.location.hash = `#/book/${bookId}/read/${page.page - 1}`)}>
+                  ← Previous
+                </button>
+                <span className="page-count muted">
+                  Page {page.page} of {page.pageCount}
+                </span>
+                <span className="page-actions">
+                  <button className="secondary" onClick={() => finish(true)} title="Unknown words become well known">
+                    Finish, rest as known
+                  </button>
+                  <button onClick={() => finish(false)}>{page.page < page.pageCount ? 'Finish page →' : 'Finish book'}</button>
+                </span>
+              </nav>
+            )}
           </>
         }
         side={

@@ -86,7 +86,7 @@ export function AudioVersions({
           <button className="secondary" disabled={disabled} onClick={() => setRenaming(current.label)}>
             Rename
           </button>
-          <button className="secondary" disabled={disabled} onClick={() => remove(current)}>
+          <button className="danger" disabled={disabled} onClick={() => remove(current)}>
             Delete
           </button>
         </span>

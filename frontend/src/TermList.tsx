@@ -266,7 +266,7 @@ export function TermList() {
               Remove parents
             </button>
           </span>
-          <button className="secondary" onClick={() => apply({ delete: true }, `Delete ${selected.size} terms? This cannot be undone.`)}>
+          <button className="danger" onClick={() => apply({ delete: true }, `Delete ${selected.size} terms? This cannot be undone.`)}>
             Delete
           </button>
         </section>
