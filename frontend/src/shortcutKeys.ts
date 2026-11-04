@@ -17,6 +17,7 @@ export const ACTIONS: Action[] = [
   { id: 'prevPage', label: 'Previous page', key: 'ArrowLeft' },
   { id: 'nextPage', label: 'Next page', key: 'ArrowRight' },
   { id: 'highlights', label: 'Hide or show the word colours', key: 'h' },
+  { id: 'togglePanel', label: 'Show or hide the word panel', key: 'p' },
   { id: 'help', label: 'Show or hide the key list', key: '?' },
   { id: 'clear', label: 'Clear the selection', key: 'Escape' },
 ]

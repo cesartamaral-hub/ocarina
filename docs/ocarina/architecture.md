@@ -53,8 +53,13 @@ checked, `refs/main` pointed at the pinned revision).
 ## Frontend
 Hash routes (`#/`, `#/book/<id>`, `#/book/<id>/read/<page>`, `#/settings`) in `App.tsx`. API calls
 in `src/api/<area>.ts` mirror the backend modules. Reader: `Reader.tsx` (page, selection, keys),
-`TermPanel.tsx` (word panel), `useAudioFollow.ts`, `useHoverCard.tsx`. Preferences load once at
-start (`loadPrefs`) and are read with `getPref`.
+`ReaderLayout.tsx` (the frame: reading column plus the word panel pinned to the window's right edge, resizable
+(`sidePanel.ts` holds the width rules), collapsible with `P`, a drawer under 1000 px), `ReaderToolbar.tsx`,
+`AudioPanel.tsx` (the sticky player bar), `TermPanel.tsx` (word panel), `useAudioFollow.ts`,
+`useHoverCard.tsx`. Page layout: the header is sticky; `main` has a width scale (`w-full` for the reader,
+`w-medium` for the book and term lists, 760 px otherwise), chosen in `App.tsx`. Preferences load once at
+start (`loadPrefs`) and are read with `getPref`; the panel keeps `reader.sideWidth` and `reader.sideCollapsed`.
+Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 
 ## Decisions
 - Hard fork; Lute code may be changed or removed once its React replacement exists.

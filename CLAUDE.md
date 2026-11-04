@@ -26,7 +26,7 @@ and `.venv-build` (pyenv Python 3.12: only py2app can package that one). Tests n
 - `ocarina/api/` one Flask blueprint per area (audio, books, jobs, pages, system, terms, tts_models, web); `__init__.register` wires them. Keep route functions thin; logic goes in `ocarina/tts/` or a service module.
 - `ocarina/tts/` model-free TTS pipeline: sentences, cache, stitch, supervisor (worker process), worker, models (download), book_audio. `catalog.json` lists the voice models.
 - `ocarina/prefs.py` preferences file in the data folder. `lute/` is Lute's engine (parsing, terms, books, backups, stats, database) without its pages; `ocarina/startup.py` opens a library (a new one starts empty); the only hook is `register_ocarina(app)` in `lute/app_factory.py`.
-- `frontend/src/`: `api/` (one file per area, import from `./api`), `reader/` (Reader, TermPanel, hooks), `BookList`, `BookView`, `Settings`, `AudioBar`. Hash routes: `#/`, `#/book/<id>`, `#/book/<id>/read/<page>`, `#/settings`.
+- `frontend/src/`: `api/` (one file per area, import from `./api`), `reader/` (Reader, ReaderLayout = the frame with the pinned, resizable word panel, ReaderToolbar, AudioPanel, TermPanel, hooks), `BookList`, `BookView`, `Settings`, `AudioBar`. Hash routes: `#/`, `#/book/<id>`, `#/book/<id>/read/<page>`, `#/settings`.
 - `desktop/` pywebview launcher, py2app `setup.py`, `build.sh`, dev scripts. `assets/` icon sources. `tests/ocarina/` our tests (use `helpers.py`).
 
 ## Rules that save time

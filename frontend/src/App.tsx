@@ -58,6 +58,10 @@ function Logo() {
 
 export default function App() {
   const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, languages, languageId } = useRoute()
+  // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
+  const reading = bookId !== null && readPage !== null
+  const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || languages || languageId)
+  const medium = terms || onHome
   const [ready, setReady] = useState(false)
   useEffect(() => {
     loadPrefs().then(() => {
@@ -81,7 +85,7 @@ export default function App() {
           <a href="#/settings">Settings</a>
         </nav>
       </header>
-      <main>
+      <main className={reading ? 'w-full' : medium ? 'w-medium' : undefined}>
         {!ready ? null : settings ? (
           <Settings />
         ) : tags ? (
