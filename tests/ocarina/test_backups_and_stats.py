@@ -111,3 +111,67 @@ def test_no_automatic_backup_is_due_for_an_empty_library(client, tmp_path, monke
     assert client.get(BACKUPS).json["dueNow"] is False
     monkeypatch.setattr(backups, "_has_data", lambda: True)
     assert client.get(BACKUPS).json["dueNow"] is True
+
+
+def _stats(client):
+    return client.get("/ocarina/api/stats").json
+
+
+def _language(stats, name):
+    return next(lang for lang in stats["languages"] if lang["name"] == name)
+
+
+def test_each_language_with_texts_gets_its_own_numbers(app, client):
+    "Terms by status, books, and what the texts hold, per language; languages with no texts and no reading are left out."
+    import time  # pylint: disable=import-outside-toplevel
+    from lute.db import db  # pylint: disable=import-outside-toplevel
+    from lute.models.term import Term  # pylint: disable=import-outside-toplevel
+    from ocarina import book_index  # pylint: disable=import-outside-toplevel
+    from tests.conftest import _get_test_language  # pylint: disable=import-outside-toplevel
+
+    with app.app_context():
+        book = make_dutch_book("Per taal")
+        for word, status in (("ik", 5), ("woon", 2), ("elke", 98), ("nederland", 99)):
+            term = Term(_get_test_language("Dutch"), word)
+            term.status = status
+            db.session.add(term)
+        db.session.commit()
+        book_index.build(book)
+    names = [lang["name"] for lang in _stats(client)["languages"]]
+    assert names == ["Dutch"]
+    dutch = _language(_stats(client), "Dutch")
+    assert dutch["terms"]["known"] == 2 and dutch["terms"]["learning"] == 1 and dutch["terms"]["ignored"] == 1
+    assert dutch["terms"]["vocabulary"] == 3 and dutch["terms"]["byStatus"]["5"] == 1
+    assert dutch["books"]["count"] == 1 and dutch["books"]["archived"] == 0
+    assert dutch["books"]["list"][0]["title"] == "Per taal" and dutch["books"]["list"][0]["pages"] == 2
+    coverage = dutch["coverage"]
+    assert coverage["words"] == 14 and coverage["known"] == 3 and coverage["learning"] == 1 and coverage["ignored"] == 1
+    assert coverage["knownPercent"] == round(100 * 3 / 13, 1)  # 'ik' twice and 'Nederland'; the ignored word is left out
+    assert coverage["minutesLeft"] >= 0 and coverage["pendingBooks"] == 0
+    time.sleep(0)  # (the word index of this book was built directly above)
+
+
+def test_reading_numbers_streak_and_growth_per_language(app, client):
+    with app.app_context():
+        book_id = make_dutch_book("Gelezen").id
+    client.post(f"/ocarina/api/books/{book_id}/pages/1/finish", json={"restAsKnown": True})
+    stats = _stats(client)
+    dutch = _language(stats, "Dutch")
+    assert dutch["read"]["day"] > 0 and dutch["read"]["total"] == dutch["read"]["day"]
+    assert dutch["streak"] == 1 and dutch["lastRead"] == dutch["firstRead"]
+    assert dutch["growth"] and dutch["growth"][-1]["known"] == dutch["terms"]["known"]  # "rest as known" made words known today
+    assert stats["totals"]["readToday"] == dutch["read"]["day"] and stats["totals"]["known"] == dutch["terms"]["known"]
+    assert stats["streak"] == 1 and stats["chart"]["Dutch"]  # what was there before is still there
+
+
+def test_archived_books_do_not_count_towards_what_is_left_to_read(app, client):
+    with app.app_context():
+        book_id = make_dutch_book("Weg").id
+    client.patch(f"/ocarina/api/books/{book_id}", json={"archived": True})
+    dutch = _language(_stats(client), "Dutch")
+    assert dutch["books"]["count"] == 0 and dutch["books"]["archived"] == 1
+    assert dutch["coverage"]["words"] == 0 and dutch["books"]["list"] == []
+
+
+def test_a_language_with_nothing_is_not_listed(client):
+    assert _stats(client)["languages"] == []
