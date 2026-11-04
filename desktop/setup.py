@@ -21,6 +21,13 @@ setup(
                 "tokenizers",
                 "safetensors",
                 "numpy",
+                "trafilatura",
+                "courlan",
+                "htmldate",
+                "justext",
+                "lxml",
+                "yt_dlp",
+                "youtube_transcript_api",
             ],
             "includes": ["sqlite3", "yaml"],
             "excludes": ["mlx"],  # copied by hand in build.sh, see there

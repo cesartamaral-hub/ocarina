@@ -252,6 +252,12 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
       </p>
       <ul className="models">{models.filter((m) => m.kind === 'aligner').map(renderModel)}</ul>
 
+      <h2>Transcription model{size(storage, 'transcriber')}</h2>
+      <p className="muted">
+        Writes down what is said in a YouTube video that has no captions, when you add study material. It runs on this Mac, and only while a video is being transcribed.
+      </p>
+      <ul className="models">{models.filter((m) => m.kind === 'transcriber').map(renderModel)}</ul>
+
       <AddModel onAdded={load} />
 
         </>

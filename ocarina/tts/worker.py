@@ -184,6 +184,35 @@ class MlxAlignerEngine:
         return [[i.text, round(offset + i.start_time, 3), round(offset + i.end_time, 3)] for i in result]
 
 
+class FakeTranscriberEngine:
+    "Stands in for Whisper in tests."
+
+    sample_rate = None
+
+    def __init__(self, repo=None):
+        self.repo = repo
+
+    def transcribe(self, audio, language):  # pylint: disable=unused-argument
+        "What was said."
+        return f"Gehoord ({language})."
+
+
+class MlxWhisperEngine:
+    "Whisper via mlx-audio: the text of a recording."
+
+    sample_rate = None
+
+    def __init__(self, repo=None):
+        from mlx_audio.stt import load  # pylint: disable=import-outside-toplevel
+
+        self.model = load(repo)
+
+    def transcribe(self, audio, language):
+        "The text of the file, in the language when it is known (else Whisper finds it)."
+        result = self.model.generate(audio, language=language, return_timestamps=False, verbose=None)
+        return result.text.strip()
+
+
 class MlxChatterboxEngine:
     "Chatterbox Multilingual v3 via mlx-audio."
 
@@ -272,7 +301,7 @@ class MlxAudio8Engine:
         return len(wav) / self.sample_rate
 
 
-ENGINES = {"fake": FakeEngine, "fake-aligner": FakeAlignerEngine, "mlx-aligner": MlxAlignerEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine, "mlx-lm": MlxLmEngine}
+ENGINES = {"fake": FakeEngine, "fake-transcriber": FakeTranscriberEngine, "mlx-whisper": MlxWhisperEngine, "fake-aligner": FakeAlignerEngine, "mlx-aligner": MlxAlignerEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine, "mlx-lm": MlxLmEngine}
 
 
 def _handle(engine, req):
@@ -286,6 +315,8 @@ def _handle(engine, req):
             raise RuntimeError("No model loaded")
         extra = {k: req.get(k) for k in ("style", "source", "target", "text")}
         return {"text": engine.complete(req["system"], req["user"], req.get("max_tokens", 300), **extra)}, engine
+    if op == "transcribe":
+        return {"text": engine.transcribe(req["audio"], req.get("language"))}, engine
     if op == "duration":
         return {"seconds": engine.duration(req["audio"])}, engine
     if op == "onsets":

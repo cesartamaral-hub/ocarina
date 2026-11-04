@@ -116,7 +116,7 @@ export function BookList() {
       <div className="title-row">
         <h1>{archived ? 'Archived books' : 'Books'}</h1>
         <a href="#/new" className="button">
-          Add a book
+          Add material
         </a>
       </div>
       {backupWarning && (

@@ -440,7 +440,7 @@ body:has(.reader) { overflow: hidden; }
 .storage-bar i { display: block; height: 100%; }
 .storage-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 0; margin: 0 0 8px; }
 .storage-legend i, .storage-group h3 i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; }
-.g-voice { background: #3a9a5b; } .g-text { background: #6b86c9; } .g-sync { background: #d49a2a; }
+.g-voice { background: #3a9a5b; } .g-text { background: #6b86c9; } .g-sync { background: #d49a2a; } .g-transcribe { background: #9b6bc9; }
 .storage-group h3 { margin: 18px 0 6px; font-size: 1rem; }
 .storage-rows { list-style: none; padding: 0; margin: 0; }
 .storage-rows li { display: grid; grid-template-columns: minmax(0, 1fr) 80px 80px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
@@ -707,3 +707,11 @@ body:has(.reader) { overflow: hidden; }
   .settings-group ul { display: flex; gap: 4px; }
   .settings-nav a { white-space: nowrap; }
 }
+
+.import-progress { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.import-progress progress { flex: 1; }
+.keep-sound { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.keep-sound input { width: auto; }
+.source-hint { margin: 6px 0 0; }
+.controls label:has(.row-inline) { flex: 1 1 22rem; }
+.controls .row-inline input { flex: 1; min-width: 0; }

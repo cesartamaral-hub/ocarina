@@ -2,7 +2,7 @@ import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync' | 'translate'
+  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync' | 'translate' | 'import'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number
@@ -14,6 +14,8 @@ export type Job = {
   model_id?: string
   preview?: string
   error?: string
+  message?: string // import jobs: what is happening now
+  result?: { title: string; text: string; sourceUri: string; note: string | null; audioToken: string | null } // import jobs, when done
   suspect?: number // sync jobs: sentences that could not be placed with confidence
 }
 
@@ -36,7 +38,7 @@ export type Model = {
   license: string
   languages: string[]
   installed: boolean
-  kind?: 'speech' | 'text' | 'aligner'
+  kind?: 'speech' | 'text' | 'aligner' | 'transcriber'
   custom?: boolean
   check?: ModelCheck | null
   sizeBytes: number

@@ -251,6 +251,46 @@
         "pl",
         "fr"
       ]
+    },
+    {
+      "id": "whisper-large-v3-turbo-mlx",
+      "name": "Whisper Large v3 Turbo (transcription, MLX)",
+      "kind": "transcriber",
+      "description": "Writes down what is said in a video or a recording, on this Mac, for videos without captions. Fast and accurate on many languages, including Dutch, Polish and French.",
+      "engine": "mlx-whisper",
+      "repositories": [
+        {
+          "id": "mlx-community/whisper-large-v3-turbo-asr-fp16",
+          "revision": "624c19c9af5603fa73b83bce14d4aeea96156d18",
+          "files": {
+            "added_tokens.json": 34648,
+            "config.json": 1301,
+            "generation_config.json": 3772,
+            "merges.txt": 493869,
+            "model.safetensors": 1613977443,
+            "model.safetensors.index.json": 37633,
+            "normalizer.json": 52666,
+            "preprocessor_config.json": 340,
+            "special_tokens_map.json": 2186,
+            "tokenizer.json": 2710337,
+            "tokenizer_config.json": 282843,
+            "vocab.json": 1036558
+          }
+        }
+      ],
+      "license": "mit",
+      "family": "whisper",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr",
+        "es",
+        "de",
+        "en",
+        "pt",
+        "it"
+      ]
     }
   ]
 }

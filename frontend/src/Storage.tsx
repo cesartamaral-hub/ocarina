@@ -3,7 +3,7 @@ import { clearStorage, deleteModel, getStorage, type Storage as StorageInfo, typ
 import { formatBytes } from './format'
 import { notify } from './notices'
 
-const GROUP_CLASS: Record<StorageGroup['kind'], string> = { speech: 'g-voice', text: 'g-text', aligner: 'g-sync' }
+const GROUP_CLASS: Record<StorageGroup['kind'], string> = { speech: 'g-voice', text: 'g-text', aligner: 'g-sync', transcriber: 'g-transcribe' }
 
 // How much disk space the models and Ocarina's data take, and what can be freed.
 export function Storage() {

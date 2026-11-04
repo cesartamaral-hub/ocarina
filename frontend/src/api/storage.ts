@@ -1,6 +1,6 @@
 import { API, json, send } from './client'
 
-export type StorageModel = { id: string; name: string; kind: 'speech' | 'text' | 'aligner'; installed: boolean; bytes: number; custom: boolean }
+export type StorageModel = { id: string; name: string; kind: 'speech' | 'text' | 'aligner' | 'transcriber'; installed: boolean; bytes: number; custom: boolean }
 export type StorageGroup = { kind: StorageModel['kind']; label: string; bytes: number; count: number }
 export type StorageData = { id: string; label: string; description: string; bytes: number; clearable: boolean }
 

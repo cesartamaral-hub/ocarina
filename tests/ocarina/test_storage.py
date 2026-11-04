@@ -59,11 +59,11 @@ def test_each_model_is_measured_by_its_own_repositories(client, hub):
 def test_groups_total_and_the_space_that_is_not_ocarinas(client, hub):
     data = client.get(URL).json
     sizes = {g["kind"]: g["bytes"] for g in data["groups"]}
-    assert sizes == {"speech": 1200, "text": 550, "aligner": 0}
+    assert sizes == {"speech": 1200, "text": 550, "aligner": 0, "transcriber": 0}
     assert data["modelsBytes"] == 1750
     assert data["otherHubBytes"] == 7000
     assert data["hubPath"] == str(hub)
-    assert [g["label"] for g in data["groups"]] == ["Voice models", "Translation models", "Audio sync model"]
+    assert [g["label"] for g in data["groups"]] == ["Voice models", "Translation models", "Audio sync model", "Transcription model"]
 
 
 def test_data_folders_are_measured_and_only_caches_can_be_cleared(app, client, hub):

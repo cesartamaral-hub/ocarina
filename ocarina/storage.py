@@ -12,7 +12,7 @@ from huggingface_hub import constants
 
 from ocarina.tts import models as model_files
 
-KIND_LABELS = {"speech": "Voice models", "text": "Translation models", "aligner": "Audio sync model"}
+KIND_LABELS = {"speech": "Voice models", "text": "Translation models", "aligner": "Audio sync model", "transcriber": "Transcription model"}
 
 # What is kept in the data folder: id, folder or file name, what it is, and whether it can be cleared (made again as needed).
 DATA_ITEMS = [

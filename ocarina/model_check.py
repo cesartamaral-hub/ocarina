@@ -119,12 +119,33 @@ def _try_aligner(datapath, model, engine):
             os.remove(path)
 
 
+def _try_transcriber(datapath, model, engine):
+    "Load Whisper and listen to a second and a half of tone (it only has to run, not to find words)."
+    import numpy as np  # pylint: disable=import-outside-toplevel
+    import soundfile as sf  # pylint: disable=import-outside-toplevel
+
+    path = os.path.join(datapath, "temp", f"check_{model['id']}.wav")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    sf.write(path, (0.1 * np.sin(np.arange(24000) / 8)).astype("float32"), 16000)
+    supervisor = Supervisor(engine or model["engine"], repo=model["repositories"][0]["id"], timeout=1800)
+    try:
+        started = time.time()
+        supervisor.transcribe(path, "en")
+        return {"seconds": round(time.time() - started, 1)}
+    finally:
+        supervisor.unload()
+        if os.path.exists(path):
+            os.remove(path)
+
+
 def check_model(datapath, model, engine=None):
     "Try the model once; stores and returns {ok, ...numbers} or {ok: False, error, detail}."
     try:
         kind = model_files.kind_of(model)
         if kind == "text":
             numbers = _try_text(model, engine)
+        elif kind == "transcriber":
+            numbers = _try_transcriber(datapath, model, engine)
         elif kind == "aligner":
             numbers = _try_aligner(datapath, model, engine)
         else:

@@ -75,13 +75,18 @@ def find_model(model_id):
 
 
 def kind_of(model):
-    'What a model is for: "speech" (it voices books) or "text" (it translates sentences).'
+    'What a model is for: "speech" (it voices books), "text" (it translates sentences), "aligner" or "transcriber".'
     return model.get("kind", "speech")
 
 
 def text_models():
     "The models that can translate sentences."
     return [m for m in load_catalog() if kind_of(m) == "text"]
+
+
+def transcriber_model():
+    "The model that turns speech into text, or None."
+    return next((m for m in load_catalog() if kind_of(m) == "transcriber"), None)
 
 
 def speech_models():

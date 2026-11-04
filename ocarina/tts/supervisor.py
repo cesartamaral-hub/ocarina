@@ -114,6 +114,10 @@ class Supervisor:
                     print(f"Worker restarted: {e}", file=sys.stderr)
         raise TtsError("unreachable")
 
+    def transcribe(self, audio, language=None):
+        "The text said in a file (whisper engine)."
+        return self._ask({"op": "transcribe", "audio": audio, "language": language})["text"]
+
     def duration(self, audio):
         "Seconds of audio in a file (aligner engine)."
         return self._ask({"op": "duration", "audio": audio})["seconds"]

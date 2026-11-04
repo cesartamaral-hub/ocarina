@@ -1,4 +1,5 @@
 import { API, json, send } from './client'
+import type { Job } from './tts'
 
 export type Book = {
   id: number
@@ -55,7 +56,7 @@ export const getSentences = (id: number) =>
 
 export type Language = { id: number; name: string; books?: number; terms?: number }
 
-export type Extracted = { title: string; text: string; sourceUri: string; note: string | null }
+export type Extracted = { title: string; text: string; sourceUri: string; note: string | null; audioToken?: string | null }
 
 export const getLanguages = () => fetch(`${API}/languages`).then((r) => json<Language[]>(r))
 
@@ -65,7 +66,9 @@ export const extractFromFile = (file: File) => {
   return fetch(`${API}/books/extract`, { method: 'POST', body: form }).then((r) => json<Extracted>(r))
 }
 
-export const extractFromUrl = (url: string) => send<Extracted>('POST', `${API}/books/extract`, { url })
+// A web page and a video with captions answer at once; a video that has to be transcribed answers with a job to wait for.
+export const extractFromUrl = (url: string, options: { languageId?: number; keepAudio?: boolean } = {}) =>
+  send<Extracted | Job>('POST', `${API}/books/extract`, { url, ...options })
 
 export type NewBook = {
   title: string
@@ -73,6 +76,7 @@ export type NewBook = {
   text: string
   sourceUri: string
   audio: File | null
+  importAudio?: string | null // the sound of an imported video (see Extracted.audioToken)
 }
 
 export const createBook = (b: NewBook) => {
@@ -82,5 +86,6 @@ export const createBook = (b: NewBook) => {
   form.append('text', b.text)
   form.append('sourceUri', b.sourceUri)
   if (b.audio) form.append('audio', b.audio)
+  else if (b.importAudio) form.append('importAudio', b.importAudio)
   return fetch(`${API}/books`, { method: 'POST', body: form }).then((r) => json<{ id: number }>(r))
 }
