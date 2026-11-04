@@ -14,6 +14,7 @@ import {
   type Term,
 } from '../api'
 import { AudioPanel } from './AudioPanel'
+import { languageCode } from '../typography'
 import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
 import { ReaderToolbar } from './ReaderToolbar'
@@ -285,7 +286,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           </div>
         ) : (
           <>
-            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} onMouseUp={onMouseUp}>
+            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseUp={onMouseUp}>
               {page.paragraphs
                 .filter((para) => para.length > 0) // blank lines come as empty paragraphs
                 .map((para, pi) => (

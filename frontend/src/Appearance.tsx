@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { appearance, saveAppearance, SIZE_RANGE, type ReaderFont, type Theme } from './appearanceSettings'
+import { appearance, saveAppearance, type Theme } from './appearanceSettings'
+import { TypographyControls } from './TypographyControls'
 
 export function Appearance() {
   const [settings, setSettings] = useState(appearance)
@@ -22,28 +23,8 @@ export function Appearance() {
             <option value="dark">Dark</option>
           </select>
         </label>
-        <label>
-          Text size in the reader: {settings.size} px
-          <input
-            type="range"
-            min={SIZE_RANGE.min}
-            max={SIZE_RANGE.max}
-            value={settings.size}
-            onChange={(e) => change({ size: Number(e.target.value) })}
-          />
-        </label>
-        <label>
-          Font in the reader
-          <select value={settings.font} onChange={(e) => change({ font: e.target.value as ReaderFont })}>
-            <option value="sans">Sans serif</option>
-            <option value="serif">Serif</option>
-          </select>
-        </label>
-        <div>
-          <button className="secondary" onClick={() => change({ size: SIZE_RANGE.standard, font: 'sans', theme: 'system' })}>
-            Back to the standard look
-          </button>
-        </div>
+        <h2>Text in the reader</h2>
+        <TypographyControls />
         <p className="muted">How the text will look:</p>
         <article className="appearance-sample">
           <p>

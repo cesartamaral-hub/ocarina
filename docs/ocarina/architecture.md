@@ -72,3 +72,7 @@ Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 - "Installed" model check compares file sizes only, not hashes.
 - Lute's old screens still serve everything not yet ported (term lists, import, backups, stats).
 - Bundle is ~470 MB (mlx, scipy, transformers); trim later.
+
+## Reader text settings
+
+`frontend/src/typography.ts` holds the rules (defaults, limits, normalising saved data, the CSS variables) and is unit tested. The settings are saved as one server preference, `reader.typography`; until it exists the older `readerSize` and `readerFont` are used. `applyAppearance()` writes the `--r-*` variables on the document, and the reader article, the Appearance sample and the line length (`--r-measure`, kept in characters) read them. `TypographyControls.tsx` is shared by the "Aa" popover in the reader toolbar and the Appearance page. The article gets `lang` from the book's language so justified text can hyphenate.
