@@ -333,3 +333,5 @@ ul.lookup-notes { margin: 4px 0 10px; padding-left: 1.2em; }
 div.error p { margin: 0; }
 
 .key-hint { margin: 8px 0 0; font-size: 0.8rem; }
+.w.in-span { box-shadow: 0 3px 0 var(--select); border-radius: 0; }
+.text-selection h2 { margin: 0 0 4px; }

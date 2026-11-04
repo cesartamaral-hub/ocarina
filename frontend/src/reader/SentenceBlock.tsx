@@ -11,12 +11,14 @@ export function SentenceBlock({
   playStart,
   onPlay,
   onOpenInBrowser,
+  noun = 'sentence',
 }: {
   languageId: number
   text: string
   playStart?: number
   onPlay: (seconds: number) => void
   onOpenInBrowser?: () => void
+  noun?: string
 }) {
   const [result, setResult] = useState<Translation | null>(null)
   const [error, setError] = useState<{ message: string; code?: string } | null>(null)
@@ -37,15 +39,15 @@ export function SentenceBlock({
 
   const needsSettings = error && ['no_key', 'no_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
   return (
-    <section className="sentence-block" aria-label="The sentence">
+    <section className="sentence-block" aria-label={`The ${noun}`}>
       <p className="sentence-text">{text}</p>
       <div className="sentence-actions">
         <button className="secondary" disabled={busy} onClick={run}>
-          {busy ? 'Translating…' : result ? 'Translate again' : 'Translate sentence'}
+          {busy ? 'Translating…' : result ? 'Translate again' : `Translate ${noun}`}
         </button>
         {playStart !== undefined && (
           <button className="secondary" onClick={() => onPlay(playStart)}>
-            ▶ Play sentence
+            ▶ Play {noun === 'sentence' ? 'sentence' : 'from here'}
           </button>
         )}
       </div>

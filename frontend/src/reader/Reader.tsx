@@ -7,14 +7,18 @@ import {
   getPage,
   getPageText,
   getPref,
+  openExternal,
   putPageText,
   setPref,
   type Item,
   type ReaderPage,
   type Term,
 } from '../api'
+import { dictUrl } from './dictUrl'
+import { SentenceBlock } from './SentenceBlock'
 import { AudioPanel } from './AudioPanel'
 import { languageCode } from '../typography'
+import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
 import { ReaderToolbar } from './ReaderToolbar'
@@ -89,13 +93,16 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }, [])
 
   const selectRange = useCallback(
-    (from: number, to: number) => {
+    (from: number, to: number, asText = false) => {
       const [lo, hi] = from <= to ? [from, to] : [to, from]
       const range = flat.filter((it) => it.index >= lo && it.index <= hi)
-      const words = range.filter((it) => it.isWord)
-      if (words.length < 2) return false
-      const text = range.map((it) => it.display).join('').replace(/\s+/g, ' ').trim()
-      setSelected({ termId: null, text, sentence: words[0].sentence })
+      const picked = classify(range)
+      if (!picked) return false
+      setSelected(
+        picked.kind === 'phrase' && !asText
+          ? { termId: null, text: picked.text, sentence: picked.sentence }
+          : { termId: null, text: picked.text, sentence: picked.sentence, kind: 'text', span: [lo, hi] },
+      )
       setSelectedIndex(null)
       return true
     },
@@ -113,6 +120,10 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         return next
       })
       return
+    }
+    if (e.altKey) {
+      const own = flat.filter((x) => x.sentence === it.sentence)
+      if (own.length && selectRange(own[0].index, own[own.length - 1].index, true)) return
     }
     if (e.shiftKey && selectedIndex !== null && selectRange(selectedIndex, it.index)) return
     setSelected({ termId: it.termId, text: it.text, sentence: it.sentence })
@@ -304,7 +315,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                               data-i={it.index}
                               className={`w s${it.status}${
                                 selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
-                              }${it.termId !== null && multi.has(it.termId) ? ' multi' : ''}`}
+                              }${it.termId !== null && multi.has(it.termId) ? ' multi' : ''}${
+                                selected?.span && it.index >= selected.span[0] && it.index <= selected.span[1] ? ' in-span' : ''
+                              }`}
                               onClick={(e) => onWordClick(e, it)}
                               onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
                               onMouseLeave={hoverCard.end}
@@ -347,7 +360,24 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           </>
         }
         side={
-          selected ? (
+          selected?.kind === 'text' ? (
+          <section className="text-selection" key={`text:${selected.text}`}>
+            <h2>Selected text</h2>
+            <SentenceBlock
+              languageId={page.language.id}
+              text={selected.text}
+              playStart={audio.startOf(selected.sentence)}
+              onPlay={audio.playAt}
+              noun="text"
+              onOpenInBrowser={
+                page.language.sentenceDictionaries[0] ? () => openExternal(dictUrl(page.language.sentenceDictionaries[0], selected.text)).catch((e) => setError(e.message)) : undefined
+              }
+            />
+            <button className="secondary" onClick={() => setSelected({ termId: null, text: selected.text, sentence: selected.sentence })}>
+              Save as phrase anyway
+            </button>
+          </section>
+        ) : selected ? (
           <TermPanel
             key={selected.termId ?? `new:${selected.text}`}
             page={page}

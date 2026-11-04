@@ -76,3 +76,7 @@ Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 ## Reader text settings
 
 `frontend/src/typography.ts` holds the rules (defaults, limits, normalising saved data, the CSS variables) and is unit tested. The settings are saved as one server preference, `reader.typography`; until it exists the older `readerSize` and `readerFont` are used. `applyAppearance()` writes the `--r-*` variables on the document, and the reader article, the Appearance sample and the line length (`--r-measure`, kept in characters) read them. `TypographyControls.tsx` is shared by the "Aa" popover in the reader toolbar and the Appearance page. The article gets `lang` from the book's language so justified text can hyphenate.
+
+## Selecting text in the reader
+
+`reader/selection.ts` (`classify`, unit tested) decides what a drag or Shift-click range means: 2 to 6 words in one sentence is a phrase (word panel, as before); more words or a sentence end inside it is text. Text opens "Selected text" in the side panel (translate, play from the first sentence, "Save as phrase anyway") and outlines the span; Option-click on a word selects its whole sentence as text.

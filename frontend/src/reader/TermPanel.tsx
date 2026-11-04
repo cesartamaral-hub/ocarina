@@ -16,15 +16,9 @@ import {
 import { notify } from '../notices'
 import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { Definition } from './Definition'
+import { dictUrl } from './dictUrl'
 import { SentenceBlock } from './SentenceBlock'
 import { STATUS_BUTTONS } from './statuses'
-
-// Dictionary urls contain [LUTE] (older ones ###) where the word goes; a leading * only marked
-// "open as popup" in Lute.
-function dictUrl(d: Dictionary, text: string): string {
-  const word = encodeURIComponent(text)
-  return d.url.replace(/^\*/, '').replace('[LUTE]', word).replace('###', word)
-}
 
 function dictName(d: Dictionary): string {
   try {
@@ -35,7 +29,8 @@ function dictName(d: Dictionary): string {
 }
 
 
-export type Target = { termId: number | null; text: string; sentence: number }
+// `span` (first and last item index) and `kind: 'text'` mark a dragged selection that is read, not learned.
+export type Target = { termId: number | null; text: string; sentence: number; kind?: 'text'; span?: [number, number] }
 
 export function TermPanel({
   page,
