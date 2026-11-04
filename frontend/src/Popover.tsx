@@ -27,7 +27,8 @@ export function Popover({
   useEffect(() => {
     const away = (e: MouseEvent) => {
       const target = e.target as Node
-      if (!box.current?.contains(target) && !anchor.current?.contains(target)) onClose()
+      // A click in another popover (a menu opened from this one) is not a click away.
+      if (!box.current?.contains(target) && !anchor.current?.contains(target) && !(target as Element).closest?.('.popover')) onClose()
     }
     document.addEventListener('mousedown', away)
     return () => document.removeEventListener('mousedown', away)
