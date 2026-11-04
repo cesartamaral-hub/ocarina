@@ -384,7 +384,8 @@ button.link-button:hover:not(:disabled) { filter: none; text-decoration-thicknes
 
 /* The line above the text: where you came from on the left, what you do to the page on the right. */
 .reader-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 14px 0 4px; }
-.reader-toolbar .back { max-width: min(46ch, 100%); overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
+.reader-toolbar .back { padding-left: 8px; }
+.reader-toolbar .reader-title { min-width: 0; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 4px; }
 .reader-toolbar .spacer { flex: 1; }
 
 /* Page controls pinned to the bottom of the reading area: previous at the left edge, finish at the right edge. */
@@ -437,8 +438,8 @@ body:has(.reader) { overflow: hidden; }
 .pal-dark { --bg: #1a1917; --fg: #ece8e0; --panel: #24221f; --line: #3a3733; --accent: #6cc3a8; --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46; }
 .ap-grid { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 28px; align-items: start; }
 .ap-controls { display: grid; gap: 18px; }
-.ap-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; background: var(--panel); }
-.ap-card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+.ap-card, .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; background: var(--panel); }
+.ap-card h2, .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
 .ap-card h3 { margin: 18px 0 8px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .ap-preview { position: sticky; top: calc(var(--header-h) + 18px); }
 .ap-preview h2 { margin: 0 0 10px; font-size: 1.05rem; }
@@ -484,3 +485,22 @@ body:has(.reader) { overflow: hidden; }
   .ap-preview { position: static; order: -1; }
   .radio-cards.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.more-menu a { display: flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 6px; color: var(--fg); text-decoration: none; }
+.more-menu a:hover { background: var(--line); }
+.more-menu a.danger-text { color: var(--error); }
+
+/* Audio page */
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; }
+.page-head h1 { margin: 0; }
+.page-head p { margin: 2px 0 0; }
+.card { margin: 0 0 16px; }
+.card > .muted:first-of-type { margin-top: 0; }
+.card .audio-versions { margin-bottom: 12px; }
+.card audio { margin-bottom: 4px; }
+.audio-status { margin: 10px 0 0; }
+.audio-using-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0 4px; }
+.card .ap-slider { max-width: 420px; }
+.card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.job-strip { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--accent); border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.job-strip progress { flex: 1; min-width: 80px; }

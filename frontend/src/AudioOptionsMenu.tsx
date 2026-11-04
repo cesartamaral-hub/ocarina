@@ -13,11 +13,13 @@ export function AudioOptionsMenu({
   choice,
   onChange,
   disabled,
+  label,
 }: {
   options: AudioOptions
   choice: AudioChoice
   onChange: (choice: AudioChoice) => void
   disabled?: boolean
+  label?: string // shows a labelled button instead of the "⋯" one
 }) {
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -101,7 +103,7 @@ export function AudioOptionsMenu({
     <div className="menu-wrap">
       <button
         ref={trigger}
-        className={`secondary icon-button${overridden ? ' active' : ''}`}
+        className={label ? `secondary small${overridden ? ' active' : ''}` : `secondary icon-button${overridden ? ' active' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Model and voice for this audio"
@@ -115,7 +117,7 @@ export function AudioOptionsMenu({
           }
         }}
       >
-        ⋯
+        {label ? `${label} ▾` : '⋯'}
       </button>
       {open && (
         <div ref={menu} className="menu" role="menu" aria-label="Model and voice for this audio" onKeyDown={onMenuKey}>

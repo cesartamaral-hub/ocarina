@@ -8,7 +8,8 @@ import { Backups } from './Backups'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
 import { BookList } from './BookList'
-import { BookView } from './BookView'
+import { AudioPage } from './AudioPage'
+import { BookRedirect } from './BookRedirect'
 import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
@@ -20,7 +21,7 @@ import { Translation } from './Translation'
 import { Stats } from './Stats'
 import { TermList } from './TermList'
 
-// Tiny hash router: "#/" is the book list, "#/book/12" a book.
+// Tiny hash router: "#/" is the book list, "#/book/12" opens a book in the reader, "#/book/12/audio" is its audio page.
 function useRoute() {
   const [hash, setHash] = useState(window.location.hash)
   useEffect(() => {
@@ -33,6 +34,7 @@ function useRoute() {
   return {
     bookId: m ? Number(m[1]) : null,
     readPage: r ? Number(r[2]) : null,
+    audioPage: /^#\/book\/\d+\/audio\/?$/.test(hash),
     settings: hash === '#/settings',
     newBook: hash === '#/new',
     terms: hash === '#/terms',
@@ -61,7 +63,7 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, storage, languages, languageId } = useRoute()
+  const { bookId, readPage, audioPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, storage, languages, languageId } = useRoute()
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
   const reading = bookId !== null && readPage !== null
   const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || storage || languages || languageId)
@@ -133,10 +135,12 @@ export default function App() {
           <NewBook />
         ) : bookId !== null && readPage !== null ? (
           <Reader key={bookId} bookId={bookId} pageNumber={readPage} />
+        ) : bookId !== null && audioPage ? (
+          <AudioPage key={bookId} bookId={bookId} />
         ) : bookId === null ? (
           <BookList />
         ) : (
-          <BookView key={bookId} bookId={bookId} />
+          <BookRedirect key={bookId} bookId={bookId} />
         )}
       </main>
       <NoticeList />

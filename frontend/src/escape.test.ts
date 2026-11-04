@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { closeTopLayer, onEscapeKey, parentRoute, type KeyLike } from './escape'
 
 describe('parentRoute', () => {
-  it('goes from the reader to the book, and from the book to the list', () => {
-    expect(parentRoute('#/book/12/read/3')).toBe('#/book/12')
+  it('goes from the reader to the book list, and from the audio page back to the book', () => {
+    expect(parentRoute('#/book/12/read/3')).toBe('#/')
+    expect(parentRoute('#/book/12/audio')).toBe('#/book/12') // which opens the reader where you were
     expect(parentRoute('#/book/12')).toBe('#/')
   })
   it('goes from settings pages to settings, and from settings to the list', () => {
@@ -36,7 +37,7 @@ describe('onEscapeKey', () => {
   })
   it('goes back when nothing is open', () => {
     const go = vi.fn()
-    onEscapeKey(key(), go, () => '#/book/5/read/2')
+    onEscapeKey(key(), go, () => '#/book/5/audio')
     expect(go).toHaveBeenCalledWith('#/book/5')
   })
   it('leaves a text field first, and does not go back yet', () => {

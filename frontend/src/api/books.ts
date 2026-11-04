@@ -41,6 +41,8 @@ export type BookSentences = {
   sentences: Sentence[]
 }
 
+export const getBook = (id: number) => fetch(`${API}/books/${id}`).then((r) => json<Book>(r))
+
 export const getBooks = (archived = false) => fetch(`${API}/books?archived=${archived}`).then((r) => json<Book[]>(r))
 
 export const changeBook = (id: number, change: Partial<Pick<Book, 'title' | 'sourceUri' | 'tags' | 'archived'>>) =>

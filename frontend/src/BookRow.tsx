@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
 import type { Book } from './api'
-import { useEscape } from './escape'
+import { MoreMenu } from './MoreMenu'
 import { barParts, difficulty, DIFFICULTY_LABEL, duration } from './bookStats'
 
 function SpeakerIcon() {
@@ -9,48 +8,6 @@ function SpeakerIcon() {
       <path d="M2 6h3l4-3v10L5 10H2z" fill="currentColor" />
       <path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
-  )
-}
-
-// The "more" menu of a row: closes on Esc, on a click outside and after a choice.
-function MoreMenu({ title, items }: { title: string; items: { label: string; onChoose: () => void; danger?: boolean }[] }) {
-  const [open, setOpen] = useState(false)
-  const box = useRef<HTMLSpanElement>(null)
-  useEscape(open, () => setOpen(false))
-  useEffect(() => {
-    if (!open) return
-    const away = (e: MouseEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', away)
-    return () => {
-      document.removeEventListener('mousedown', away)
-    }
-  }, [open])
-  return (
-    <span className="more" ref={box}>
-      <button className="secondary" aria-label={`More for ${title}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        ⋯
-      </button>
-      {open && (
-        <ul className="more-menu" role="menu">
-          {items.map((i) => (
-            <li key={i.label} role="none">
-              <button
-                role="menuitem"
-                className={i.danger ? 'link-button danger-text' : 'link-button'}
-                onClick={() => {
-                  setOpen(false)
-                  i.onChoose()
-                }}
-              >
-                {i.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </span>
   )
 }
 
@@ -98,7 +55,7 @@ export function BookRow({
   return (
     <div className="book-row">
       <div className="book-title">
-        <a href={`#/book/${book.id}`}>{book.title}</a>
+        <a href={`#/book/${book.id}/read/${book.currentPage}`}>{book.title}</a>
         {book.hasAudio && (
           <span className="audio-icon" role="img" aria-label={audio} title={audio}>
             <SpeakerIcon />
@@ -115,8 +72,9 @@ export function BookRow({
           {book.currentPage > 1 ? 'Continue' : 'Read'}
         </a>
         <MoreMenu
-          title={book.title}
+          title={`More for ${book.title}`}
           items={[
+            { label: 'Audio…', href: `#/book/${book.id}/audio` },
             { label: 'Edit', onChoose: onEdit },
             { label: book.archived ? 'Unarchive' : 'Archive', onChoose: onArchive },
             { label: 'Delete…', onChoose: onDelete, danger: true },

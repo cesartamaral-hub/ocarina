@@ -2,6 +2,7 @@
 JSON API for books.
 
     GET    /ocarina/api/books                  books (?archived=true for the archived ones)
+    GET    /ocarina/api/books/<id>             one book, as in the list (the reader uses its current page)
     PATCH  /ocarina/api/books/<id>             change title, source, tags or archived
     DELETE /ocarina/api/books/<id>             delete a book (and audio Ocarina made for it)
     GET    /ocarina/api/books/<id>/sentences   sentences, with start times if audio was generated
@@ -60,6 +61,15 @@ def books():
         book_index.build_in_background(current_app._get_current_object(), stale)  # the numbers appear on the next load
     stats = book_index.stats_by_book()
     return jsonify([_book_json(b, audio_dir, stats) for b in found])
+
+
+@bp.route("/books/<int:book_id>", methods=["GET"])
+def get_book(book_id):
+    "One book with its progress."
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    return jsonify(_book_json(book, current_app.env_config.useraudiopath, book_index.stats_by_book()))
 
 
 @bp.route("/books/<int:book_id>", methods=["PATCH"])

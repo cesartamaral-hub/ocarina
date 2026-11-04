@@ -72,3 +72,11 @@ def test_delete_removes_generated_audio_but_keeps_own_recordings(app, client):
     ids = [b["id"] for b in client.get(BOOKS).json]
     assert generated_id not in ids and own_id not in ids
     assert client.delete(f"{BOOKS}/{own_id}").status_code == 404
+
+
+def test_one_book_can_be_fetched_with_its_current_page(app, client):
+    with app.app_context():
+        book_id = make_dutch_book("Eén boek").id
+    r = client.get(f"{BOOKS}/{book_id}")
+    assert r.status_code == 200 and r.json["id"] == book_id and r.json["currentPage"] == 1 and r.json["pages"] == 2
+    assert client.get(f"{BOOKS}/99999").status_code == 404

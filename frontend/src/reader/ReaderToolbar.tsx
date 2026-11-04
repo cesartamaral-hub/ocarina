@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useEscape } from '../escape'
+import { MoreMenu } from '../MoreMenu'
 import { TypographyControls } from '../TypographyControls'
 import { keyLabel, keyOf } from '../shortcutKeys'
 
@@ -34,15 +35,15 @@ export function ReaderToolbar({
   }, [open])
   return (
     <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
-      <a className="button quiet back" href={`#/book/${bookId}`} title={`Back to ${title}`}>
-        ← {title}
+      <a className="button quiet back" href="#/" title="Back to your books">
+        ← Books
       </a>
+      <span className="reader-title muted" title={title}>
+        {title}
+      </span>
       <span className="spacer" />
       <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
         Highlights
-      </button>
-      <button className="quiet" onClick={onEdit}>
-        Edit text
       </button>
       <span className="aa-box" ref={box}>
         <button className="quiet aa-button" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)} title="Text appearance">
@@ -54,9 +55,14 @@ export function ReaderToolbar({
           </div>
         )}
       </span>
-      <button className="quiet" onClick={onHelp} title="Keyboard shortcuts">
-        Keys
-      </button>
+      <MoreMenu
+        title="More: audio, edit text, keyboard shortcuts"
+        items={[
+          { label: 'Audio…', href: `#/book/${bookId}/audio` },
+          { label: 'Edit text', onChoose: onEdit },
+          { label: 'Keyboard shortcuts', onChoose: onHelp },
+        ]}
+      />
     </div>
   )
 }

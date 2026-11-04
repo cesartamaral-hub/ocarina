@@ -8,13 +8,13 @@ const describe = (j: Job): { text: string; href: string } => {
     return { text: `Downloading ${j.title ?? 'a model'}${j.state === 'running' && j.total ? ` · ${percent(j.done, j.total)}%` : ''}`, href: '#/settings' }
   }
   if (j.kind === 'sync') {
-    return { text: `Syncing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`, href: j.book_id ? `#/book/${j.book_id}` : '#/' }
+    return { text: `Syncing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`, href: j.book_id ? `#/book/${j.book_id}/audio` : '#/' }
   }
   if (j.kind === 'preview') return { text: 'Making a voice preview', href: '#/settings' }
   if (j.kind === 'check' || j.phase === 'testing') return { text: `Testing ${j.title ?? 'a model'}`, href: '#/settings' }
   return {
     text: `Voicing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`,
-    href: j.book_id ? `#/book/${j.book_id}` : '#/',
+    href: j.book_id ? `#/book/${j.book_id}/audio` : '#/',
   }
 }
 
