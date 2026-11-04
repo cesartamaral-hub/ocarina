@@ -306,17 +306,17 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 onFollowChange={setFollow}
               />
             )}
+            <ReaderToolbar
+              bookId={bookId}
+              title={page.title}
+              page={page.page}
+              pageCount={page.pageCount}
+              highlights={highlights}
+              onToggleHighlights={toggleHighlights}
+              onEdit={startEditing}
+              onHelp={() => setHelp(true)}
+            />
             <div className="reader-column">
-              <ReaderToolbar
-                bookId={bookId}
-                title={page.title}
-                page={page.page}
-                pageCount={page.pageCount}
-                highlights={highlights}
-                onToggleHighlights={toggleHighlights}
-                onEdit={startEditing}
-                onHelp={() => setHelp(true)}
-              />
               {help && <KeyHelp onClose={() => setHelp(false)} />}
               {error && <p className="error">{error}</p>}
               {editing !== null ? (

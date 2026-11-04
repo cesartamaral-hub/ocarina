@@ -97,7 +97,7 @@ button.secondary { background: transparent; color: var(--fg); border: 1px solid 
 .reader.collapsed { grid-template-columns: minmax(0, 1fr) 44px; }
 .reader-main { min-width: 0; padding: 0 28px 64px; }
 .reader-column { max-width: var(--measure); margin: 0 auto; }
-.reader-toolbar { margin: 18px 0 6px; }
+.reader-toolbar { margin: 18px auto 6px; max-width: 760px; } /* its own fixed width, so it stays put while the text column resizes */
 .reader-column article, .appearance-sample { font-size: var(--r-size, 18px); line-height: var(--r-line, 2); font-family: var(--r-font, inherit); font-weight: var(--r-weight, 400); letter-spacing: var(--r-letter, 0); word-spacing: var(--r-word, 0); text-align: var(--r-align, start); hyphens: var(--r-hyphens, manual); }
 .aa-box { position: relative; display: inline-block; }
 .aa-button { padding: 1px 8px; font-weight: 600; }

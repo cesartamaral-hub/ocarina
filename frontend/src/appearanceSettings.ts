@@ -5,7 +5,10 @@ import { DEFAULTS, fromPreferences, normalize, toCssVars, type Typography } from
 // the page as an attribute and two CSS variables.
 export type Theme = 'system' | 'light' | 'dark'
 
-export const typography = (): Typography => fromPreferences(getPref)
+// Changes apply at once; saving waits until you stop moving a slider.
+let latest: Typography | null = null
+let saveTimer: number | undefined
+export const typography = (): Typography => latest ?? fromPreferences(getPref)
 
 export const appearance = () => ({ theme: getPref<Theme>('theme', 'system') })
 
@@ -24,7 +27,12 @@ export function saveAppearance(change: { theme?: Theme }): void {
 
 export function saveTypography(change: Partial<Typography> | 'reset'): Typography {
   const next = change === 'reset' ? DEFAULTS : normalize({ ...typography(), ...change })
-  setPref('reader.typography', next)
+  latest = next
   applyAppearance()
+  window.clearTimeout(saveTimer)
+  saveTimer = window.setTimeout(() => {
+    setPref('reader.typography', next)
+    latest = null
+  }, 250)
   return next
 }
