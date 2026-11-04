@@ -24,6 +24,9 @@ import { useEscape } from '../escape'
 import { useLeaveGuard } from '../leaveGuard'
 import { TextEditor } from './TextEditor'
 import { VocabularyPanel } from './VocabularyPanel'
+import { TranslationPanel } from './TranslationPanel'
+import { effectiveMode, nextMode, pageTranslations, type TranslationMode } from './translationView'
+import { useBookTranslation } from './useBookTranslation'
 import { pageVocabulary, type NewWord } from './vocabulary'
 import { useMediaQuery } from '../useMediaQuery'
 import { isDirty } from './editing'
@@ -100,6 +103,17 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }, [narrow, vocabWide])
   useEscape(narrow && vocabNarrow, () => setVocabNarrow(false))
   const vocab = useMemo(() => pageVocabulary(flat), [flat])
+
+  // A translated version of the text, shown beside it or instead of it.
+  const tr = useBookTranslation(bookId)
+  const [chosenMode, setChosenMode] = useState<TranslationMode>(() => getPref<TranslationMode>('reader.translationMode', 'original'))
+  const pageTr = useMemo(() => (page && tr.data ? pageTranslations(page.paragraphs, tr.data.sentences, page.page) : new Map()), [page, tr.data])
+  const shown = effectiveMode(chosenMode, pageTr.size > 0)
+  const chooseMode = useCallback((m: TranslationMode) => {
+    setChosenMode(m)
+    setPref('reader.translationMode', m)
+  }, [])
+  const [pair, setPair] = useState<number | null>(null) // the sentence under the pointer, marked on both sides
   // The book's own numbers come from the server; they follow your status changes a moment after you make them.
   const [bookStats, setBookStats] = useState<BookStats | null | undefined>(undefined)
   const hasPage = page !== null
@@ -168,6 +182,12 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   )
 
   // A click on a word, with what the modifier keys mean.
+  // A click on a translated sentence selects the sentence of the original (with its translate and play buttons).
+  function selectSentence(sentence: number) {
+    const own = flat.filter((x) => x.sentence === sentence)
+    if (own.length) selectRange(own[0].index, own[own.length - 1].index, true)
+  }
+
   // A word from the vocabulary panel's list: select it and bring it into view.
   function pickNewWord(w: NewWord) {
     setSelected({ termId: w.termId, text: w.text, sentence: w.sentence })
@@ -250,6 +270,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         setHelp((h) => !h)
       } else if (action === 'toggleVocab') {
         toggleVocab()
+      } else if (action === 'cycleTranslation') {
+        chooseMode(nextMode(chosenMode, pageTr.size > 0))
       } else if (action === 'highlights') {
         toggleHighlights()
       } else if (action === 'prevPage' && pageNumber > 1) {
@@ -260,7 +282,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab])
+  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, chooseMode, chosenMode, pageTr])
 
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
@@ -384,10 +406,12 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               onToggleHighlights={toggleHighlights}
               vocabOpen={vocabOpen}
               onToggleVocab={toggleVocab}
+              translationOn={shown !== 'original'}
+              translation={<TranslationPanel tr={tr} mode={shown} onMode={chooseMode} page={page.page} pageHasTranslation={pageTr.size > 0} />}
               onEdit={startEditing}
               onHelp={() => setHelp(true)}
             />
-            <div className="reader-column">
+            <div className={`reader-column${shown === 'both' ? ' parallel' : ''}`}>
               {help && <KeyHelp onClose={() => setHelp(false)} />}
               {error && <p className="error">{error}</p>}
               {editing !== null ? (
@@ -409,39 +433,78 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseDown={onMouseDown}>
               {page.paragraphs
                 .filter((para) => para.length > 0) // blank lines come as empty paragraphs
-                .map((para, pi) => (
-                  <p key={pi}>
-                    {para.map((sent, si) => (
-                      <span
-                        key={si}
-                        data-sent={sent[0]?.sentence}
-                        className={`sentence${sent[0]?.sentence === audio.playing ? ' playing' : ''}${selected?.sentence === sent[0]?.sentence ? ' active' : ''}`}
-                      >
-                        {sent.map((it) =>
-                          it.isWord ? (
-                            <span
-                              key={it.index}
-                              data-i={it.index}
-                              className={`w s${it.status}${
-                                selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
-                              }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
-                                ((dragSpan ?? selected?.span) && it.index >= (dragSpan ?? selected!.span!)[0] && it.index <= (dragSpan ?? selected!.span!)[1]) ? ' in-span' : ''
-                              }`}
-                              onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
-                              onMouseLeave={hoverCard.end}
-                            >
-                              {it.display}
-                            </span>
-                          ) : (
-                            <span key={it.index} data-i={it.index}>
-                              {it.display}
-                            </span>
-                          ),
-                        )}
-                      </span>
-                    ))}
-                  </p>
-                ))}
+                .map((para, pi) => {
+                  const original = (
+                    <p key="o">
+                      {para.map((sent, si) => (
+                        <span
+                          key={si}
+                          data-sent={sent[0]?.sentence}
+                          className={`sentence${sent[0]?.sentence === audio.playing ? ' playing' : ''}${selected?.sentence === sent[0]?.sentence ? ' active' : ''}${shown === 'both' && sent[0]?.sentence === pair ? ' pair' : ''}`}
+                          onMouseEnter={shown === 'both' ? () => setPair(sent[0]?.sentence ?? null) : undefined}
+                          onMouseLeave={shown === 'both' ? () => setPair(null) : undefined}
+                        >
+                          {sent.map((it) =>
+                            it.isWord ? (
+                              <span
+                                key={it.index}
+                                data-i={it.index}
+                                className={`w s${it.status}${
+                                  selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
+                                }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
+                                  ((dragSpan ?? selected?.span) && it.index >= (dragSpan ?? selected!.span!)[0] && it.index <= (dragSpan ?? selected!.span!)[1]) ? ' in-span' : ''
+                                }`}
+                                onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
+                                onMouseLeave={hoverCard.end}
+                              >
+                                {it.display}
+                              </span>
+                            ) : (
+                              <span key={it.index} data-i={it.index}>
+                                {it.display}
+                              </span>
+                            ),
+                          )}
+                        </span>
+                      ))}
+                    </p>
+                  )
+                  if (shown === 'original') return <div key={pi} className="para">{original}</div>
+                  // The translation of this paragraph: the same sentence numbers, so the sentence being read aloud is marked here too.
+                  const translated = (
+                    <p key="t" className="tr" lang={tr.data?.target} dir="ltr">
+                      {para.map((sent, si) => {
+                        const id = sent[0]?.sentence
+                        const t = pageTr.get(id)
+                        const hasWord = sent.some((i) => i.isWord)
+                        if (!hasWord) return null
+                        return (
+                          <span
+                            key={si}
+                            data-sent={id}
+                            className={`sentence tr-sentence${id === audio.playing ? ' playing' : ''}${selected?.sentence === id ? ' active' : ''}${id === pair ? ' pair' : ''}${t?.stale ? ' tr-stale' : ''}${t ? '' : ' tr-pending'}`}
+                            onMouseEnter={() => setPair(id)}
+                            onMouseLeave={() => setPair(null)}
+                            onClick={() => selectSentence(id)}
+                            title={t?.stale ? 'The sentence was edited after this was translated' : 'Click to select this sentence'}
+                          >
+                            {t ? t.text : shown === 'both' ? '…' : sent.map((i) => i.display).join('')}{' '}
+                          </span>
+                        )
+                      })}
+                    </p>
+                  )
+                  return shown === 'both' ? (
+                    <div key={pi} className="para-pair">
+                      {original}
+                      {translated}
+                    </div>
+                  ) : (
+                    <div key={pi} className="para">
+                      {translated}
+                    </div>
+                  )
+                })}
             </article>
             <p className="muted">
               Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.

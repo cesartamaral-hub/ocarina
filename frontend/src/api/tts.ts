@@ -2,7 +2,7 @@ import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync'
+  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync' | 'translate'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number

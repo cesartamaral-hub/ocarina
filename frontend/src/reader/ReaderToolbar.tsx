@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { MoreMenu } from '../MoreMenu'
 import { Popover } from '../Popover'
 import { useAnchoredPopover } from '../useAnchoredPopover'
@@ -12,6 +13,8 @@ export function ReaderToolbar({
   onToggleHighlights,
   vocabOpen,
   onToggleVocab,
+  translation,
+  translationOn,
   onEdit,
   onHelp,
 }: {
@@ -21,10 +24,13 @@ export function ReaderToolbar({
   onToggleHighlights: () => void
   vocabOpen: boolean
   onToggleVocab: () => void
+  translation: ReactNode // the content of the Translation popover
+  translationOn: boolean // a translation is being shown
   onEdit: () => void
   onHelp: () => void
 }) {
   const { anchor, placement, toggle, close } = useAnchoredPopover(380, 'end')
+  const { anchor: tpAnchor, placement: tpPlacement, toggle: tpToggle, close: tpClose } = useAnchoredPopover(360, 'end')
   return (
     <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
       <a className="button quiet back" href="#/" title="Back to your books">
@@ -34,6 +40,14 @@ export function ReaderToolbar({
         {title}
       </span>
       <span className="spacer" />
+      <button ref={tpAnchor} className="quiet" aria-pressed={translationOn} aria-expanded={tpPlacement !== null} aria-haspopup="dialog" onClick={() => tpToggle()} title="A translated version of the text">
+        Translation
+      </button>
+      {tpPlacement && (
+        <Popover anchor={tpAnchor} placement={tpPlacement} onClose={tpClose} label="Translation" className="tp-popover">
+          {translation}
+        </Popover>
+      )}
       <button className="quiet" aria-pressed={vocabOpen} onClick={onToggleVocab} title={`How well you know the words (${keyLabel(keyOf('toggleVocab'))})`}>
         Vocabulary
       </button>

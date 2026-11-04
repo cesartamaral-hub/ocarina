@@ -18,6 +18,7 @@ export const ACTIONS: Action[] = [
   { id: 'nextPage', label: 'Next page', key: 'ArrowRight' },
   { id: 'highlights', label: 'Hide or show the word colours', key: 'h' },
   { id: 'togglePanel', label: 'Show or hide the word panel', key: 'p' },
+  { id: 'cycleTranslation', label: 'Show the translation: original, side by side, translation only', key: 't' },
   { id: 'toggleVocab', label: 'Show or hide the vocabulary panel', key: 'v' },
   { id: 'help', label: 'Show or hide the key list', key: '?' },
   { id: 'clear', label: 'Clear the selection', key: 'Escape' },

@@ -589,3 +589,31 @@ body:has(.reader) { overflow: hidden; }
 .lang-books li progress { grid-column: 1 / -1; width: 100%; height: 6px; }
 .lang-card .chart { max-width: none; margin-bottom: 8px; }
 .lang-card .chart svg { background: var(--bg); }
+
+/* Translated version of the text */
+.reader-column { container-type: inline-size; }
+.reader-column.parallel { max-width: min(100%, calc(2 * var(--r-measure, 70ch) + 40px)); }
+.para-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 36px; margin-bottom: 1.1em; }
+.para-pair p { margin: 0; }
+.para-pair .tr { border-left: 2px solid var(--line); padding-left: 20px; }
+.tr { color: color-mix(in srgb, var(--fg) 80%, var(--bg)); }
+.tr .sentence { cursor: pointer; }
+.tr-pending { font-style: italic; color: var(--muted); }
+.tr-stale { opacity: 0.65; }
+.sentence.pair { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+@container (max-width: 760px) { .para-pair { grid-template-columns: minmax(0, 1fr); gap: 6px; } .para-pair .tr { border-left: 0; padding-left: 0; border-top: 1px dashed var(--line); padding-top: 6px; } }
+.translation-panel { padding: 14px 16px 16px; }
+.translation-panel h3 { margin: 0 0 10px; font-size: 1rem; }
+.translation-panel .segmented { display: flex; margin: 0 0 8px; }
+.translation-panel .segmented label { flex: 1; justify-content: center; padding: 0 8px; font-size: 0.9rem; text-align: center; }
+.translation-panel .segmented label.off { opacity: 0.5; cursor: default; }
+.tp-count { margin: 12px 0 4px; }
+.translation-panel progress { width: 100%; height: 8px; }
+.tp-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.tp-running { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.tp-note { margin: 10px 0 0; font-size: 0.88rem; }
+.tp-warn { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.88rem; background: color-mix(in srgb, #d49a2a 18%, transparent); border: 1px solid color-mix(in srgb, #d49a2a 45%, var(--line)); }
+.translation-panel .link-button { margin-top: 12px; }
+.tp-popover { max-height: min(80vh, 640px); }
+.para { margin: 0; }
+.tr-sentence:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
