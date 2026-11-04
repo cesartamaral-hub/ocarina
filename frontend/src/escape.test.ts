@@ -7,16 +7,12 @@ describe('parentRoute', () => {
     expect(parentRoute('#/book/12/audio')).toBe('#/book/12') // which opens the reader where you were
     expect(parentRoute('#/book/12')).toBe('#/')
   })
-  it('goes from settings pages to settings, and from settings to the list', () => {
-    expect(parentRoute('#/appearance')).toBe('#/settings')
-    expect(parentRoute('#/translation')).toBe('#/settings')
-    expect(parentRoute('#/storage')).toBe('#/settings')
-    expect(parentRoute('#/settings')).toBe('#/')
-  })
-  it('goes from a language to the languages list', () => {
-    expect(parentRoute('#/languages/4')).toBe('#/languages')
-    expect(parentRoute('#/languages/new')).toBe('#/languages')
-    expect(parentRoute('#/languages')).toBe('#/')
+  it('goes from a language to the languages list, and from a settings section to the book list', () => {
+    expect(parentRoute('#/settings/languages/4')).toBe('#/settings/languages')
+    expect(parentRoute('#/settings/languages/new')).toBe('#/settings/languages')
+    expect(parentRoute('#/settings/languages')).toBe('#/')
+    expect(parentRoute('#/settings/appearance')).toBe('#/')
+    expect(parentRoute('#/settings/storage')).toBe('#/')
   })
   it('stays on the book list', () => {
     expect(parentRoute('#/')).toBeNull()

@@ -66,9 +66,6 @@ export function Translation() {
   if (!s) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Sentence translation</h1>
       <p className="muted">
         When you press “Translate sentence” in the reader, that sentence is sent to the service you choose here. Nothing is sent unless you press it, and
@@ -88,7 +85,7 @@ export function Translation() {
                 {missing && (
                   <span className="choice-note">
                     {' '}
-                    Not downloaded yet ({formatBytes(s.localModel.sizeBytes)}). <a href="#/settings">Download it in Settings</a>.
+                    Not downloaded yet ({formatBytes(s.localModel.sizeBytes)}). <a href="#/settings/models">Download it in Settings</a>.
                   </span>
                 )}
               </span>
@@ -109,7 +106,7 @@ export function Translation() {
                 {!m.installed && (
                   <span className="choice-note">
                     {' '}
-                    Not downloaded yet. <a href="#/settings">Download it in Settings</a>.
+                    Not downloaded yet. <a href="#/settings/models">Download it in Settings</a>.
                   </span>
                 )}
               </span>

@@ -23,14 +23,14 @@ export function LanguageList() {
     <>
       <div className="title-row">
         <h1>Languages</h1>
-        <a href="#/languages/new" className="button">
+        <a href="#/settings/languages/new" className="button">
           Add a language
         </a>
       </div>
       <ul className="books">
         {languages.map((l) => (
           <li key={l.id}>
-            <a href={`#/languages/${l.id}`}>{l.name}</a>
+            <a href={`#/settings/languages/${l.id}`}>{l.name}</a>
             <span className="muted">
               {l.books} {l.books === 1 ? 'book' : 'books'} · {l.terms} terms
             </span>
@@ -93,7 +93,7 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
     setError('')
     try {
       const result = await saveLanguage(lang!)
-      if (languageId === null) window.location.hash = `#/languages/${result.id}`
+      if (languageId === null) window.location.hash = `#/settings/languages/${result.id}`
       else {
         setLang(result)
         setSaved(true)
@@ -108,7 +108,7 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
     setError('')
     try {
       await deleteLanguage(languageId, false)
-      window.location.hash = '#/languages'
+      window.location.hash = '#/settings/languages'
     } catch (e) {
       const err = e as Error & { books?: number; terms?: number }
       if (err.books === undefined) return setError(err.message)
@@ -118,7 +118,7 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
       if (typed?.trim() !== lang!.name) return
       try {
         await deleteLanguage(languageId, true)
-        window.location.hash = '#/languages'
+        window.location.hash = '#/settings/languages'
       } catch (e2) {
         setError((e2 as Error).message)
       }
@@ -128,7 +128,7 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
   return (
     <>
       <p>
-        <a href="#/languages">← Languages</a>
+        <a href="#/settings/languages">← Languages</a>
       </p>
       <h1>{languageId === null ? 'Add a language' : lang.name}</h1>
 

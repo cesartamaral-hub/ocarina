@@ -37,9 +37,6 @@ export function Backups() {
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch })
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Backups</h1>
       <p className="muted">
         A backup is a compressed copy of your database (books, terms, statuses). Your images are copied next to it. Audio files are not included.

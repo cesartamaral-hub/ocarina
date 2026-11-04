@@ -144,7 +144,7 @@ export function AudioOptionsMenu({
           </div>
           <div className="menu-footer">
             <p className="muted">Applies to this audio only.</p>
-            <a role="menuitem" tabIndex={-1} className="menu-item link" href="#/settings" onClick={() => setOpen(false)}>
+            <a role="menuitem" tabIndex={-1} className="menu-item link" href="#/settings/models" onClick={() => setOpen(false)}>
               Change the defaults in Settings
             </a>
             {overridden && (

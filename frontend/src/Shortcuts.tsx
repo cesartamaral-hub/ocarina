@@ -28,9 +28,6 @@ export function Shortcuts() {
 
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Keyboard shortcuts</h1>
       <p className="muted">Click a key, then press the one you want instead. Esc cancels. These work in the reader.</p>
       <table className="dicts shortcuts">

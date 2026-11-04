@@ -35,8 +35,7 @@ export function parentRoute(hash: string): string | null {
   const audio = hash.match(/^#\/book\/(\d+)\/audio/)
   if (audio) return `#/book/${audio[1]}` // opens the book where you left off
   if (/^#\/book\/\d+/.test(hash)) return '#/'
-  if (['#/translation', '#/appearance', '#/shortcuts', '#/backups', '#/tags', '#/storage'].includes(hash)) return '#/settings'
-  if (/^#\/languages\/(new|\d+)$/.test(hash)) return '#/languages'
+  if (/^#\/settings\/languages\/(new|\d+)$/.test(hash)) return '#/settings/languages'
   if (hash === '' || hash === '#' || hash === '#/') return null
   return '#/'
 }

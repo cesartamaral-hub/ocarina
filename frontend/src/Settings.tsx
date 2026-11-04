@@ -34,7 +34,7 @@ const size = (storage: StorageInfo | null, kind: StorageInfo['groups'][number]['
   return bytes > 0 ? ` · ${formatBytes(bytes)}` : ''
 }
 
-export function Settings() {
+export function Settings({ part }: { part: 'models' | 'voices' }) {
   const [models, setModels] = useState<Model[] | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
@@ -218,21 +218,20 @@ export function Settings() {
   }
   return (
     <>
-      <h1>Settings</h1>
-      <p className="settings-links">
-        <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
-        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a> · <a href="#/storage">Storage</a>
-      </p>
-      {storage && storage.modelsBytes > 0 && (
+      <h1>{part === 'models' ? 'Models' : 'Voices'}</h1>
+      {error && part === 'voices' && <p className="error">{error}</p>}
+      {part === 'models' && storage && storage.modelsBytes > 0 && (
         <p className="storage-summary">
           Models on this Mac use <strong>{formatBytes(storage.modelsBytes)}</strong>
           <span className="muted">
             {' '}
             · {storage.groups.filter((g) => g.bytes > 0).map((g) => `${g.label.replace(' models', '').replace(' model', '')} ${formatBytes(g.bytes)}`).join(' · ')}
           </span>{' '}
-          · <a href="#/storage">See Storage</a>
+          · <a href="#/settings/storage">See Storage</a>
         </p>
       )}
+      {part === 'models' && (
+        <>
       <h2>Voice models{size(storage, 'speech')}</h2>
       <p className="muted">
         Models are downloaded once and run on this Mac. Audio generation needs one installed.
@@ -255,6 +254,11 @@ export function Settings() {
 
       <AddModel onAdded={load} />
 
+        </>
+      )}
+
+      {part === 'voices' && (
+        <>
       <h2>Voice per language</h2>
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
@@ -288,6 +292,8 @@ export function Settings() {
         })}
       </ul>
       <Voices voices={voices} onChange={loadVoices} />
+        </>
+      )}
     </>
   )
 }

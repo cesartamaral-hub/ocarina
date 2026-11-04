@@ -96,9 +96,6 @@ export function Appearance() {
 
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Appearance</h1>
       <div className="ap-grid">
         <div className="ap-controls">

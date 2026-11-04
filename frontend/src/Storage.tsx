@@ -43,9 +43,6 @@ export function Storage() {
   const total = Math.max(info.modelsBytes, 1)
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Storage</h1>
       <p className="muted">
         What Ocarina keeps on this Mac.
@@ -80,7 +77,7 @@ export function Storage() {
               <i className={GROUP_CLASS[g.kind]} /> {g.label} <span className="muted">{formatBytes(g.bytes)}</span>
             </h3>
             {rows.length === 0 ? (
-              <p className="muted">None downloaded. <a href="#/settings">Download one in Settings</a>.</p>
+              <p className="muted">None downloaded. <a href="#/settings/models">Download one in Settings</a>.</p>
             ) : (
               <ul className="storage-rows">
                 {rows.map((m) => (

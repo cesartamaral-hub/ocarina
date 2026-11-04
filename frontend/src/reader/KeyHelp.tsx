@@ -30,7 +30,7 @@ export function KeyHelp({ onClose }: { onClose: () => void }) {
         </tbody>
       </table>
       <p className="muted">
-        <a href="#/shortcuts">Change the keys</a>
+        <a href="#/settings/shortcuts">Change the keys</a>
       </p>
       <button className="secondary" onClick={onClose}>
         Close

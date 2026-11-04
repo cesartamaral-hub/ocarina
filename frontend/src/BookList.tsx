@@ -121,7 +121,7 @@ export function BookList() {
       </div>
       {backupWarning && (
         <p className="error">
-          {backupWarning} <a href="#/backups">Open backups</a>
+          {backupWarning} <a href="#/settings/backups">Open backups</a>
         </p>
       )}
       <div className="controls">

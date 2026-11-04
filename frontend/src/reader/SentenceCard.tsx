@@ -130,7 +130,7 @@ export function SentenceCard({
         {error && (
           <p className="sc-error">
             {error.message}{' '}
-            {needsSettings && <a href="#/translation">Open translation settings</a>}
+            {needsSettings && <a href="#/settings/translation">Open translation settings</a>}
             {onOpenInBrowser && (
               <>
                 {needsSettings ? ' · ' : ''}

@@ -5,7 +5,7 @@ import { notify } from './notices'
 
 const describe = (j: Job): { text: string; href: string } => {
   if (j.kind === 'download') {
-    return { text: `Downloading ${j.title ?? 'a model'}${j.state === 'running' && j.total ? ` · ${percent(j.done, j.total)}%` : ''}`, href: '#/settings' }
+    return { text: `Downloading ${j.title ?? 'a model'}${j.state === 'running' && j.total ? ` · ${percent(j.done, j.total)}%` : ''}`, href: '#/settings/models' }
   }
   if (j.kind === 'sync') {
     return { text: `Syncing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`, href: j.book_id ? `#/book/${j.book_id}/audio` : '#/' }
@@ -13,8 +13,8 @@ const describe = (j: Job): { text: string; href: string } => {
   if (j.kind === 'translate') {
     return { text: `Translating “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`, href: j.book_id ? `#/book/${j.book_id}` : '#/' }
   }
-  if (j.kind === 'preview') return { text: 'Making a voice preview', href: '#/settings' }
-  if (j.kind === 'check' || j.phase === 'testing') return { text: `Testing ${j.title ?? 'a model'}`, href: '#/settings' }
+  if (j.kind === 'preview') return { text: 'Making a voice preview', href: '#/settings/models' }
+  if (j.kind === 'check' || j.phase === 'testing') return { text: `Testing ${j.title ?? 'a model'}`, href: '#/settings/models' }
   return {
     text: `Voicing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`,
     href: j.book_id ? `#/book/${j.book_id}/audio` : '#/',

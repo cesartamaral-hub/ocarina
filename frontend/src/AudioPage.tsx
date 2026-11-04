@@ -62,12 +62,12 @@ function JobStrip({ job, onCancel, needsAligner, needsModel }: { job: Job | null
       )}
       {needsAligner && (
         <p className="error">
-          The audio sync model is not downloaded yet. <a href="#/settings">Download it in Settings</a>.
+          The audio sync model is not downloaded yet. <a href="#/settings/models">Download it in Settings</a>.
         </p>
       )}
       {needsModel && (
         <p className="error">
-          The voice model is not downloaded yet. <a href="#/settings">Download it in Settings</a>.
+          The voice model is not downloaded yet. <a href="#/settings/models">Download it in Settings</a>.
         </p>
       )}
     </div>

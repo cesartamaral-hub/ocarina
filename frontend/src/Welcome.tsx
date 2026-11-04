@@ -48,7 +48,7 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
               without it.
             </p>
             <p>
-              <a className="button" href="#/settings">
+              <a className="button" href="#/settings/models">
                 Choose a voice model
               </a>
             </p>

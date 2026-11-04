@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react'
-import { loadPrefs, runDueBackup } from './api'
-import { Appearance } from './Appearance'
+import { getPref, loadPrefs, runDueBackup } from './api'
 import { applyAppearance } from './appearanceSettings'
 import { onEscapeKey } from './escape'
 import { mayFollow } from './leaveGuard'
-import { Backups } from './Backups'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
 import { BookList } from './BookList'
 import { AudioPage } from './AudioPage'
 import { BookRedirect } from './BookRedirect'
-import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
-import { Settings } from './Settings'
-import { Storage } from './Storage'
-import { Shortcuts } from './Shortcuts'
-import { Tags } from './Tags'
-import { Translation } from './Translation'
+import { SettingsShell } from './SettingsShell'
+import { legacyRedirect, parseSettings } from './settingsRoutes'
 import { Stats } from './Stats'
 import { TermList } from './TermList'
 
@@ -35,18 +29,11 @@ function useRoute() {
     bookId: m ? Number(m[1]) : null,
     readPage: r ? Number(r[2]) : null,
     audioPage: /^#\/book\/\d+\/audio\/?$/.test(hash),
-    settings: hash === '#/settings',
+    settings: parseSettings(hash),
     newBook: hash === '#/new',
     terms: hash === '#/terms',
     stats: hash === '#/stats',
-    tags: hash === '#/tags',
-    shortcuts: hash === '#/shortcuts',
-    translation: hash === '#/translation',
-    appearance: hash === '#/appearance',
-    backups: hash === '#/backups',
-    storage: hash === '#/storage',
-    languages: hash === '#/languages',
-    languageId: hash === '#/languages/new' ? 'new' : (hash.match(/^#\/languages\/(\d+)$/)?.[1] ?? null),
+    raw: hash,
   }
 }
 
@@ -63,12 +50,18 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, audioPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, storage, languages, languageId } = useRoute()
+  const { bookId, readPage, audioPage, settings, newBook, terms, stats, raw } = useRoute()
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
   const reading = bookId !== null && readPage !== null
-  const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || storage || languages || languageId)
-  const medium = terms || onHome || appearance || stats
+  const onHome = bookId === null && !(settings || newBook || terms || stats || raw.startsWith('#/settings'))
+  const medium = terms || onHome || stats || settings !== null
   const [ready, setReady] = useState(false)
+  // Older addresses (and plain "#/settings") go to their section.
+  useEffect(() => {
+    if (!ready) return
+    const to = legacyRedirect(raw, getPref<string | null>('settings.section', null))
+    if (to) window.location.replace(to)
+  }, [raw, ready])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onEscapeKey(e, (hash) => (window.location.hash = hash), () => window.location.hash)
     // A link to another page while text has unsaved changes asks first.
@@ -103,32 +96,16 @@ export default function App() {
         <JobChip />
         <nav>
           <a href="#/terms">Terms</a>
-          <a href="#/languages">Languages</a>
+          <a href="#/settings/languages">Languages</a>
           <a href="#/stats">Reading</a>
           <a href="#/settings">Settings</a>
         </nav>
       </header>
       <main className={reading ? 'w-full' : medium ? 'w-medium' : undefined}>
         {!ready ? null : settings ? (
-          <Settings />
-        ) : tags ? (
-          <Tags />
-        ) : translation ? (
-          <Translation />
-        ) : shortcuts ? (
-          <Shortcuts />
-        ) : appearance ? (
-          <Appearance />
+          <SettingsShell section={settings.section} rest={settings.rest} />
         ) : stats ? (
           <Stats />
-        ) : backups ? (
-          <Backups />
-        ) : storage ? (
-          <Storage />
-        ) : languages ? (
-          <LanguageList />
-        ) : languageId ? (
-          <LanguageEditor key={languageId} languageId={languageId === 'new' ? null : Number(languageId)} />
         ) : terms ? (
           <TermList />
         ) : newBook ? (

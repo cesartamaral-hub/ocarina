@@ -78,7 +78,7 @@ export function TranslationPanel({
       {tr.error && <p className="error tp-note">{tr.error}</p>}
 
       <p className="muted tp-note">
-        {d.done > 0 ? 'Made with' : 'Translates with'} <strong>{d.providerName}</strong> by default. <a href="#/translation">Change</a>
+        {d.done > 0 ? 'Made with' : 'Translates with'} <strong>{d.providerName}</strong> by default. <a href="#/settings/translation">Change</a>
       </p>
       {over && !running && (
         <p className="tp-warn">

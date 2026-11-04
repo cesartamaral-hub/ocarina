@@ -85,9 +85,6 @@ function TagTable({ kind, title }: { kind: TagKind; title: string }) {
 export function Tags() {
   return (
     <>
-      <p>
-        <a href="#/settings">← Settings</a>
-      </p>
       <h1>Tags</h1>
       <TagTable kind="term" title="Term tags" />
       <TagTable kind="book" title="Book tags" />
