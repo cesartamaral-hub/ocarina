@@ -10,6 +10,8 @@ export function ReaderToolbar({
   title,
   highlights,
   onToggleHighlights,
+  vocabOpen,
+  onToggleVocab,
   onEdit,
   onHelp,
 }: {
@@ -17,6 +19,8 @@ export function ReaderToolbar({
   title: string
   highlights: boolean
   onToggleHighlights: () => void
+  vocabOpen: boolean
+  onToggleVocab: () => void
   onEdit: () => void
   onHelp: () => void
 }) {
@@ -30,6 +34,9 @@ export function ReaderToolbar({
         {title}
       </span>
       <span className="spacer" />
+      <button className="quiet" aria-pressed={vocabOpen} onClick={onToggleVocab} title={`How well you know the words (${keyLabel(keyOf('toggleVocab'))})`}>
+        Vocabulary
+      </button>
       <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
         Highlights
       </button>

@@ -7,11 +7,15 @@ import { SIDE_DEFAULT, SIDE_MAX, SIDE_MIN, clampWidth, widthAfterKey } from './s
 // The panel can be resized (drag the handle, or focus it and use the arrow keys; double-click resets), collapsed to a
 // narrow rail, and on a narrow window becomes a drawer that slides over the text while a word is selected.
 export function ReaderLayout({
+  left,
+  leftOpen,
   main,
   side,
   selectionKey,
   onCloseDrawer,
 }: {
+  left: ReactNode // the vocabulary panel, on the left
+  leftOpen: boolean
   main: ReactNode
   side: ReactNode
   selectionKey: string | null // identifies what is selected; null when nothing is
@@ -78,9 +82,12 @@ export function ReaderLayout({
 
   return (
     <div
-      className={`reader${collapsed ? ' collapsed' : ''}${hasSelection ? ' drawer-open' : ''}`}
+      className={`reader${collapsed ? ' collapsed' : ''}${hasSelection ? ' drawer-open' : ''}${leftOpen ? ' left-open' : ''}`}
       style={{ '--side-w': `${width}px` } as React.CSSProperties}
     >
+      <aside className="reader-left" aria-label="Vocabulary" aria-hidden={!leftOpen} inert={!leftOpen}>
+        {left}
+      </aside>
       <div className="reader-main">{main}</div>
       <div className="reader-scrim" onClick={onCloseDrawer} aria-hidden="true" />
       <aside className="reader-side" aria-label="Word panel">

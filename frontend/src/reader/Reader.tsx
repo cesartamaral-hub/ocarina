@@ -5,11 +5,13 @@ import {
   bulkStatusByText,
   finishPage,
   getPage,
+  getBook,
   getPageText,
   getPref,
   openExternal,
   putPageText,
   setPref,
+  type BookStats,
   type Item,
   type ReaderPage,
   type Term,
@@ -21,6 +23,9 @@ import { languageCode } from '../typography'
 import { useEscape } from '../escape'
 import { useLeaveGuard } from '../leaveGuard'
 import { TextEditor } from './TextEditor'
+import { VocabularyPanel } from './VocabularyPanel'
+import { pageVocabulary, type NewWord } from './vocabulary'
+import { useMediaQuery } from '../useMediaQuery'
 import { isDirty } from './editing'
 import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
@@ -83,6 +88,40 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
 
   const flat = useMemo(() => page?.paragraphs.flat(2) ?? [], [page])
 
+  // The vocabulary panel on the left: open or closed (remembered) on a wide window; on a narrow one it slides over the text when asked.
+  const narrow = useMediaQuery('(max-width: 1099px)')
+  const [vocabWide, setVocabWide] = useState(() => getPref<boolean>('reader.vocabOpen', true))
+  const [vocabNarrow, setVocabNarrow] = useState(false)
+  const vocabOpen = narrow ? vocabNarrow : vocabWide
+  const toggleVocab = useCallback(() => {
+    if (narrow) return setVocabNarrow((o) => !o)
+    setVocabWide(!vocabWide)
+    setPref('reader.vocabOpen', !vocabWide)
+  }, [narrow, vocabWide])
+  useEscape(narrow && vocabNarrow, () => setVocabNarrow(false))
+  const vocab = useMemo(() => pageVocabulary(flat), [flat])
+  // The book's own numbers come from the server; they follow your status changes a moment after you make them.
+  const [bookStats, setBookStats] = useState<BookStats | null | undefined>(undefined)
+  const hasPage = page !== null
+  useEffect(() => {
+    if (!hasPage) return
+    let alive = true
+    let timer = window.setTimeout(function ask(tries = 0) {
+      getBook(bookId).then(
+        (b) => {
+          if (!alive) return
+          setBookStats(b.stats)
+          if (b.stats === null && tries < 5) timer = window.setTimeout(() => ask(tries + 1), 2000) // still being counted
+        },
+        () => undefined,
+      )
+    }, 1200)
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
+  }, [bookId, hasPage, page])
+
   // Same term, anywhere on the page, gets the new status at once.
   const applyStatus = useCallback((termId: number, status: number) => {
     setPage((p) =>
@@ -129,6 +168,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   )
 
   // A click on a word, with what the modifier keys mean.
+  // A word from the vocabulary panel's list: select it and bring it into view.
+  function pickNewWord(w: NewWord) {
+    setSelected({ termId: w.termId, text: w.text, sentence: w.sentence })
+    setSelectedIndex(w.index)
+    document.querySelector(`[data-i="${w.index}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    if (narrow) setVocabNarrow(false)
+  }
+
   function clickWord(mods: { meta: boolean; shift: boolean; alt: boolean }, it: Item) {
     if (!it.isWord) return
     if (mods.meta) {
@@ -201,6 +248,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         setHelp(false)
       } else if (action === 'help') {
         setHelp((h) => !h)
+      } else if (action === 'toggleVocab') {
+        toggleVocab()
       } else if (action === 'highlights') {
         toggleHighlights()
       } else if (action === 'prevPage' && pageNumber > 1) {
@@ -211,7 +260,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights])
+  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab])
 
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
@@ -298,6 +347,17 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   return (
     <>
       <ReaderLayout
+        leftOpen={vocabOpen}
+        left={
+          <VocabularyPanel
+            vocab={vocab}
+            page={page.page}
+            pageCount={page.pageCount}
+            book={bookStats}
+            onPick={pickNewWord}
+            onClose={() => (narrow ? setVocabNarrow(false) : toggleVocab())}
+          />
+        }
         selectionKey={selected ? (selected.termId !== null ? `term:${selected.termId}` : `text:${selected.text}`) : null}
         onCloseDrawer={() => {
           setSelected(null)
@@ -322,6 +382,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               title={page.title}
               highlights={highlights}
               onToggleHighlights={toggleHighlights}
+              vocabOpen={vocabOpen}
+              onToggleVocab={toggleVocab}
               onEdit={startEditing}
               onHelp={() => setHelp(true)}
             />
@@ -417,7 +479,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 </span>
                 <span className="page-actions">
                   <button className="secondary" onClick={() => finish(true)} title="Unknown words become well known">
-                    Finish, rest as known
+                    <span className="long">Finish, rest as known</span>
+                    <span className="short">Rest as known</span>
                   </button>
                   <button onClick={() => finish(false)}>{page.page < page.pageCount ? 'Finish page →' : 'Finish book'}</button>
                 </span>
