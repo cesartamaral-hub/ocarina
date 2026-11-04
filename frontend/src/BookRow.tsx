@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Book } from './api'
+import { useEscape } from './escape'
 import { barParts, difficulty, DIFFICULTY_LABEL, duration } from './bookStats'
 
 function SpeakerIcon() {
@@ -15,19 +16,15 @@ function SpeakerIcon() {
 function MoreMenu({ title, items }: { title: string; items: { label: string; onChoose: () => void }[] }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLSpanElement>(null)
+  useEscape(open, () => setOpen(false))
   useEffect(() => {
     if (!open) return
     const away = (e: MouseEvent) => {
       if (!box.current?.contains(e.target as Node)) setOpen(false)
     }
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
     document.addEventListener('mousedown', away)
-    document.addEventListener('keydown', esc)
     return () => {
       document.removeEventListener('mousedown', away)
-      document.removeEventListener('keydown', esc)
     }
   }, [open])
   return (

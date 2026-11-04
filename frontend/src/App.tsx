@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { loadPrefs, runDueBackup } from './api'
 import { Appearance } from './Appearance'
 import { applyAppearance } from './appearanceSettings'
+import { onEscapeKey } from './escape'
 import { Backups } from './Backups'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
@@ -63,6 +64,11 @@ export default function App() {
   const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || languages || languageId)
   const medium = terms || onHome
   const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => onEscapeKey(e, (hash) => (window.location.hash = hash), () => window.location.hash)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
   useEffect(() => {
     loadPrefs().then(() => {
       applyAppearance()

@@ -18,6 +18,7 @@ import { dictUrl } from './dictUrl'
 import { SentenceBlock } from './SentenceBlock'
 import { AudioPanel } from './AudioPanel'
 import { languageCode } from '../typography'
+import { useEscape } from '../escape'
 import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
@@ -39,6 +40,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [dragSpan, setDragSpan] = useState<[number, number] | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
+  const [original, setOriginal] = useState('')
   const [follow, setFollow] = useState(true)
   const [highlights, setHighlights] = useState(() => getPref('highlights', true))
   const toggleHighlights = useCallback(() => {
@@ -170,6 +172,16 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     document.addEventListener('mouseup', up)
   }
 
+  // Esc: leave the editor (asking first if there are changes), else clear the selection, else go back (see escape.ts).
+  useEscape(editing !== null, () => {
+    if (editing === original || window.confirm('Discard your changes to this text?')) setEditing(null)
+  })
+  useEscape(editing === null && (selected !== null || multi.size > 0 || help), () => {
+    setSelected(null)
+    setMulti(new Set())
+    setHelp(false)
+  })
+
   // Page turning, and clearing the selection, from the keyboard.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -240,7 +252,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   async function startEditing() {
     if (!page) return
     try {
-      setEditing((await getPageText(bookId, page.page)).text)
+      const text = (await getPageText(bookId, page.page)).text
+      setOriginal(text)
+      setEditing(text)
     } catch (e) {
       setError((e as Error).message)
     }

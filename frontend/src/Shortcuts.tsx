@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ACTIONS, assignKey, keyLabel, keyOf, resetKeys } from './shortcutKeys'
+import { useEscape } from './escape'
 
 export function Shortcuts() {
   const [listening, setListening] = useState<string | null>(null)
   const [, setVersion] = useState(0)
   const [error, setError] = useState('')
+
+  useEscape(listening !== null, () => setListening(null))
 
   // While an action is waiting for its new key, the next key press is that key.
   useEffect(() => {
@@ -12,10 +15,6 @@ export function Shortcuts() {
     function onKey(e: KeyboardEvent) {
       e.preventDefault()
       e.stopPropagation()
-      if (e.key === 'Escape' && listening !== 'clear') {
-        setListening(null)
-        return
-      }
       const problem = assignKey(listening!, e.key)
       setError(problem ?? '')
       if (!problem) {

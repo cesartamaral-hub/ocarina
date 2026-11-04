@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AudioOptions } from './api'
+import { useEscape } from './escape'
 
 export type AudioChoice = { model: string; voice: string } // '' = what the language's settings say
 
@@ -37,6 +38,8 @@ export function AudioOptionsMenu({
     if (returnFocus) trigger.current?.focus()
   }
 
+  useEscape(open, () => close(true))
+
   // Focus the chosen model when the menu opens, so the arrow keys start from something meaningful.
   useEffect(() => {
     if (!open) return
@@ -65,10 +68,7 @@ export function AudioOptionsMenu({
     else if (e.key === 'ArrowUp') go(at - 1)
     else if (e.key === 'Home') go(0)
     else if (e.key === 'End') go(els.length - 1)
-    else if (e.key === 'Escape') {
-      e.preventDefault()
-      close(true)
-    } else if (e.key === 'Tab') close(false)
+    else if (e.key === 'Tab') close(false)
   }
 
   function pick(it: Item) {

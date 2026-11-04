@@ -84,3 +84,7 @@ Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 ## Book statistics
 
 `ocarina/book_index.py` keeps a word index per book (tables `bookwords`, `bookindex`; migration `20261104_create_bookwords.sql`). `GET /books` starts a background thread for books whose index is missing or built from other text (a SHA-1 of all pages), and returns `stats: null, indexing: true` for them; the book list polls every 1.5 s until the numbers arrive. Statistics are one SQL join with `words`, so they follow status changes at once. "Known" is status 4, 5, 99; learning 1–3; 98 (ignored) is left out of the percentage; only single-word terms count. Reading time is words / 150 per minute. The list's sorting, difficulty chips (98 / 95 / 90 %) and bar are pure functions in `frontend/src/bookStats.ts` with tests.
+
+## The Esc key
+
+`frontend/src/escape.ts`: one capture-phase handler on the window (installed in `App.tsx`) always cancels Esc's default (so the window does not leave full screen). It closes the innermost open thing, and when nothing is open it blurs a focused text field, else goes to the route's parent (reader -> book -> list; settings pages -> settings). Anything that can be dismissed registers with `useEscape(active, close)` while it is open (the Aa popover, the book ⋯ menu, the audio options menu, the key-recording mode, the reader's selection, and the text editor, which asks before discarding changes). New popovers and dialogs should do the same.
