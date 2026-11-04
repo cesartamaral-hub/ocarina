@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSentences, type BookSentences, type ReaderPage } from '../api'
 import type { Playable } from '../media'
-import { wordTime } from '../wordTime'
 
 // Keeps the reader in step with the book's generated audio.
 //
 // Sentences that contain a word, in page order, line up one to one with the generated audio's
 // sentences for the same page (both come from Lute's parser). If the counts differ, the text
 // was edited after the audio was made, so following switches itself off (aligned = false).
+const LEAD_IN = 0.4 // seconds before a sentence's start
+
 export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: boolean, version = 0) {
   const audioRef = useRef<Playable | null>(null)
   const [audioInfo, setAudioInfo] = useState<BookSentences | null>(null)
@@ -33,13 +34,6 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
   // Where in the audio a sentence (by its number on the page) starts.
   const startOf = (sentence: number) => (aligned ? pageTimings[wordSentences.indexOf(sentence)]?.start : undefined)
 
-  // Where in the audio a word is said (see wordTime.ts).
-  function wordStartOf(sentence: number, charsBefore: number, chars: number) {
-    const i = aligned ? wordSentences.indexOf(sentence) : -1
-    const start = pageTimings[i]?.start
-    return start === undefined ? undefined : wordTime(start, pageTimings[i + 1]?.start, charsBefore, chars)
-  }
-
   function onAudioTime(t: number) {
     if (!timings || !page) return
     let idx = -1
@@ -63,6 +57,12 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
     document.querySelector(`[data-sent="${playing}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [playing])
 
+  // Plays a sentence from its beginning, a little before it so that its first word is not cut.
+  function playSentence(sentence: number) {
+    const start = startOf(sentence)
+    if (start !== undefined) playAt(Math.max(0, start - LEAD_IN))
+  }
+
   function playAt(seconds: number) {
     const el = audioRef.current
     if (!el) return
@@ -70,5 +70,5 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
     el.play()
   }
 
-  return { audioRef, audioInfo, timings, starts, aligned, firstStart: pageTimings[0]?.start, startOf, wordStartOf, playing, onAudioTime, playAt }
+  return { audioRef, audioInfo, timings, starts, aligned, firstStart: pageTimings[0]?.start, startOf, playSentence, playing, onAudioTime, playAt }
 }

@@ -250,14 +250,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     setSelectedIndex(it.index)
   }
 
-  // A double click on a word plays the audio (or the video) from where that word is said.
+  // A double click on a word plays its sentence, from just before it begins.
   function playFromWord(it: Item) {
-    if (!it.isWord) return
-    const own = flat.filter((x) => x.sentence === it.sentence)
-    const before = own.slice(0, own.findIndex((x) => x.index === it.index)).reduce((n, x) => n + x.display.length, 0)
-    const total = own.reduce((n, x) => n + x.display.length, 0)
-    const at = audio.wordStartOf(it.sentence, before, total)
-    if (at !== undefined) audio.playAt(at)
+    if (it.isWord) audio.playSentence(it.sentence)
   }
 
   // Our own mouse handling instead of the browser's text selection and click events, which behave differently
@@ -571,7 +566,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 })}
             </article>
             <p className="muted reader-hint">
-              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.{audio.timings ? ' Double-click a word to play from there.' : ''}
+              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.{audio.timings ? ' Double-click a word to play its sentence.' : ''}
             </p>
           </>
               )}

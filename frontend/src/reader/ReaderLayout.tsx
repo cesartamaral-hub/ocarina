@@ -90,7 +90,17 @@ export function ReaderLayout({
       <aside className="reader-left" aria-label="Vocabulary" aria-hidden={!leftOpen} inert={!leftOpen}>
         {left}
       </aside>
-      <div className="reader-main">{main}</div>
+      <div
+        className="reader-main"
+        onMouseDown={(e) => {
+          // The scrim that dims the text behind the drawer does not take clicks (a double click on a word has to reach the word); a press on
+          // the text away from the words closes the drawer instead.
+          const overlay = focus || window.matchMedia('(max-width: 999px)').matches
+          if (hasSelection && overlay && !(e.target as Element).closest('[data-i], button, a, input, select, textarea, audio, iframe, label, summary')) onCloseDrawer()
+        }}
+      >
+        {main}
+      </div>
       <div className="reader-scrim" onClick={onCloseDrawer} aria-hidden="true" />
       <aside className="reader-side" aria-label="Word panel">
         <div

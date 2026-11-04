@@ -4,7 +4,7 @@ const MOUSE: [string, string][] = [
   ['click a word', 'open it in the side panel'],
   ['drag over words', 'make a phrase'],
   ['⌘ or Ctrl + click', 'pick several words for one status change'],
-  ['double-click a word', 'play the audio or video from there (when the text follows it)'],
+  ['double-click a word', 'play its sentence from the audio or video (when the text follows it)'],
 ]
 
 export function KeyHelp({ onClose }: { onClose: () => void }) {

@@ -15,6 +15,7 @@
   --follow: #9a3412;   /* the sentence being read aloud: a calm burnt orange */
   --select: #1f1d1a;   /* the word or phrase you picked: the strongest contrast available */
   --error: #b3261e;
+  --hover-b: 0.92;     /* a word under the pointer: how much its colour changes */
   --s0: #cfe3ff; --s1: #f6b8ad; --s2: #f7d2a6; --s3: #f6e8a2; --s4: #d5e9ac; --s5: #c3e6cd;
   color-scheme: light dark;
 }
@@ -32,6 +33,7 @@
     --follow: #e6c45a;
     --select: #ffffff;
     --error: #ff8a80;
+    --hover-b: 1.5;
     --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46;
     color-scheme: dark;
   }
@@ -48,6 +50,7 @@
   --follow: #e6c45a;
   --select: #ffffff;
   --error: #ff8a80;
+  --hover-b: 1.5;
   --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46;
   color-scheme: dark;
 }
@@ -118,7 +121,8 @@ audio { width: 100%; }
 .reader-column article { padding-top: 16px; }
 .reader-column article p { margin: 0 0 1.1em; }
 .w { cursor: pointer; border-radius: 3px; padding: 1px 0; }
-.w:hover { filter: brightness(0.92); }
+.w:hover { filter: brightness(var(--hover-b)); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--fg) 55%, transparent); }
+.w.s99:hover { background: color-mix(in srgb, var(--fg) 14%, transparent); }
 .w.s0 { background: var(--s0); } .w.s1 { background: var(--s1); } .w.s2 { background: var(--s2); }
 .w.s3 { background: var(--s3); } .w.s4 { background: var(--s4); } .w.s5 { background: var(--s5); }
 .w.s98 { border-bottom: 1px dotted var(--muted); }
@@ -126,6 +130,7 @@ audio { width: 100%; }
 .w.sel { outline: 2px solid var(--select); outline-offset: 1px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--select) 22%, transparent); position: relative; }
 /* A sentence being read aloud has an outline and a faint tint; the sentence around your selection only a faint band. */
 .sentence { border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.sentence:hover { background: color-mix(in srgb, var(--fg) 7%, transparent); }
 .sentence.active { background: color-mix(in srgb, var(--select) 7%, transparent); }
 .sentence.playing { outline: 2px solid var(--follow); outline-offset: 3px; background: color-mix(in srgb, var(--follow) 12%, transparent); }
 /* The card with a word's meaning when the pointer rests on it. */
@@ -168,7 +173,7 @@ button.st.on { border-color: var(--fg); }
   .side-handle, .side-toggle { display: none; }
   .side-close { display: block; }
   .side-bar { justify-content: flex-end; }
-  .reader-scrim { position: fixed; inset: var(--header-h) 0 0 0; z-index: 25; background: rgba(0, 0, 0, 0.4); }
+  .reader-scrim { position: fixed; inset: var(--header-h) 0 0 0; z-index: 25; background: rgba(0, 0, 0, 0.4); pointer-events: none; }
   .reader.drawer-open .reader-scrim { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { .reader, .reader-side { transition: none; } }
@@ -595,7 +600,7 @@ body:has(.reader) { overflow: hidden; }
 .tr .sentence { cursor: pointer; }
 .tr-pending { font-style: italic; color: var(--muted); }
 .tr-stale { opacity: 0.65; }
-.sentence.pair { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.sentence.pair { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 @container (max-width: 760px) { .para-pair { grid-template-columns: minmax(0, 1fr); gap: 6px; } .para-pair .tr { border-left: 0; padding-left: 0; border-top: 1px dashed var(--line); padding-top: 6px; } }
 .translation-panel { padding: 14px 16px 16px; }
 .translation-panel h3 { margin: 0 0 10px; font-size: 1rem; }
@@ -645,7 +650,7 @@ body:has(.reader) { overflow: hidden; }
 .reader.focus .side-handle, .reader.focus .side-toggle { display: none; }
 .reader.focus .side-close { display: block; }
 .reader.focus .side-bar { justify-content: flex-end; }
-.reader.focus .reader-scrim { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.4); }
+.reader.focus .reader-scrim { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.4); pointer-events: none; }
 .reader.focus.drawer-open .reader-scrim { display: block; }
 /* The toolbar becomes a few controls in the bottom corner; a small handle brings them out. Hidden, they do not catch clicks. */
 .focus-mode .reader-toolbar { position: fixed; bottom: 10px; right: 14px; z-index: 20; margin: 0; padding: 4px 6px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
