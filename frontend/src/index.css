@@ -722,3 +722,13 @@ body:has(.reader) { overflow: hidden; }
 .video-problem { margin: 0; padding: 10px; font-size: 0.82rem; color: #ddd; }
 .video-problem a { color: var(--accent, #7fd1b0); }
 .reader-audio .video-frame ~ .controls { display: contents; }
+
+.speak { display: inline-flex; align-items: center; vertical-align: middle; }
+.speak-more { padding: 0 4px; min-width: 0; }
+h2 .speak { margin-left: 6px; }
+.pronounce-sources { border: 0; padding: 0; margin: 8px 0 18px; display: flex; flex-direction: column; gap: 8px; }
+.pronounce-sources label { display: flex; align-items: flex-start; gap: 10px; }
+.pronounce-sources input { width: auto; margin-top: 4px; }
+.pronounce-sources small { display: block; }
+.method-menu button { flex-direction: column; align-items: flex-start; height: auto; padding-top: 6px; padding-bottom: 6px; white-space: normal; text-align: left; }
+.method-menu small { white-space: normal; line-height: 1.3; }

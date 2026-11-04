@@ -40,6 +40,7 @@ import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
 import { ReaderToolbar } from './ReaderToolbar'
 import { actionFor, statusForKey, statusKeyLabel } from '../shortcutKeys'
+import { pauseThisWhileSaying, say, stopSaying } from '../pronouncer'
 import { STATUS_BUTTONS, statusName } from './statuses'
 import { TermPanel, type Target } from './TermPanel'
 import { useAudioFollow } from './useAudioFollow'
@@ -72,6 +73,13 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [audioVersion, setAudioVersion] = useState(0) // bumped when another audio version is picked
   const audio = useAudioFollow(bookId, page, follow, audioVersion)
   usePlaybackKeys(audio.audioRef, audio.starts)
+  useEffect(() => {
+    pauseThisWhileSaying(audio.audioRef)
+    return () => {
+      pauseThisWhileSaying(null)
+      stopSaying()
+    }
+  }, [audio.audioRef])
   useWindowTitle(page?.title ?? 'Ocarina')
   useNowPlaying(audio.audioRef, page && (audio.audioInfo?.hasAudio || audio.audioInfo?.video) ? { title: page.title, artist: page.language.name, starts: audio.starts } : null)
 
@@ -242,6 +250,16 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     setSelectedIndex(it.index)
   }
 
+  // A double click on a word plays the audio (or the video) from where that word is said.
+  function playFromWord(it: Item) {
+    if (!it.isWord) return
+    const own = flat.filter((x) => x.sentence === it.sentence)
+    const before = own.slice(0, own.findIndex((x) => x.index === it.index)).reduce((n, x) => n + x.display.length, 0)
+    const total = own.reduce((n, x) => n + x.display.length, 0)
+    const at = audio.wordStartOf(it.sentence, before, total)
+    if (at !== undefined) audio.playAt(at)
+  }
+
   // Our own mouse handling instead of the browser's text selection and click events, which behave differently
   // in the desktop app's web view: press on a word, drag across the text, release.
   function onMouseDown(e: React.MouseEvent) {
@@ -251,6 +269,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     e.preventDefault() // no native text selection; we draw our own
     window.getSelection()?.removeAllRanges()
     const mods = { meta: e.metaKey, shift: e.shiftKey, alt: e.altKey }
+    const double = e.detail === 2 && !mods.meta && !mods.shift && !mods.alt // the second press of a double click
     let last = start.index
     const move = (m: MouseEvent) => {
       const over = itemAt(document.elementFromPoint(m.clientX, m.clientY))
@@ -264,6 +283,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       setDragSpan(null)
       if (last !== start.index && selectRange(start.index, last)) return
       clickWord(mods, start)
+      if (double) playFromWord(start)
     }
     document.addEventListener('mousemove', move)
     document.addEventListener('mouseup', up)
@@ -288,7 +308,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
       const action = actionFor(e)?.id
       // A key the app acts on is marked as handled: otherwise the web view hands it to macOS, which beeps.
-      if (action && ['clear', 'help', 'toggleVocab', 'focus', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage'].includes(action)) e.preventDefault()
+      if (action && ['clear', 'help', 'toggleVocab', 'focus', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage', 'speak'].includes(action)) e.preventDefault()
       if (action === 'clear') {
         setSelected(null)
         setMulti(new Set())
@@ -302,6 +322,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       } else if (action === 'cycleTranslation') {
         if (pageTr.size > 0) chooseMode(nextMode(chosenMode, true))
         else tpToggle() // nothing to show yet: T opens the Translation menu, where it can be made
+      } else if (action === 'speak') {
+        if (!e.repeat && selected?.text && page) say(selected.text, page.language.id)
       } else if (action === 'highlights') {
         toggleHighlights()
       } else if (action === 'prevPage' && pageNumber > 1) {
@@ -312,7 +334,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, toggleFocus, chooseMode, chosenMode, pageTr, tpToggle])
+  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, toggleFocus, chooseMode, chosenMode, pageTr, tpToggle, selected])
 
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
@@ -549,7 +571,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 })}
             </article>
             <p className="muted reader-hint">
-              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.
+              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.{audio.timings ? ' Double-click a word to play from there.' : ''}
             </p>
           </>
               )}

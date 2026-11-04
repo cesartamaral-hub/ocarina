@@ -18,6 +18,7 @@ import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { Definition } from './Definition'
 import { dictUrl } from './dictUrl'
 import { SentenceCard } from './SentenceCard'
+import { SpeakButton } from './SpeakButton'
 import { STATUS_BUTTONS } from './statuses'
 
 function dictName(d: Dictionary): string {
@@ -164,7 +165,9 @@ export function TermPanel({
   const isNew = term.id === null
   return (
     <div className="term">
-      <h2>{term.displayText}</h2>
+      <h2>
+        {term.displayText} {term.displayText.trim() && <SpeakButton text={term.displayText} languageId={page.language.id} />}
+      </h2>
       {isNew && <p className="muted">New phrase. Pick a status or fill it in, then save.</p>}
       <div className="statuses">
         {STATUS_BUTTONS.map((b) => (

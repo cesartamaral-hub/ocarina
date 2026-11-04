@@ -17,6 +17,7 @@ export const ACTIONS: Action[] = [
   { id: 'prevPage', label: 'Previous page', key: 'ArrowLeft' },
   { id: 'nextPage', label: 'Next page', key: 'ArrowRight' },
   { id: 'highlights', label: 'Hide or show the word colours', key: 'h' },
+  { id: 'speak', label: 'Hear the selected word or text', key: 's' },
   { id: 'togglePanel', label: 'Show or hide the word panel', key: 'p' },
   { id: 'cycleTranslation', label: 'Show the translation: original, side by side, translation only', key: 't' },
   { id: 'focus', label: 'Focus mode: only the text and the player', key: 'f' },

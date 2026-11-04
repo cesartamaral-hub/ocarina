@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getTranslateSettings, translateSentence, type Translation } from '../api'
 import { notify } from '../notices'
 import { cardLabel, sendsTo, serviceName, targetName } from './cardWording'
+import { SpeakButton } from './SpeakButton'
 
 const PLAY = <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
 const COPY = (
@@ -88,6 +89,7 @@ export function SentenceCard({
               {PLAY}
             </Tool>
           )}
+          <SpeakButton text={text} languageId={languageId} />
           <Tool label="Copy the text" onClick={() => copy(text)}>
             {COPY}
           </Tool>

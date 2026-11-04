@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
+from ocarina import tools
 from ocarina.importer import HEADERS, TIMEOUT, ImportFailed, Imported, clean_paragraphs, short_title
 
 log = logging.getLogger("ocarina.importer")
@@ -159,7 +160,7 @@ def _download_audio(url, folder, check=None, as_m4a=False):
         "socket_timeout": TIMEOUT,
         "progress_hooks": [hook],
     }
-    ffmpeg = shutil.which("ffmpeg") or next((p for p in ("/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg") if os.path.exists(p)), None)
+    ffmpeg = tools.ffmpeg()
     if ffmpeg:
         options["ffmpeg_location"] = ffmpeg
     if as_m4a and ffmpeg:

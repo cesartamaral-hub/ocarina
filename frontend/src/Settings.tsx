@@ -27,6 +27,7 @@ import { notify } from './notices'
 import { TransferProgress } from './TransferProgress'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 import { Voices } from './Voices'
+import { Pronunciation } from './Pronunciation'
 
 // " · 5.8 GB" after a section title, when something of that kind is downloaded.
 const size = (storage: StorageInfo | null, kind: StorageInfo['groups'][number]['kind']) => {
@@ -265,6 +266,8 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
 
       {part === 'voices' && (
         <>
+      <Pronunciation />
+
       <h2>Voice per language</h2>
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">

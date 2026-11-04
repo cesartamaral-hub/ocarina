@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSentences, type BookSentences, type ReaderPage } from '../api'
 import type { Playable } from '../media'
+import { wordTime } from '../wordTime'
 
 // Keeps the reader in step with the book's generated audio.
 //
@@ -32,6 +33,13 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
   // Where in the audio a sentence (by its number on the page) starts.
   const startOf = (sentence: number) => (aligned ? pageTimings[wordSentences.indexOf(sentence)]?.start : undefined)
 
+  // Where in the audio a word is said (see wordTime.ts).
+  function wordStartOf(sentence: number, charsBefore: number, chars: number) {
+    const i = aligned ? wordSentences.indexOf(sentence) : -1
+    const start = pageTimings[i]?.start
+    return start === undefined ? undefined : wordTime(start, pageTimings[i + 1]?.start, charsBefore, chars)
+  }
+
   function onAudioTime(t: number) {
     if (!timings || !page) return
     let idx = -1
@@ -62,5 +70,5 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
     el.play()
   }
 
-  return { audioRef, audioInfo, timings, starts, aligned, firstStart: pageTimings[0]?.start, startOf, playing, onAudioTime, playAt }
+  return { audioRef, audioInfo, timings, starts, aligned, firstStart: pageTimings[0]?.start, startOf, wordStartOf, playing, onAudioTime, playAt }
 }

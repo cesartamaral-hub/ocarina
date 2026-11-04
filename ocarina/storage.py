@@ -23,6 +23,7 @@ DATA_ITEMS = [
     ("sentence_audio", "tts_cache", "Voiced sentences", "Sentences already voiced, so making a book's audio again is quick. Cleared, they are voiced again when needed.", True),
     ("translations", "translation_cache", "Saved translations", "Translations you have seen, so they work offline. Cleared, they are asked for again.", True),
     ("dictionary", "dictionary_cache", "Saved definitions", "Definitions from Wiktionary. Cleared, they are fetched again.", True),
+    ("pronunciations", "pronounce_cache", "Heard words", "Words and phrases you heard spoken, so they play at once. Cleared, they are made again when needed.", True),
     ("temp", "temp", "Temporary files", "Leftovers of previews and checks.", True),
 ]
 
