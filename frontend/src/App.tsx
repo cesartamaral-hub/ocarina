@@ -65,7 +65,7 @@ export default function App() {
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
   const reading = bookId !== null && readPage !== null
   const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || storage || languages || languageId)
-  const medium = terms || onHome
+  const medium = terms || onHome || appearance
   const [ready, setReady] = useState(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onEscapeKey(e, (hash) => (window.location.hash = hash), () => window.location.hash)

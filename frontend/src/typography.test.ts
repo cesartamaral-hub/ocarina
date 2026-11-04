@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULTS, FONTS, LIMITS, fromPreferences, measurePx, normalize, spacingLabel, stepSize, toCssVars } from './typography'
+import { DEFAULTS, FONTS, LIMITS, PRESETS, fromPreferences, matchingPreset, measurePx, normalize, spacingLabel, stepSize, toCssVars } from './typography'
 
 describe('normalize', () => {
   it('turns nothing into the defaults', () => {
@@ -87,5 +87,21 @@ describe('small helpers', () => {
   it('names spacing in plain terms', () => {
     expect(spacingLabel(0, LIMITS.letter)).toBe('Standard')
     expect(spacingLabel(0.05, LIMITS.letter)).toBe('+5%')
+  })
+})
+
+describe('presets', () => {
+  it('are valid as they are: normalising changes nothing', () => {
+    for (const p of PRESETS) expect(normalize(p.values)).toEqual(p.values)
+  })
+  it('differ from each other', () => {
+    expect(new Set(PRESETS.map((p) => JSON.stringify(p.values))).size).toBe(PRESETS.length)
+  })
+  it('are recognised while nothing is changed, and not after', () => {
+    for (const p of PRESETS) expect(matchingPreset(p.values)).toBe(p.id)
+    expect(matchingPreset({ ...PRESETS[1].values, size: 17 })).toBeNull()
+  })
+  it('start with the standard look', () => {
+    expect(PRESETS[0].values).toEqual(DEFAULTS)
   })
 })

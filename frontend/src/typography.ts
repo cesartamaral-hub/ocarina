@@ -101,3 +101,18 @@ export const spacingLabel = (value: number, limit: Limit): string => (value <= l
 const LANGUAGE_CODES: Record<string, string> = { dutch: 'nl', polish: 'pl', french: 'fr', english: 'en', german: 'de', spanish: 'es', italian: 'it', portuguese: 'pt' }
 // Lets the browser hyphenate in the right language; unknown languages get no code.
 export const languageCode = (name: string): string | undefined => LANGUAGE_CODES[name.trim().toLowerCase()]
+
+// Starting points on the Appearance page; each is a full set of settings, so choosing one changes everything at once.
+export type Preset = { id: string; label: string; hint: string; values: Typography }
+export const PRESETS: Preset[] = [
+  { id: 'comfortable', label: 'Comfortable', hint: 'Easy on the eyes', values: DEFAULTS },
+  { id: 'compact', label: 'Compact', hint: 'More text on screen', values: { ...DEFAULTS, size: 16, width: 95, line: 1.6 } },
+  { id: 'large', label: 'Large print', hint: 'Big and airy', values: { ...DEFAULTS, size: 24, weight: 500, width: 55, line: 2.2, letter: 0.02, word: 0.05 } },
+  { id: 'book', label: 'Book', hint: 'Serif, justified', values: { ...DEFAULTS, size: 20, font: 'serif', width: 60, line: 1.9, align: 'justify' } },
+]
+
+// The preset these settings are exactly equal to, or null once you have changed anything.
+export function matchingPreset(t: Typography): string | null {
+  const same = (a: Typography, b: Typography) => (Object.keys(a) as (keyof Typography)[]).every((k) => a[k] === b[k])
+  return PRESETS.find((p) => same(normalize(p.values), t))?.id ?? null
+}

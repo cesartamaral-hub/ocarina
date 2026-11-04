@@ -1,24 +1,20 @@
-import { useState } from 'react'
-import { saveTypography, typography } from './appearanceSettings'
+import { AlignPicker } from './AlignPicker'
+import { useTypography } from './useTypography'
 import {
-  ALIGNMENTS,
   FONTS,
   LIMITS,
   WEIGHTS,
   spacingLabel,
   stepSize,
   widthLabel,
-  type Align,
   type FontKey,
-  type Typography,
 } from './typography'
 
 type Numeric = 'width' | 'line' | 'letter' | 'word'
 
 // The text controls, shared by the "Aa" popover in the reader and the Appearance page. Changes apply at once.
 export function TypographyControls() {
-  const [t, setT] = useState<Typography>(typography)
-  const change = (patch: Partial<Typography> | 'reset') => setT(saveTypography(patch))
+  const [t, change] = useTypography()
   const slider = (key: Numeric, label: string, text: string) => (
     <label className="tc-row">
       <span>{label}</span>
@@ -74,28 +70,7 @@ export function TypographyControls() {
       {slider('word', 'Word spacing', spacingLabel(t.word, LIMITS.word))}
       <div className="tc-row">
         <span id="tc-align">Alignment</span>
-        <div className="tc-align" role="radiogroup" aria-labelledby="tc-align">
-          {ALIGNMENTS.map((a) => (
-            <button
-              key={a.value}
-              type="button"
-              role="radio"
-              aria-checked={t.align === a.value}
-              aria-label={a.label}
-              title={a.label}
-              className={t.align === a.value ? 'on' : 'secondary'}
-              onClick={() => change({ align: a.value as Align })}
-            >
-              <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true">
-                {[0, 4, 8, 12].map((y, i) => {
-                  const w = a.value === 'justify' || i % 2 === 0 ? 16 : 10
-                  const x = a.value === 'center' ? (16 - w) / 2 : a.value === 'end' ? 16 - w : 0
-                  return <rect key={y} x={x} y={y} width={w} height="2" rx="1" fill="currentColor" />
-                })}
-              </svg>
-            </button>
-          ))}
-        </div>
+        <AlignPicker value={t.align} onChange={(align) => change({ align })} />
       </div>
       <div>
         <button type="button" className="secondary" onClick={() => change('reset')}>
