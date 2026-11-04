@@ -41,6 +41,9 @@ class Imported:
     text: str
     source_uri: str
     note: str | None = None
+    automatic: bool = False  # captions YouTube made by itself (no punctuation)
+    video_id: str | None = None
+    anchors: list | None = None  # [[word number, seconds], ...]: where in the video the words of the text are said
     audio_path: str | None = None  # a video's sound, kept only when asked (see youtube.py)
 
 

@@ -1,9 +1,10 @@
 import { useEffect, type RefObject } from 'react'
+import type { Playable } from './media'
 import { jumpTarget } from './audioJump'
 
 // Tells the system what is playing, as a music player does: the title and artist in the Now Playing display, and the media keys,
 // the headphone buttons and the lock-screen controls (play, pause, previous and next sentence, back and forward, seeking).
-export function useNowPlaying(audioRef: RefObject<HTMLAudioElement | null>, info: { title: string; artist: string; starts: number[] | null } | null) {
+export function useNowPlaying(audioRef: RefObject<Playable | null>, info: { title: string; artist: string; starts: number[] | null } | null) {
   const title = info?.title
   const artist = info?.artist
   const starts = info?.starts ?? null
@@ -49,10 +50,9 @@ export function useNowPlaying(audioRef: RefObject<HTMLAudioElement | null>, info
         /* a position outside the audio */
       }
     }
-    const el = audio()
-    el?.addEventListener('timeupdate', report)
+    const timer = window.setInterval(report, 1000) // an audio element or a video: neither needs to be there yet
     return () => {
-      el?.removeEventListener('timeupdate', report)
+      window.clearInterval(timer)
       session.metadata = null
       for (const [action] of handlers) {
         try {

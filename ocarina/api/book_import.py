@@ -11,6 +11,7 @@ JSON API for adding a book.
 Reading the file formats and the web page is Lute's own code (lute/book/service.py).
 """
 
+import json
 import os
 import re
 import uuid
@@ -23,7 +24,7 @@ from lute.book.service import BookImportException, FileTextExtraction, Service
 from lute.db import db
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, importer, transcribe, youtube
+from ocarina import audio_versions, importer, transcribe, video, youtube
 from ocarina.api import jobs
 from ocarina.tts.book_audio import tts_lang
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
@@ -49,7 +50,15 @@ def _language_code(language_id):
 
 
 def _imported(got, audio_token=None):
-    return {"title": got.title, "text": got.text, "sourceUri": got.source_uri, "note": got.note, "audioToken": audio_token}
+    return {
+        "title": got.title,
+        "text": got.text,
+        "sourceUri": got.source_uri,
+        "note": got.note,
+        "audioToken": audio_token,
+        "videoId": got.video_id,
+        "anchors": got.anchors,
+    }
 
 
 def _temp_dir(app):
@@ -64,11 +73,11 @@ def _extract_url(url, code, keep_audio):
     if not importer.is_youtube(url):
         return jsonify(_imported(importer.from_web(url)))
     app = current_app._get_current_object()  # pylint: disable=protected-access
+    run_whisper = transcribe.transcriber(app.config)
     if not keep_audio:
         got = youtube.captions_only(url, code)
-        if got is not None:
+        if got is not None and not (got.automatic and run_whisper):  # automatic captions have no punctuation: Whisper does better
             return jsonify(_imported(got))
-    run_whisper = transcribe.transcriber(app.config)
     if run_whisper is None and not keep_audio:
         model = transcribe.model()
         return (
@@ -173,5 +182,10 @@ def create_book():
     if kept:
         book.audio_stream.close()
         os.remove(kept)
+    if form.get("videoId"):
+        try:
+            video.save(saved.id, form["videoId"], json.loads(form.get("videoAnchors") or "[]"))
+        except ValueError:
+            pass  # the book is saved; it just has no video to play
     audio_versions.sync(saved, current_app.env_config.useraudiopath)  # an audio file sent with the book is its first version
     return jsonify({"id": saved.id}), 201

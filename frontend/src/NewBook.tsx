@@ -21,6 +21,8 @@ export function NewBook() {
   const [busy, setBusy] = useState(false)
   const [keepAudio, setKeepAudio] = useState(false)
   const [audioToken, setAudioToken] = useState<string | null>(null)
+  const [video, setVideo] = useState<{ videoId: string; anchors: [number, number][] } | null>(null)
+  const [watch, setWatch] = useState(true)
   const [job, setJob] = useState<Job | null>(null)
   const [needsModel, setNeedsModel] = useState(false)
   const cancelled = useRef(false)
@@ -41,6 +43,7 @@ export function NewBook() {
     setSourceUri(got.sourceUri)
     setNote(got.note ?? '')
     setAudioToken(got.audioToken ?? null)
+    setVideo(got.videoId && got.anchors ? { videoId: got.videoId, anchors: got.anchors } : null)
   }
 
   async function run(extract: () => Promise<Extracted | Job>) {
@@ -85,7 +88,7 @@ export function NewBook() {
     setError('')
     setBusy(true)
     try {
-      const { id } = await createBook({ title, languageId, text, sourceUri, audio, importAudio: audioToken })
+      const { id } = await createBook({ title, languageId, text, sourceUri, audio, importAudio: audioToken, video: watch && video ? video : null })
       setPref('newBook.languageId', languageId)
       window.location.hash = `#/book/${id}`
     } catch (e) {
@@ -183,6 +186,12 @@ export function NewBook() {
           <input type="file" accept="audio/*,.m4b,.opus" onChange={(e) => setAudio(e.target.files?.[0] ?? null)} />
         </label>
         {audioToken && <p className="muted">The sound of the video will be saved as this material's audio.</p>}
+        {video && (
+          <label className="keep-sound">
+            <input type="checkbox" checked={watch} onChange={(e) => setWatch(e.target.checked)} />
+            Play the video in the reader, with the text following it (needs internet)
+          </label>
+        )}
         {error && (
           <p className="error">
             {error} {needsModel && <a href="#/settings/models">Open Models</a>}

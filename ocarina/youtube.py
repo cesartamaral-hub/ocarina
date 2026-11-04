@@ -21,9 +21,11 @@ from ocarina.importer import HEADERS, TIMEOUT, ImportFailed, Imported, clean_par
 
 log = logging.getLogger("ocarina.importer")
 
+END_GUESS = 3.0  # seconds a last line is taken to last
 PARAGRAPH = 450  # characters, about where a paragraph of captions is cut
 NOISE = re.compile(r"[\[\(][^\]\)]{0,40}[\]\)]|[♪♫♬]")  # [Music], (applause), music notes
 SENTENCE_END = re.compile(r"[.!?…]['\")\]]*$")
+AUTOMATIC = "These captions were made by YouTube automatically, so they can have mistakes and no punctuation. Check them before saving."
 ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
 
@@ -57,28 +59,33 @@ def video_title(url, vid):
         return f"YouTube {vid}"
 
 
-def captions_to_text(snippets, generated):
+def build_text(pieces, generated):
     """
-    Paragraphs from caption lines. Captions are short fragments, often without punctuation (the automatic ones), so a paragraph
-    is cut after about PARAGRAPH characters, at a sentence end when the captions have them.
+    (text, anchors) from timed lines [(start seconds, text), ...]: captions or the segments Whisper heard. Lines are short fragments,
+    often without punctuation (automatic captions), so a paragraph is cut after about PARAGRAPH characters, at a sentence end
+    when the lines have them. anchors: [[number of words before the line, start seconds], ...] closed by [all the words, about when it ends].
     """
-    paragraphs, current = [], ""
-    for raw in snippets:
+    paragraphs, current, words, anchors = [], "", 0, []
+    for start, raw in pieces:
         piece = re.sub(r"\s+", " ", NOISE.sub(" ", raw)).strip()
         if not piece:
             continue
+        anchors.append([words, round(float(start), 2)])
+        words += len(piece.split())
         current = f"{current} {piece}".strip()
         if len(current) >= PARAGRAPH and (generated or SENTENCE_END.search(current)):
             paragraphs.append(current)
             current = ""
     if current:
         paragraphs.append(current)
-    return clean_paragraphs("\n\n".join(paragraphs))
+    if anchors:
+        anchors.append([words, round(anchors[-1][1] + END_GUESS, 2)])  # closes the list: all the words, and about when the last line ends
+    return clean_paragraphs("\n\n".join(paragraphs)), anchors
 
 
 def _captions(vid, language):
     """
-    (text, note) from the captions of a video, or (None, reason). Order: written in the language, automatic in the language, any
+    (text, note, anchors) from the captions of a video, or (None, reason, None). Order: written in the language, automatic in the language, any
     caption YouTube can translate into the language.
     """
     from youtube_transcript_api import YouTubeTranscriptApi  # pylint: disable=import-outside-toplevel
@@ -95,18 +102,18 @@ def _captions(vid, language):
     try:
         return _pick_and_fetch(list(YouTubeTranscriptApi().list(vid)), language)
     except TranscriptsDisabled:
-        return None, "The video has no captions."
+        return None, "The video has no captions.", None
     except (AgeRestricted, VideoUnplayable):
         raise ImportFailed("That video is age-restricted or cannot be played, so it cannot be read.") from None
     except VideoUnavailable:
         raise ImportFailed("That video is unavailable (private, removed or not found).") from None
     except (RequestBlocked, IpBlocked):
-        return None, "YouTube refused to give the captions to this computer."
+        return None, "YouTube refused to give the captions to this computer.", None
     except requests.exceptions.RequestException as e:
         raise ImportFailed("YouTube could not be reached. Check your connection.") from e
     except YouTubeTranscriptApiException:
         log.warning("The captions could not be read", exc_info=True)
-        return None, "The captions could not be read."
+        return None, "The captions could not be read.", None
 
 
 def _pick_and_fetch(available, language):
@@ -126,12 +133,12 @@ def _pick_and_fetch(available, language):
                 chosen, note = t.translate(language), f"The captions are YouTube's translation of the {t.language} ones. Check them before saving."
                 break
     if chosen is None:
-        return None, "The video has no captions in this language."
+        return None, "The video has no captions in this language.", None
     fetched = chosen.fetch()
-    text = captions_to_text([s.text for s in fetched], chosen.is_generated)
+    text, anchors = build_text([(s.start, s.text) for s in fetched], chosen.is_generated)
     if chosen.is_generated and note is None:
-        note = "These captions were made by YouTube automatically, so they can have mistakes and no punctuation. Check them before saving."
-    return text, note
+        note = AUTOMATIC
+    return text, note, anchors
 
 
 def _download_audio(url, folder, check=None, as_m4a=False):
@@ -171,13 +178,15 @@ def _download_audio(url, folder, check=None, as_m4a=False):
 def captions_only(url, language):
     "The video's captions as an Imported, or None when it has none (nothing is downloaded)."
     vid = video_id(url)
-    text, note = _captions(vid, (language or "").split("-")[0].lower() or None)
-    return Imported(short_title(video_title(url, vid), url), text, url, note) if text else None
+    text, note, anchors = _captions(vid, (language or "").split("-")[0].lower() or None)
+    if not text:
+        return None
+    return Imported(short_title(video_title(url, vid), url), text, url, note, automatic=note == AUTOMATIC, video_id=vid, anchors=anchors)
 
 
 def from_youtube(url, language, progress=None, keep_audio=False, check=None, transcribe=None):
     """
-    `transcribe(audio_path, language)` turns sound into text (Whisper on this Mac); when it is None a video without captions fails.
+    `transcribe(audio_path, language)` turns sound into (text, [(start seconds, text), ...]) (Whisper on this Mac); when it is None a video without captions fails.
     With keep_audio the downloaded sound stays (its path is in the result and the caller must move or delete it).
     """
     say = progress or log.info
@@ -186,13 +195,17 @@ def from_youtube(url, language, progress=None, keep_audio=False, check=None, tra
     code = (language or "").split("-")[0].lower() or None
 
     say("Looking for the captions...")
-    text, note = _captions(vid, code)
+    text, note, anchors = _captions(vid, code)
     if not text:
         log.info("No captions: %s", note)
         if transcribe is None:
             raise ImportFailed(f"{note or 'The video has no captions.'} Download the Whisper model in Settings to transcribe it on this Mac.")
+    # Automatic captions have no punctuation; Whisper's text does, so it is preferred when it can be had (the captions stay as the fallback).
+    fallback = (text, note, anchors) if text and note == AUTOMATIC and transcribe else None
+    if fallback:
+        text = None
     if text and not keep_audio:
-        return Imported(title, text, url, note)
+        return Imported(title, text, url, note, video_id=vid, anchors=anchors)
 
     folder = tempfile.mkdtemp(prefix="ocarina-import-")
     try:
@@ -202,11 +215,18 @@ def from_youtube(url, language, progress=None, keep_audio=False, check=None, tra
             check()
         if not text:
             say("Transcribing on this Mac (this can take a few minutes)...")
-            text = clean_paragraphs(transcribe(audio, code))
-            note = "Transcribed on this Mac by Whisper, so it can have mistakes. Check it before saving."
-            if not text:
-                raise ImportFailed("Nothing was heard in the video.")
-        result = Imported(title, text, url, note)
+            try:
+                heard, segments = transcribe(audio, code)
+                text, anchors = build_text(segments or [(0.0, heard)], False)
+                note = "Transcribed on this Mac by Whisper, so it can have mistakes. Check it before saving."
+                if not text:
+                    raise ImportFailed("Nothing was heard in the video.")
+            except Exception:  # pylint: disable=broad-exception-caught  # the captions are still a result
+                if not fallback:
+                    raise
+                log.warning("Whisper failed; using the captions", exc_info=True)
+                text, note, anchors = fallback
+        result = Imported(title, text, url, note, video_id=vid, anchors=anchors)
         if keep_audio:
             kept = os.path.join(tempfile.gettempdir(), f"ocarina-import-{vid}{os.path.splitext(audio)[1]}")
             shutil.move(audio, kept)

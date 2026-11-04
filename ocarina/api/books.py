@@ -14,7 +14,7 @@ import os
 from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
-from ocarina import audio_versions, book_index
+from ocarina import audio_versions, book_index, video
 from lute.models.book import Book as DBBook, BookTag
 from lute.models.repositories import BookRepository
 from ocarina.tts.book_audio import book_sentences, is_ocarina_audio, timings_path
@@ -147,5 +147,12 @@ def sentences(book_id):
                 made = json.load(f)
             result["sentences"] = made["sentences"]
             result["audioModel"] = made.get("model")  # the catalog id of the model that voiced it
+            result["hasTimings"] = True
+    watched = video.find(book.id)
+    if watched:
+        result["video"] = {"videoId": watched["videoId"]}
+        if not result["hasTimings"]:  # a recording synced with the text, or audio Ocarina made, takes its place
+            starts = video.starts_for(result["sentences"], watched["anchors"])
+            result["sentences"] = [{**s, "start": t} for s, t in zip(result["sentences"], starts)]
             result["hasTimings"] = True
     return jsonify(result)

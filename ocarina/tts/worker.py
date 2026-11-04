@@ -194,7 +194,7 @@ class FakeTranscriberEngine:
 
     def transcribe(self, audio, language):  # pylint: disable=unused-argument
         "What was said."
-        return f"Gehoord ({language})."
+        return f"Gehoord ({language}).", [[0.0, f"Gehoord ({language})."]]
 
 
 class MlxWhisperEngine:
@@ -208,9 +208,10 @@ class MlxWhisperEngine:
         self.model = load(repo)
 
     def transcribe(self, audio, language):
-        "The text of the file, in the language when it is known (else Whisper finds it)."
-        result = self.model.generate(audio, language=language, return_timestamps=False, verbose=None)
-        return result.text.strip()
+        "(text, [[start seconds, text], ...]) of the file, in the language when it is known (else Whisper finds it)."
+        result = self.model.generate(audio, language=language, return_timestamps=True, verbose=None)
+        segments = [[round(float(s["start"]), 2), s["text"].strip()] for s in (result.segments or []) if s["text"].strip()]
+        return result.text.strip(), segments
 
 
 class MlxChatterboxEngine:
@@ -316,7 +317,8 @@ def _handle(engine, req):
         extra = {k: req.get(k) for k in ("style", "source", "target", "text")}
         return {"text": engine.complete(req["system"], req["user"], req.get("max_tokens", 300), **extra)}, engine
     if op == "transcribe":
-        return {"text": engine.transcribe(req["audio"], req.get("language"))}, engine
+        text, segments = engine.transcribe(req["audio"], req.get("language"))
+        return {"text": text, "segments": segments}, engine
     if op == "duration":
         return {"seconds": engine.duration(req["audio"])}, engine
     if op == "onsets":

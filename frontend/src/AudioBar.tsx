@@ -3,6 +3,7 @@ import { getPref, setPref } from './api'
 import { keyLabel, keyOf } from './shortcutKeys'
 import { SPEED, clampSpeed, speedLabel } from './speeds'
 import { SpeedMenu } from './SpeedMenu'
+import type { Playable } from './media'
 
 
 // The book's audio player with a slow-down control (pitch preserved, remembered per language).
@@ -18,7 +19,7 @@ export function AudioBar({
   bookId: number
   language: string
   version: number
-  audioRef: RefObject<HTMLAudioElement | null>
+  audioRef: RefObject<Playable | null>
   onTime?: (seconds: number) => void
   children?: ReactNode
 }) {
@@ -32,7 +33,7 @@ export function AudioBar({
 
   // Applied again whenever the audio element is replaced (new version).
   useEffect(() => {
-    const el = audioRef.current
+    const el = audioRef.current as HTMLAudioElement | null
     if (!el) return
     el.playbackRate = speed
     el.preservesPitch = true
@@ -41,7 +42,7 @@ export function AudioBar({
   return (
     <>
       <audio
-        ref={audioRef}
+        ref={audioRef as RefObject<HTMLAudioElement | null>}
         key={version}
         controls
         src={`/useraudio/stream/${bookId}?v=${version}`}

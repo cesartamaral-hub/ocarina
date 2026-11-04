@@ -26,14 +26,14 @@ def _fake_youtube(monkeypatch, captions):
 
 
 def test_captions_answer_at_once(client, monkeypatch):
-    _fake_youtube(monkeypatch, ("Ondertitels.", "note"))
+    _fake_youtube(monkeypatch, ("Ondertitels.", "note", [[0, 1.0]]))
     r = client.post(EXTRACT, json={"url": URL})
     assert r.status_code == 200
-    assert r.json == {"title": "Een video", "text": "Ondertitels.", "sourceUri": URL, "note": "note", "audioToken": None}
+    assert r.json == {"title": "Een video", "text": "Ondertitels.", "sourceUri": URL, "note": "note", "audioToken": None, "videoId": "dQw4w9WgXcQ", "anchors": [[0, 1.0]]}
 
 
 def test_no_captions_and_no_model_says_which_model(client, monkeypatch):
-    _fake_youtube(monkeypatch, (None, "The video has no captions."))
+    _fake_youtube(monkeypatch, (None, "The video has no captions.", None))
     monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)  # whatever this Mac has downloaded
     r = client.post(EXTRACT, json={"url": URL})
     assert r.status_code == 409 and r.json["code"] == "model_not_installed"
@@ -41,7 +41,7 @@ def test_no_captions_and_no_model_says_which_model(client, monkeypatch):
 
 def test_no_captions_is_transcribed_as_a_job(app, client, monkeypatch):
     app.config["OCARINA_TTS_ENGINE"] = "fake"
-    _fake_youtube(monkeypatch, (None, "no captions"))
+    _fake_youtube(monkeypatch, (None, "no captions", None))
     r = client.post(EXTRACT, json={"url": URL, "languageId": None})
     assert r.status_code == 202
     job = wait_for_job(client, r.json["id"])
@@ -52,7 +52,7 @@ def test_no_captions_is_transcribed_as_a_job(app, client, monkeypatch):
 
 def test_kept_sound_becomes_the_books_audio(app, client, monkeypatch):
     app.config["OCARINA_TTS_ENGINE"] = "fake"
-    _fake_youtube(monkeypatch, ("Ondertitels.", None))
+    _fake_youtube(monkeypatch, ("Ondertitels.", None, [[0, 1.0]]))
     r = client.post(EXTRACT, json={"url": URL, "keepAudio": True})
     job = wait_for_job(client, r.json["id"])
     token = job["result"]["audioToken"]
@@ -82,3 +82,14 @@ def test_a_bad_sound_token_is_refused(client):
         content_type="multipart/form-data",
     )
     assert r.status_code == 400
+
+
+def test_automatic_captions_are_transcribed_when_whisper_is_there(app, client, monkeypatch):
+    _fake_youtube(monkeypatch, ("zonder leestekens", youtube.AUTOMATIC, [[0, 1.0]]))
+    monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)
+    plain = client.post(EXTRACT, json={"url": URL})
+    assert plain.status_code == 200 and plain.json["text"] == "zonder leestekens"  # no model: the captions as they are
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    r = client.post(EXTRACT, json={"url": URL})
+    assert r.status_code == 202
+    assert wait_for_job(client, r.json["id"])["result"]["text"].startswith("Gehoord")

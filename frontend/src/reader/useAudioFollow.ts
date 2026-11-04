@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSentences, type BookSentences, type ReaderPage } from '../api'
+import type { Playable } from '../media'
 
 // Keeps the reader in step with the book's generated audio.
 //
@@ -7,7 +8,7 @@ import { getSentences, type BookSentences, type ReaderPage } from '../api'
 // sentences for the same page (both come from Lute's parser). If the counts differ, the text
 // was edited after the audio was made, so following switches itself off (aligned = false).
 export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: boolean, version = 0) {
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = useRef<Playable | null>(null)
   const [audioInfo, setAudioInfo] = useState<BookSentences | null>(null)
   const [playing, setPlaying] = useState<number | null>(null)
 

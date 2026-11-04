@@ -715,3 +715,8 @@ body:has(.reader) { overflow: hidden; }
 .source-hint { margin: 6px 0 0; }
 .controls label:has(.row-inline) { flex: 1 1 22rem; }
 .controls .row-inline input { flex: 1; min-width: 0; }
+.video-frame { flex: 0 0 240px; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+.video-host, .video-host iframe { width: 100%; height: 100%; display: block; }
+.video-problem { margin: 0; padding: 10px; font-size: 0.82rem; color: #ddd; }
+.video-problem a { color: var(--accent, #7fd1b0); }
+.reader-audio .video-frame ~ .controls { display: contents; }

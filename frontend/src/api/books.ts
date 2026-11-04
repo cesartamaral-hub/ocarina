@@ -38,6 +38,7 @@ export type BookSentences = {
   hasAudio: boolean
   hasTimings: boolean
   audioModel?: string
+  video?: { videoId: string } // the YouTube video the book was made from
   currentPage: number
   sentences: Sentence[]
 }
@@ -56,7 +57,15 @@ export const getSentences = (id: number) =>
 
 export type Language = { id: number; name: string; books?: number; terms?: number }
 
-export type Extracted = { title: string; text: string; sourceUri: string; note: string | null; audioToken?: string | null }
+export type Extracted = {
+  title: string
+  text: string
+  sourceUri: string
+  note: string | null
+  audioToken?: string | null
+  videoId?: string | null // a YouTube video: its id, and where its words are said (see ocarina/video.py)
+  anchors?: [number, number][] | null
+}
 
 export const getLanguages = () => fetch(`${API}/languages`).then((r) => json<Language[]>(r))
 
@@ -77,6 +86,7 @@ export type NewBook = {
   sourceUri: string
   audio: File | null
   importAudio?: string | null // the sound of an imported video (see Extracted.audioToken)
+  video?: { videoId: string; anchors: [number, number][] } | null // the video to play in the reader
 }
 
 export const createBook = (b: NewBook) => {
@@ -87,5 +97,9 @@ export const createBook = (b: NewBook) => {
   form.append('sourceUri', b.sourceUri)
   if (b.audio) form.append('audio', b.audio)
   else if (b.importAudio) form.append('importAudio', b.importAudio)
+  if (b.video) {
+    form.append('videoId', b.video.videoId)
+    form.append('videoAnchors', JSON.stringify(b.video.anchors))
+  }
   return fetch(`${API}/books`, { method: 'POST', body: form }).then((r) => json<{ id: number }>(r))
 }

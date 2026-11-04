@@ -73,7 +73,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const audio = useAudioFollow(bookId, page, follow, audioVersion)
   usePlaybackKeys(audio.audioRef, audio.starts)
   useWindowTitle(page?.title ?? 'Ocarina')
-  useNowPlaying(audio.audioRef, page && audio.audioInfo?.hasAudio ? { title: page.title, artist: page.language.name, starts: audio.starts } : null)
+  useNowPlaying(audio.audioRef, page && (audio.audioInfo?.hasAudio || audio.audioInfo?.video) ? { title: page.title, artist: page.language.name, starts: audio.starts } : null)
 
   useEffect(() => {
     const run = { alive: true }
@@ -418,13 +418,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         }}
         main={
           <>
-            {audio.audioInfo?.hasAudio && (
+            {(audio.audioInfo?.hasAudio || audio.audioInfo?.video) && (
               <AudioPanel
                 bookId={bookId}
                 language={page.language.name}
                 audioVersion={audioVersion}
                 onVersionChanged={() => setAudioVersion((v) => v + 1)}
                 audio={audio}
+                videoId={audio.audioInfo?.hasAudio ? undefined : audio.audioInfo?.video?.videoId}
                 follow={follow}
                 onFollowChange={setFollow}
               />
