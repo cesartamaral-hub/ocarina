@@ -354,3 +354,13 @@ div.error p { margin: 0; }
 .more-menu button { width: 100%; text-align: left; padding: 6px 10px; border-radius: 5px; }
 .more-menu button:hover { background: var(--line); }
 @media (max-width: 700px) { .book-row { grid-template-columns: 1fr auto; } .book-numbers { grid-column: 1 / -1; order: 3; } }
+
+/* Text editor */
+.text-editor { margin: 0 auto; }
+.text-editor h2 { margin: 10px 0 12px; font-size: 1.1rem; }
+.text-editor textarea { display: block; width: 100%; min-height: 55vh; box-sizing: border-box; resize: none; overflow: hidden; padding: 22px 26px; font-size: var(--r-size, 18px); line-height: var(--r-line, 2); font-family: var(--r-font, inherit); font-weight: var(--r-weight, 400); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+.text-editor textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.editor-bar { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 14px; padding: 12px 0; background: var(--bg); border-top: 1px solid var(--line); }
+.editor-actions { display: flex; gap: 8px; }
+.reader-column:has(.text-editor) { max-width: none; }
+.text-editor { max-width: 820px; }

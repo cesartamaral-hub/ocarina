@@ -19,6 +19,8 @@ import { SentenceBlock } from './SentenceBlock'
 import { AudioPanel } from './AudioPanel'
 import { languageCode } from '../typography'
 import { useEscape } from '../escape'
+import { TextEditor } from './TextEditor'
+import { isDirty } from './editing'
 import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
@@ -41,6 +43,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [reloadKey, setReloadKey] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
   const [original, setOriginal] = useState('')
+  const [saving, setSaving] = useState(false)
   const [follow, setFollow] = useState(true)
   const [highlights, setHighlights] = useState(() => getPref('highlights', true))
   const toggleHighlights = useCallback(() => {
@@ -173,9 +176,10 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }
 
   // Esc: leave the editor (asking first if there are changes), else clear the selection, else go back (see escape.ts).
-  useEscape(editing !== null, () => {
-    if (editing === original || window.confirm('Discard your changes to this text?')) setEditing(null)
-  })
+  const cancelEditing = () => {
+    if (editing === null || !isDirty(editing, original) || window.confirm('Discard your changes to this text?')) setEditing(null)
+  }
+  useEscape(editing !== null, cancelEditing)
   useEscape(editing === null && (selected !== null || multi.size > 0 || help), () => {
     setSelected(null)
     setMulti(new Set())
@@ -261,6 +265,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }
   async function saveEditing() {
     if (!page || editing === null) return
+    setSaving(true)
     try {
       await putPageText(bookId, page.page, editing)
       notify('Text saved')
@@ -270,6 +275,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       setReloadKey((k) => k + 1)
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -320,18 +327,19 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               {help && <KeyHelp onClose={() => setHelp(false)} />}
               {error && <p className="error">{error}</p>}
               {editing !== null ? (
-          <div className="edit-text">
-            <textarea rows={18} value={editing} onChange={(e) => setEditing(e.target.value)} />
-            {audio.timings && (
-              <p className="muted">The audio was made from the old text. Regenerate it afterwards.</p>
-            )}
-            <div className="pager">
-              <button onClick={saveEditing}>Save text</button>
-              <button className="secondary" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
+          <TextEditor
+            value={editing}
+            original={original}
+            onChange={setEditing}
+            onSave={saveEditing}
+            onCancel={cancelEditing}
+            language={languageCode(page.language.name)}
+            rightToLeft={page.language.rightToLeft}
+            page={page.page}
+            pageCount={page.pageCount}
+            audioWarning={audio.timings !== null}
+            saving={saving}
+          />
         ) : (
           <>
             <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseDown={onMouseDown}>
