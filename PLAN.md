@@ -35,6 +35,24 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 - Check by hand: the folder dialog ("Import from folder"), a Finder double-click, the Dock icon.
 - Later: speech-to-text for pronunciation practice (Handy-style). Housekeeping: remove Lute's `tasks.py`.
 
+## Reader and books: agreed plan (2026-11-04, not started)
+
+Build in this order, one session and one commit each. Steps 1 to 4 are the reader; step 5 is independent and can run in parallel.
+
+1. **Playback shortcuts (done).** `K` play/pause, `J` back, `L` forward, remappable in the shortcuts page, listed in the `?` help and in player tooltips; reader and book page. Audio cannot play in reverse, so `J` means "jump back": to the start of the current sentence (the previous one if within about 1 s of its start) when timings exist, else 10 s. `L` mirrors it. `Space` is left alone (it scrolls).
+2. **Reader layout (medium).** Remove the 760 px cap for the reader (width scale: narrow for forms, medium for lists, full for the reader). The word panel is pinned to the right window edge, full height, own scroll, resizable (drag handle, also keyboard) and collapsible, width remembered; below about 1000 px it becomes a drawer. The player bar spans the reading column on one row. The text is a centred column with a readable measure (default about 70 characters). Split `Reader.tsx` into layout, toolbar and selection parts.
+3. **Text formatting (medium, needs 2).** An "Aa" popover in the reader toolbar, like Firefox Reader View: text size − / +, font (system fonts only), weight, content width, line spacing, character spacing, word spacing, alignment (start, center, end, justify; set the book's language for hyphenation), reset. Live preview, saved as preferences. The same controls component serves the popover and the Appearance page; current text size and font carry over.
+4. **Drag-select (small to medium).** Up to about 6 words in one sentence it stays a phrase; longer or across a sentence end it opens a "Selected text" panel with Translate (any length up to the service limit), Play from here and "Save as phrase anyway". The selected span is outlined like a selected word. Optional: Option-click selects the whole sentence.
+5. **Books page (medium).**
+   - Row: title and tags, a minimal speaker icon (no text; badge only when there are several versions; tooltip and aria-label say what it is), stats, a Continue button; Edit/Archive/Delete move into a ⋯ menu.
+   - Stats: **known %** of running words (the headline), **new words** (unique, unknown), **words**, a thin status bar (known / learning / new) and a difficulty chip (Easy ≥98%, Comfortable 95-98%, Challenging 90-95%, Hard <90%; a heuristic). Reading time (words / 150) and audio length on hover. "Known" means status 4, 5 or 99; ignored (98) words count as neither.
+   - Sort by Recently read, Difficulty, Progress, Title; filter Has audio.
+   - Engine: a per-book word index (word -> count), built in the background when a book is added, edited or first seen; stats are one SQL join with the current statuses, so they are exact and always fresh. Measured: parsing runs at 16,000 to 58,000 words/s, so a 100,000-word novel indexes in a few seconds, once. Lute's own `bookstats` is not used (5-page sample, unique words, stale until a page is read).
+   - Also: a few small unit tests for pure logic (difficulty thresholds, the stats join, typography to CSS), since the frontend has none.
+
+## Models you add (2026-11-04)
+A model added from Hugging Face is looked up (type, support, memory), then tried once after its download; failures are explained in plain words, flagged, and kept out of the voice menus. Higgs TTS 3-4b works (PyTorch-free loading shim). Not yet checked in the packaged app: rebuild, then try Test on a model there.
+
 ## Decisions
 - **Hard fork** (2026-11-03): no tracking of upstream `lute-v3`; Lute code is deleted once its React replacement exists.
 - **Dropped with Lute's pages** (2026-11-03, recoverable from git history before the commit "Retire Lute's pages"): Anki export, term CSV import, audio bookmarks, Lute themes and its own settings screens (replaced by Appearance and Keyboard shortcuts), Lute's Bing image search (replaced by "Find pictures").

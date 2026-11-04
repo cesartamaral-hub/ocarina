@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode, type RefObject } from 'react'
 import { getPref, setPref } from './api'
+import { keyLabel, keyOf } from './shortcutKeys'
 
 const MIN_SPEED = 0.5
 
@@ -61,6 +62,9 @@ export function AudioBar({
         </label>
         {children}
       </div>
+      <p className="muted key-hint">
+        <kbd>{keyLabel(keyOf('skipBack'))}</kbd> back · <kbd>{keyLabel(keyOf('playPause'))}</kbd> play or pause · <kbd>{keyLabel(keyOf('skipForward'))}</kbd> forward
+      </p>
     </>
   )
 }

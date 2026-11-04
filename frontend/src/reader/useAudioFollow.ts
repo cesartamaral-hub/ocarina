@@ -16,6 +16,8 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
   }, [bookId, version]) // another audio version has other timings (or none)
 
   const timings = audioInfo?.hasTimings ? audioInfo.sentences : null
+  // Where each sentence starts, for the J and L keys.
+  const starts = useMemo(() => (timings ? timings.map((t) => t.start).filter((s): s is number => s !== undefined) : null), [timings])
   const wordSentences = useMemo(
     () => page?.paragraphs.flat().filter((s) => s.some((i) => i.isWord)).map((s) => s[0].sentence) ?? [],
     [page],
@@ -59,5 +61,5 @@ export function useAudioFollow(bookId: number, page: ReaderPage | null, follow: 
     el.play()
   }
 
-  return { audioRef, audioInfo, timings, aligned, firstStart: pageTimings[0]?.start, startOf, playing, onAudioTime, playAt }
+  return { audioRef, audioInfo, timings, starts, aligned, firstStart: pageTimings[0]?.start, startOf, playing, onAudioTime, playAt }
 }

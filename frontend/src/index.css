@@ -305,3 +305,13 @@ label.choice input { margin-top: 5px; }
 label.choice.unavailable { cursor: default; }
 label.choice.unavailable > span > strong, label.choice.unavailable > span > .muted { opacity: 0.6; }
 .choice-note { display: block; margin-top: 2px; font-size: 0.85rem; }
+
+/* Result of trying a model */
+.check-ok { color: var(--accent); font-size: 0.9rem; margin-top: 2px; }
+.check-failed { margin-top: 6px; padding: 8px 10px; border: 1px solid var(--error); border-radius: 8px; color: var(--error); font-size: 0.9rem; }
+.check-failed details, div.error details { margin-top: 4px; }
+.check-failed code, div.error code { display: block; margin-top: 4px; font-size: 0.78rem; word-break: break-word; color: var(--muted); }
+ul.lookup-notes { margin: 4px 0 10px; padding-left: 1.2em; }
+div.error p { margin: 0; }
+
+.key-hint { margin: 8px 0 0; font-size: 0.8rem; }

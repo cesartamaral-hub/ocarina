@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AudioBar } from './AudioBar'
 import {
   cancelJob,
@@ -15,6 +15,7 @@ import {
 } from './api'
 import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
 import { AudioVersions } from './AudioVersions'
+import { usePlaybackKeys } from './playbackKeys'
 
 const modelName = (o: AudioOptions, id: string) => o.models.find((m) => m.id === id)?.name ?? id
 const voiceName = (o: AudioOptions, id: string) => o.voices.find((v) => v.id === id)?.name ?? id
@@ -32,6 +33,11 @@ export function BookView({ bookId }: { bookId: number }) {
   const [optionsError, setOptionsError] = useState('')
   const [choice, setChoice] = useState<AudioChoice>({ model: '', voice: '' })
   const audio = useRef<HTMLAudioElement>(null)
+  const starts = useMemo(
+    () => (book?.hasTimings ? book.sentences.map((s) => s.start).filter((t): t is number => t !== undefined) : null),
+    [book],
+  )
+  usePlaybackKeys(audio, starts)
 
   const load = useCallback(() => {
     getSentences(bookId).then(
@@ -225,7 +231,17 @@ export function BookView({ bookId }: { bookId: number }) {
         {job?.state === 'cancelled' && (
           <p className="muted">Cancelled. Sentences already voiced are kept, so starting again is quick.</p>
         )}
-        {job?.state === 'error' && <p className="error">{job.error}</p>}
+        {job?.state === 'error' && (
+          <div className="error">
+            <p>{job.error}</p>
+            {job.detail && (
+              <details>
+                <summary>Technical details</summary>
+                <code>{job.detail}</code>
+              </details>
+            )}
+          </div>
+        )}
         {needsModel && (
           <p className="error">
             The voice model is not downloaded yet. <a href="#/settings">Download it in Settings</a>.

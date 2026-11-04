@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AudioBar } from '../AudioBar'
 import { AudioVersions } from '../AudioVersions'
 import { notify } from '../notices'
+import { usePlaybackKeys } from '../playbackKeys'
 import {
   bulkStatus,
   finishPage,
@@ -42,6 +43,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const shownPage = useRef(0)
   const [audioVersion, setAudioVersion] = useState(0) // bumped when another audio version is picked
   const audio = useAudioFollow(bookId, page, follow, audioVersion)
+  usePlaybackKeys(audio.audioRef, audio.starts)
 
   useEffect(() => {
     const run = { alive: true }
