@@ -120,7 +120,7 @@ def start_audio(book_id):
             return jsonify({"error": "Voice not found"}), 400
         voice_id = voices.default_voice_id(code)  # the chosen voice was deleted: use the default
         voice = voices.path_of(cfg.datapath, voice_id)
-    if jobs.active(kind="audio", book_id=book_id):
+    if jobs.active(kind="audio", book_id=book_id) or jobs.active(kind="sync", book_id=book_id):
         return (
             jsonify({"error": "Audio for this book is already queued or running", "code": "already_queued"}),
             409,

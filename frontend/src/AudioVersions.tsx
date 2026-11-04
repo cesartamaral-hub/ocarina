@@ -12,12 +12,14 @@ export function AudioVersions({
   compact = false,
   disabled = false,
   onChanged,
+  onSync,
 }: {
   bookId: number
   refreshKey: number // changes when a version was added elsewhere (a finished generation)
   compact?: boolean
   disabled?: boolean
   onChanged: () => void
+  onSync?: (v: AudioVersion) => void // start syncing your own recording with the text
 }) {
   const [versions, setVersions] = useState<AudioVersion[]>([])
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -83,6 +85,16 @@ export function AudioVersions({
       </label>
       {!compact && current && renaming === null && (
         <span className="row-actions">
+          {onSync && current.kind === 'own' && !current.missing && (
+            <button
+              className={current.hasTimings ? 'secondary' : undefined}
+              disabled={disabled}
+              onClick={() => onSync(current)}
+              title="Find when each sentence is spoken, so the text lights up as the recording plays"
+            >
+              {current.synced ? 'Sync again' : 'Sync with the text'}
+            </button>
+          )}
           <button className="secondary" disabled={disabled} onClick={() => setRenaming(current.label)}>
             Rename
           </button>

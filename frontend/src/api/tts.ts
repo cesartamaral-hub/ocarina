@@ -2,7 +2,7 @@ import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download' | 'preview' | 'check'
+  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number
@@ -14,6 +14,7 @@ export type Job = {
   model_id?: string
   preview?: string
   error?: string
+  suspect?: number // sync jobs: sentences that could not be placed with confidence
 }
 
 export const isActive = (job: Job | null) => job?.state === 'queued' || job?.state === 'running'
@@ -35,7 +36,7 @@ export type Model = {
   license: string
   languages: string[]
   installed: boolean
-  kind?: 'speech' | 'text'
+  kind?: 'speech' | 'text' | 'aligner'
   custom?: boolean
   check?: ModelCheck | null
   sizeBytes: number
@@ -99,6 +100,7 @@ export type AudioVersion = {
   created: string
   selected: boolean
   hasTimings: boolean
+  synced: boolean // your own recording, synced with the text
   missing: boolean
 }
 
@@ -121,6 +123,9 @@ export const startAudio = (id: number, opts: { pause?: number; model?: string; v
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(opts),
   }).then((r) => json<Job>(r))
+
+export const syncAudioVersion = (bookId: number, versionId: number) =>
+  fetch(`${API}/books/${bookId}/audio/versions/${versionId}/sync`, { method: 'POST' }).then((r) => json<Job>(r))
 
 export type Voice = { id: string; name: string; builtin: boolean; seconds: number; transcript: string }
 
@@ -149,7 +154,7 @@ export type HubLookup = {
   files: number
   totalBytes: number
   modelType: string | null
-  support: { known: boolean | null; module: string | null; problem: string | null }
+  support: { known: boolean | null; module: string | null; problem: string | null; text?: { known: boolean | null } }
   memoryGb: number
   converted: boolean
   notes: string[]

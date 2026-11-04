@@ -3,6 +3,7 @@ import { loadPrefs, runDueBackup } from './api'
 import { Appearance } from './Appearance'
 import { applyAppearance } from './appearanceSettings'
 import { onEscapeKey } from './escape'
+import { mayFollow } from './leaveGuard'
 import { Backups } from './Backups'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
@@ -66,8 +67,20 @@ export default function App() {
   const [ready, setReady] = useState(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => onEscapeKey(e, (hash) => (window.location.hash = hash), () => window.location.hash)
+    // A link to another page while text has unsaved changes asks first.
+    const onClick = (e: MouseEvent) => {
+      const link = e.target instanceof Element ? e.target.closest('a[href]') : null
+      if (!mayFollow(link, (question) => window.confirm(question))) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+      }
+    }
     window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
+    window.addEventListener('click', onClick, true)
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('click', onClick, true)
+    }
   }, [])
   useEffect(() => {
     loadPrefs().then(() => {

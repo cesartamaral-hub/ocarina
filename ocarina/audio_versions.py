@@ -13,7 +13,7 @@ from sqlalchemy import text as sql
 
 from lute.db import db
 from ocarina.tts import models as model_files
-from ocarina.tts.book_audio import is_ocarina_audio, timings_path
+from ocarina.tts.book_audio import has_timings, is_ocarina_audio, timings_info, timings_path
 
 OWN, GENERATED = "own", "generated"
 MAX_LABEL = 100
@@ -33,7 +33,8 @@ def _json(row, selected_filename, audio_dir):
         "pause": row.BaPause,
         "created": row.BaCreated,
         "selected": row.BaFilename == selected_filename,
-        "hasTimings": row.BaKind == GENERATED and is_ocarina_audio(audio_dir, row.BaFilename),
+        "hasTimings": has_timings(audio_dir, row.BaFilename),
+        "synced": bool((timings_info(audio_dir, row.BaFilename) or {}).get("aligned")),
         "missing": not exists,
     }
 
@@ -81,6 +82,11 @@ def list_versions(book, audio_dir):
     "All versions of the book, oldest first."
     sync(book, audio_dir)
     return [_json(r, book.audio_filename, audio_dir) for r in _rows(book.id)]
+
+
+def find(book, version_id):
+    "The version's row (its BaFilename, BaKind, ...), or None if the book has no such version."
+    return next((r for r in _rows(book.id) if r.BaID == version_id), None)
 
 
 def add(book, filename, kind, label, model=None, voice=None, pause=None, select=True):
@@ -153,6 +159,8 @@ def remove(book, version_id, audio_dir):
     db.session.commit()
     if row.BaKind == GENERATED:
         _delete_files(audio_dir, row.BaFilename)
+    else:
+        drop_timings(audio_dir, row.BaFilename)  # the recording stays; timings we made for it do not
     return shown
 
 
@@ -164,3 +172,10 @@ def generated_filenames(book):
 def drop_generated_file(audio_dir, filename):
     "Delete a generated audio file and its timings."
     _delete_files(audio_dir, filename)
+
+
+def drop_timings(audio_dir, filename):
+    "Delete the sentence timings of an audio file (your recording itself stays)."
+    path = os.path.join(audio_dir, filename + ".sentences.json")
+    if os.path.exists(path):
+        os.remove(path)

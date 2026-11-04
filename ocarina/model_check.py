@@ -3,13 +3,14 @@ Trying a model: load it in a worker and use it once, so a model that cannot work
 (with a plain reason) and not in the middle of voicing a book.
 
 Results are kept in <data folder>/model_checks.json, per model and revision. A speech model is asked for a short
-sentence twice (the first call includes loading, the second shows the real speed); a text model for one translation.
+sentence twice (the first call includes loading, the second shows the real speed); a text model for one translation; an aligner for placing three words.
 """
 
 import json
 import os
 import time
 
+from ocarina.audio_sync import aligner_engine
 from ocarina.localllm import LocalModel
 from ocarina.tts import models as model_files
 from ocarina.tts import voices
@@ -88,7 +89,8 @@ def _try_text(model, engine):
     runner = LocalModel(idle_seconds=1)
     try:
         started = time.time()
-        answer = runner.complete(model, "Reply with the English translation only.", "Dutch sentence:\nGoedemorgen, hoe gaat het met je?", engine=engine)
+        extra = {"style": "translategemma", "source": "nl", "target": "en", "text": "Goedemorgen, hoe gaat het met je?"} if model.get("prompt") == "translategemma" else {}
+        answer = runner.complete(model, "Reply with the English translation only.", "Dutch sentence:\nGoedemorgen, hoe gaat het met je?", engine=engine, **extra)
         if not answer.strip():
             raise RuntimeError("The model gave no answer.")
         return {"secondsPerSentence": round(time.time() - started, 1)}
@@ -96,10 +98,37 @@ def _try_text(model, engine):
         runner.unload()
 
 
+def _try_aligner(datapath, model, engine):
+    "Load the aligner and place three words on a second and a half of tone (it has no use for the sound being speech)."
+    import numpy as np  # pylint: disable=import-outside-toplevel
+    import soundfile as sf  # pylint: disable=import-outside-toplevel
+
+    path = os.path.join(datapath, "temp", f"check_{model['id']}.wav")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    sf.write(path, (0.1 * np.sin(np.arange(24000) / 8)).astype("float32"), 16000)
+    supervisor = Supervisor(aligner_engine(engine or model["engine"]), repo=model["repositories"][0]["id"], timeout=1800)
+    try:
+        started = time.time()
+        words = supervisor.align(path, 0.0, 1.5, "een twee drie")
+        if len(words) != 3:
+            raise RuntimeError("The model did not place the words.")
+        return {"seconds": round(time.time() - started, 1)}
+    finally:
+        supervisor.unload()
+        if os.path.exists(path):
+            os.remove(path)
+
+
 def check_model(datapath, model, engine=None):
     "Try the model once; stores and returns {ok, ...numbers} or {ok: False, error, detail}."
     try:
-        numbers = _try_text(model, engine) if model_files.kind_of(model) == "text" else _try_speech(datapath, model, engine)
+        kind = model_files.kind_of(model)
+        if kind == "text":
+            numbers = _try_text(model, engine)
+        elif kind == "aligner":
+            numbers = _try_aligner(datapath, model, engine)
+        else:
+            numbers = _try_speech(datapath, model, engine)
         result = {"ok": True, **numbers}
     except Exception as e:  # pylint: disable=broad-exception-caught
         technical = f"{type(e).__name__}: {e}"

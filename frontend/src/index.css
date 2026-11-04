@@ -394,5 +394,18 @@ button.link-button:hover:not(:disabled) { filter: none; text-decoration-thicknes
 .page-bar > button:first-child { justify-self: start; }
 @media (max-width: 640px) { .page-bar { grid-template-columns: 1fr 1fr; } .page-bar .page-count { grid-column: 1 / -1; order: -1; } }
 .controls label.inline { flex-direction: row; align-items: center; gap: 8px; font-size: 0.9rem; }
-.controls select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); min-height: var(--control-h-sm); padding: 0 8px; }
+.controls select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); min-height: var(--control-h); padding: 0 8px; }
 .more-menu button.danger-text { color: var(--error); }
+
+/* Text fields and menus share the button height and corners, so a row of them lines up with the buttons beside them. */
+select, input:not([type]), input[type='text'], input[type='search'], input[type='password'], input[type='email'], input[type='number'], input[type='url'] { box-sizing: border-box; min-height: var(--control-h); border-radius: var(--radius); font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); padding: 0 10px; }
+select { padding-right: 6px; }
+select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea { border-radius: var(--radius); }
+
+.book-head { display: flex; align-items: center; gap: 14px; margin: 4px 0 14px; }
+
+.compare { margin-top: 32px; }
+.comparison { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
+.comparison li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--panel); }
+.comparison p { margin: 4px 0 0; }

@@ -23,7 +23,7 @@ class LocalModel:
         self._model_id = None
         self._timer = None
 
-    def complete(self, model, system, user, engine=None, max_tokens=300):
+    def complete(self, model, system, user, engine=None, max_tokens=300, **extra):
         "The model's answer; model is a catalog entry, engine overrides its engine (tests use 'fake')."
         with self._lock:
             if self._supervisor is None or self._model_id != model["id"]:
@@ -31,7 +31,7 @@ class LocalModel:
                 self._supervisor = Supervisor(engine or model["engine"], repo=model["repositories"][0]["id"])
                 self._model_id = model["id"]
             try:
-                return self._supervisor.complete(system, user, max_tokens)
+                return self._supervisor.complete(system, user, max_tokens, **extra)
             finally:
                 self._arm_timer()
 

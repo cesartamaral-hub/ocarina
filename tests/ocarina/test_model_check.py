@@ -59,6 +59,13 @@ def test_a_text_model_is_checked_with_a_translation(client):
     assert _listed(client, "qwen3-4b-instruct-mlx")["check"]["ok"] is True
 
 
+def test_the_audio_sync_model_is_checked_by_placing_words(client):
+    "The aligner is tried on a second and a half of tone."
+    assert _check(client, "qwen3-forced-aligner-mlx")["state"] == "done"
+    result = _listed(client, "qwen3-forced-aligner-mlx")
+    assert result["kind"] == "aligner" and result["check"]["ok"] is True
+
+
 def test_a_failing_model_gets_a_plain_reason_and_the_original_detail(client, monkeypatch):
     "The reason is a sentence; the Python error is kept as detail."
     def boom(self, *a, **k):  # pylint: disable=unused-argument

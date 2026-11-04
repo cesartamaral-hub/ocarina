@@ -117,6 +117,140 @@
         "secondsPerSentence": 0.3,
         "loadSeconds": 0.6
       }
+    },
+    {
+      "id": "qwen3-forced-aligner-mlx",
+      "name": "Qwen3 Forced Aligner (audio sync, MLX)",
+      "kind": "aligner",
+      "description": "Syncs a recording of your own with the text, so sentences light up as it plays. Works on a minute of audio in about a second. Tested on Dutch, Polish and French.",
+      "engine": "mlx-aligner",
+      "repositories": [
+        {
+          "id": "mlx-community/Qwen3-ForcedAligner-0.6B-8bit",
+          "revision": "0e1a68e91d815300c7c9754b2a7639378b23db15",
+          "files": {
+            "chat_template.json": 1161,
+            "config.json": 6940,
+            "generation_config.json": 115,
+            "merges.txt": 1671853,
+            "model.safetensors": 1271924386,
+            "model.safetensors.index.json": 79108,
+            "preprocessor_config.json": 330,
+            "tokenizer_config.json": 12666,
+            "vocab.json": 2776833
+          }
+        }
+      ],
+      "license": "apache-2.0",
+      "family": "qwen3-aligner",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ]
+    },
+    {
+      "id": "qwen3-8b-mlx",
+      "name": "Qwen3 8B (translation, MLX)",
+      "kind": "text",
+      "description": "A bigger version of the default: noticeably better with rare words and idioms, about twice as slow. Needs about 6 GB of free memory while it works.",
+      "engine": "mlx-lm",
+      "prompt": "chat",
+      "repositories": [
+        {
+          "id": "mlx-community/Qwen3-8B-4bit",
+          "revision": "545dc4251c05440727734bcd94334791f6ab0192",
+          "files": {
+            "added_tokens.json": 707,
+            "config.json": 939,
+            "merges.txt": 1671853,
+            "model.safetensors": 4607835174,
+            "model.safetensors.index.json": 64065,
+            "special_tokens_map.json": 613,
+            "tokenizer.json": 11422654,
+            "tokenizer_config.json": 9706,
+            "vocab.json": 2776833
+          }
+        }
+      ],
+      "license": "apache-2.0",
+      "family": "qwen3",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ]
+    },
+    {
+      "id": "translategemma-4b-mlx",
+      "name": "TranslateGemma 4B (translation, MLX)",
+      "kind": "text",
+      "description": "Google's model made only for translation: small, quick and usually more faithful than a general model of the same size. Needs about 3 GB of free memory.",
+      "engine": "mlx-lm",
+      "prompt": "translategemma",
+      "repositories": [
+        {
+          "id": "mlx-community/translategemma-4b-it-4bit",
+          "revision": "5788ec08c047f3f2e17808101b8d9566ac930d58",
+          "files": {
+            "added_tokens.json": 35,
+            "chat_template.jinja": 16982,
+            "config.json": 2815,
+            "generation_config.json": 128,
+            "model.safetensors": 2183295977,
+            "model.safetensors.index.json": 79768,
+            "special_tokens_map.json": 662,
+            "tokenizer.json": 33384568,
+            "tokenizer.model": 4689074,
+            "tokenizer_config.json": 1155413
+          }
+        }
+      ],
+      "license": "gemma",
+      "family": "gemma",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ]
+    },
+    {
+      "id": "translategemma-12b-mlx",
+      "name": "TranslateGemma 12B (translation, MLX)",
+      "kind": "text",
+      "description": "The best local option here: close to online services for ordinary text. Slower; needs about 8 GB of free memory while it works.",
+      "engine": "mlx-lm",
+      "prompt": "translategemma",
+      "repositories": [
+        {
+          "id": "mlx-community/translategemma-12b-it-4bit",
+          "revision": "f3dcfd54df14672fbcf0731086fb47a797a943ae",
+          "files": {
+            "added_tokens.json": 35,
+            "chat_template.jinja": 16982,
+            "config.json": 3269,
+            "generation_config.json": 128,
+            "model-00001-of-00002.safetensors": 5367402100,
+            "model-00002-of-00002.safetensors": 1252261023,
+            "model.safetensors.index.json": 132057,
+            "special_tokens_map.json": 662,
+            "tokenizer.json": 33384568,
+            "tokenizer.model": 4689074,
+            "tokenizer_config.json": 1155413
+          }
+        }
+      ],
+      "license": "gemma",
+      "family": "gemma",
+      "device": "mlx",
+      "languages": [
+        "nl",
+        "pl",
+        "fr"
+      ]
     }
   ]
 }

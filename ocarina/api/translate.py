@@ -5,12 +5,15 @@ JSON API for translating a sentence (see ocarina/translate.py) and its settings.
     PUT  /ocarina/api/translate/settings   change them; deeplKey saves a key, "" removes it
     POST /ocarina/api/translate            {languageId, text} -> {translation, provider, source, target, cached}
     POST /ocarina/api/translate/test       a trial translation with the current settings (asks the service for real)
+    POST /ocarina/api/translate/compare    {languageId, text}: the sentence translated by every model on this Mac that is
+                                           installed, with how long each took
 
 Errors are {error, code}; code is one of offline, quota, bad_key, no_key, no_model, unsupported_language,
 too_long, bad_input, failed.
 """
 
 import re
+import time
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -33,11 +36,15 @@ def _settings():
     saved = prefs.load(prefs.path_for(_datapath()))
     provider = saved.get("translate.provider")
     target = saved.get("translate.target")
+    local = saved.get("translate.localModel")
+    if not any(m["id"] == local for m in model_files.text_models()):
+        local = translate.LOCAL_MODEL  # not chosen yet, or the model it named is gone
     if provider not in translate.PROVIDERS:
-        # Not chosen yet: the model on this Mac once it is downloaded (private, no limits), else the free online service.
-        provider = "local" if model_files.is_installed(model_files.find_model(translate.LOCAL_MODEL)) else "mymemory"
+        # Not chosen yet: a model on this Mac once one is downloaded (private, no limits), else the free online service.
+        provider = "local" if any(model_files.is_installed(m) for m in model_files.text_models()) else "mymemory"
     return {
         "provider": provider,
+        "localModel": local,
         "target": target if target in translate.TARGETS else "en",
         "email": saved.get("translate.email") or "",
     }
@@ -49,14 +56,21 @@ def _settings_json():
         "hasDeeplKey": keystore.get(_datapath(), "deepl") is not None,
         "deeplKeyHint": keystore.hint(_datapath(), "deepl"),
         "providers": [{"id": k, **v} for k, v in translate.PROVIDERS.items()],
-        "localModel": _local_model_json(),
+        "localModel": _local_model_json(_settings()["localModel"]),
+        "localModels": [_local_model_json(m["id"]) for m in model_files.text_models()],
         "targets": [{"code": k, "name": v} for k, v in translate.TARGETS.items()],
     }
 
 
-def _local_model_json():
-    model = model_files.find_model(translate.LOCAL_MODEL)
-    return {"id": model["id"], "name": model["name"], "installed": model_files.is_installed(model), "sizeBytes": model_files.total_bytes(model)}
+def _local_model_json(model_id):
+    model = model_files.find_model(model_id)
+    return {
+        "id": model["id"],
+        "name": model["name"],
+        "description": model.get("description", ""),
+        "installed": model_files.is_installed(model),
+        "sizeBytes": model_files.total_bytes(model),
+    }
 
 
 def _local_engine():
@@ -83,6 +97,10 @@ def put_settings():
         if body["provider"] not in translate.PROVIDERS:
             return jsonify({"error": "Unknown translation service"}), 400
         changes["translate.provider"] = body["provider"]
+    if "localModel" in body:
+        if not any(m["id"] == body["localModel"] for m in model_files.text_models()):
+            return jsonify({"error": "Unknown translation model"}), 400
+        changes["translate.localModel"] = body["localModel"]
     if "target" in body:
         if body["target"] not in translate.TARGETS:
             return jsonify({"error": "Unknown target language"}), 400
@@ -123,3 +141,26 @@ def test_translation():
     except translate.TranslateError as e:
         return _failure(e)
     return jsonify(result)
+
+
+@bp.route("/translate/compare", methods=["POST"])
+def compare_models():
+    "The same sentence through every installed model on this Mac, one after the other (each keeps its own saved translations)."
+    body = request.get_json(silent=True) or {}
+    language = db.session.get(Language, body["languageId"]) if isinstance(body.get("languageId"), int) else None
+    if language is None:
+        return jsonify({"error": "Unknown language", "code": "bad_input"}), 404
+    results = []
+    for model in model_files.text_models():
+        if _local_engine() is None and not model_files.is_installed(model):
+            continue
+        settings = {**_settings(), "provider": "local", "localModel": model["id"]}
+        started = time.time()
+        try:
+            answer = translate.translate(_datapath(), settings, language.name, body.get("text"), local_engine=_local_engine())
+            results.append({"id": model["id"], "name": model["name"], "translation": answer["translation"], "cached": answer["cached"], "seconds": round(time.time() - started, 1)})
+        except translate.TranslateError as e:
+            if e.code in ("bad_input", "too_long", "unsupported_language"):
+                return _failure(e)  # the sentence is the problem, not the model
+            results.append({"id": model["id"], "name": model["name"], "error": str(e), "seconds": round(time.time() - started, 1)})
+    return jsonify({"results": results})

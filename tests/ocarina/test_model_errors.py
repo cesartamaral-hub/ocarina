@@ -20,6 +20,7 @@ from ocarina.tts.errors import explain
         ("TtsError: TTS worker died or timed out", "stopped"),
         ("TtsError: No conditionals available - ref_audio will be required", "reference voice"),
         ("TypeError: data type 'bfloat16' not understood", "cannot read"),
+        ("FileNotFoundError: [Errno 2] No such file or directory: 'ffmpeg'", "needs ffmpeg"),
     ],
 )
 def test_known_failures_are_explained(technical, expected):

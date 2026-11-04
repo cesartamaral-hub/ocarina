@@ -97,7 +97,7 @@ def test_a_broken_models_file_does_not_hide_the_shipped_models(client, app):
     with open(os.path.join(app.env_config.datapath, "models.json"), "w", encoding="utf-8") as f:
         f.write("{not json")
     assert len(client.get(MODELS).json) >= 2
-    assert [e["id"] for e in client.get("/ocarina/api/tts/engines").json["engines"]] == ["mlx-chatterbox", "mlx-audio8"]
+    assert [e["id"] for e in client.get("/ocarina/api/tts/engines").json["engines"]] == ["mlx-chatterbox", "mlx-audio8", "mlx-lm"]
 
 
 def test_download_progress_ignores_the_reconstructing_bar():
@@ -168,3 +168,16 @@ def test_inspect_only_says_not_supported_when_mlx_audio_does(monkeypatch):
     fake_modules(ModuleNotFoundError("No module named 'torch'", name="torch"))
     found = inspect_model.inspect("y", "a/b")
     assert found["known"] is True and "torch" in found["problem"]
+
+
+def test_a_translation_model_can_be_added_and_is_a_text_model(client, monkeypatch):
+    "Choosing the translation style makes the entry a text model (so it is offered under Translation, not for voicing books)."
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    monkeypatch.setattr(model_files, "lookup_hub_repo", lambda repo: {"repo": repo, "revision": "abc", "license": "apache-2.0", "files": {"model.safetensors": 10}, "totalBytes": 10})
+    r = client.post("/ocarina/api/tts/models/custom", json={"repo": "mlx-community/translategemma-27b-it-4bit", "engine": "mlx-lm", "languages": ["nl"]})
+    assert r.status_code == 201, r.json
+    assert r.json["kind"] == "text" and r.json["prompt"] == "translategemma"
+    assert any(m["id"] == r.json["id"] for m in model_files.text_models())
+    assert all(m["id"] != r.json["id"] for m in model_files.speech_models())
+    client.delete(f"/ocarina/api/tts/models/{r.json['id']}/entry")

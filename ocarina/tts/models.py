@@ -30,7 +30,9 @@ CATALOG = os.path.join(os.path.dirname(__file__), "catalog.json")
 ENGINES = {
     "mlx-chatterbox": "Chatterbox style: imitates a voice clip",
     "mlx-audio8": "Audio8 style: own voice; imitates a clip only with the words spoken in it",
+    "mlx-lm": "Translation: a chat model that translates sentences (chosen under Translation)",
 }
+ENGINE_KINDS = {"mlx-lm": "text"}  # what a model is for, when it is not for speech
 LANGUAGE_CODES = ("nl", "pl", "fr")
 _user_catalog = None  # path of models.json, set by configure()
 
@@ -75,6 +77,11 @@ def find_model(model_id):
 def kind_of(model):
     'What a model is for: "speech" (it voices books) or "text" (it translates sentences).'
     return model.get("kind", "speech")
+
+
+def text_models():
+    "The models that can translate sentences."
+    return [m for m in load_catalog() if kind_of(m) == "text"]
 
 
 def speech_models():
@@ -299,9 +306,10 @@ def describe(found):
     memory_gb = round(weights * 1.15 / 1e9, 1)
     converted = found["repo"].split("/")[0].lower() == "mlx-community" or "mlx" in found["repo"].lower()
     notes = []
-    if support["known"] is False:
-        notes.append("Ocarina's speech engine does not recognise this kind of model, so it will probably not load.")
-    elif support.get("problem") and support["known"]:
+    text_known = (support.get("text") or {}).get("known")
+    if support["known"] is False and text_known is not True:
+        notes.append("Ocarina does not recognise this kind of model, so it will probably not load.")
+    elif support.get("problem") and support["known"] and text_known is not True:
         notes.append(f"Ocarina has code for this kind of model, but it {support['problem']}.")
     if not converted:
         notes.append("This looks like the original release, not an MLX conversion. Those can be larger and slower; an “mlx-community” version is safer when there is one.")
@@ -331,6 +339,10 @@ def add_custom_model(repo_id, engine, languages, name=None):
         "license": found["license"],
         "languages": languages,
     }
+    if engine in ENGINE_KINDS:
+        entry["kind"] = ENGINE_KINDS[engine]
+    if engine == "mlx-lm" and "translategemma" in repo_id.lower():
+        entry["prompt"] = "translategemma"  # its own prompt format: the text and the two language codes
     _save_user_models([m for m in _load_user_models()] + [entry])
     return {**entry, "custom": True}
 

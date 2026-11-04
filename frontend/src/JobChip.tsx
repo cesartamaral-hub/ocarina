@@ -7,6 +7,9 @@ const describe = (j: Job): { text: string; href: string } => {
   if (j.kind === 'download') {
     return { text: `Downloading ${j.title ?? 'a model'}${j.state === 'running' && j.total ? ` · ${percent(j.done, j.total)}%` : ''}`, href: '#/settings' }
   }
+  if (j.kind === 'sync') {
+    return { text: `Syncing “${j.title ?? 'a book'}”${j.state === 'running' && j.total ? ` · ${j.done}/${j.total}` : ''}`, href: j.book_id ? `#/book/${j.book_id}` : '#/' }
+  }
   if (j.kind === 'preview') return { text: 'Making a voice preview', href: '#/settings' }
   if (j.kind === 'check' || j.phase === 'testing') return { text: `Testing ${j.title ?? 'a model'}`, href: '#/settings' }
   return {
@@ -17,6 +20,10 @@ const describe = (j: Job): { text: string; href: string } => {
 
 const finishedMessage = (j: Job): string | null => {
   if (j.state === 'done' && j.kind === 'check') return `${j.title ?? 'The model'} was tested: see Settings for the result`
+  if (j.state === 'done' && j.kind === 'sync') {
+    const doubtful = j.suspect ? `, but ${j.suspect} ${j.suspect === 1 ? 'sentence' : 'sentences'} could not be placed with confidence` : ''
+    return `“${j.title}” is synced with the text${doubtful}`
+  }
   if (j.state === 'done') return j.kind === 'download' ? `${j.title ?? 'The model'} is ready to use` : j.kind === 'audio' ? `Audio for “${j.title}” is ready` : null
   if (j.state === 'error') return `${j.title ?? 'A job'} failed: ${j.error ?? 'unknown error'}`
   return null

@@ -216,22 +216,28 @@ export function Settings() {
         Models are downloaded once and run on this Mac. Audio generation needs one installed.
       </p>
       {error && <p className="error">{error}</p>}
-      <ul className="models">{models.filter((m) => m.kind !== 'text').map(renderModel)}</ul>
+      <ul className="models">{models.filter((m) => (m.kind ?? 'speech') === 'speech').map(renderModel)}</ul>
 
-      <h2>Translation model</h2>
+      <h2>Translation models</h2>
       <p className="muted">
-        Translates sentences on this Mac, offline and without limits. Choose it under Translation once it is downloaded. It runs only while you
-        translate, and is unloaded after a few minutes.
+        Translate sentences on this Mac, offline and without limits. Download one, then choose it under Translation, where you can also compare them
+        side by side. A model runs only while you translate, and is unloaded after a few minutes.
       </p>
       <ul className="models">{models.filter((m) => m.kind === 'text').map(renderModel)}</ul>
 
       <AddModel onAdded={load} />
 
+      <h2>Audio sync model</h2>
+      <p className="muted">
+        Syncs a recording of your own with the text, so sentences light up as it plays. Used by “Sync with the text” on a book's page. It runs on this Mac.
+      </p>
+      <ul className="models">{models.filter((m) => m.kind === 'aligner').map(renderModel)}</ul>
+
       <h2>Voice per language</h2>
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
         {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
-          const options = models.filter((m) => m.kind !== 'text' && m.installed && !(m.check && !m.check.ok) && m.languages.includes(code))
+          const options = models.filter((m) => (m.kind ?? 'speech') === 'speech' && m.installed && !(m.check && !m.check.ok) && m.languages.includes(code))
           const value = chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
           const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (

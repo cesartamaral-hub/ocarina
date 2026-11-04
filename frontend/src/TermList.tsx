@@ -99,7 +99,7 @@ function EditRow({ id, onSaved, onDeleted }: { id: number; onSaved: () => void; 
       {error && <p className="error">{error}</p>}
       <div className="actions">
         <button onClick={save}>Save</button>
-        <button className="secondary" onClick={onDeleted}>
+        <button className="danger" onClick={onDeleted}>
           Delete term
         </button>
       </div>

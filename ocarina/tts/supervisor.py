@@ -84,20 +84,47 @@ class Supervisor:
             raise TtsError(resp["error"])
         return resp
 
-    def complete(self, system, user, max_tokens=300):
-        "Ask a text model (engine mlx-lm) a question; returns its answer."
+    def complete(self, system, user, max_tokens=300, **extra):
+        "Ask a text model (engine mlx-lm) a question; returns its answer. extra: style, source, target, text (see worker)."
         with self._lock:
             for attempt in (1, 2):
                 try:
                     if not self._alive():
                         self._start()
-                    return self._request({"op": "complete", "system": system, "user": user, "max_tokens": max_tokens})["text"]
+                    return self._request({"op": "complete", "system": system, "user": user, "max_tokens": max_tokens, **extra})["text"]
                 except TtsError as e:
                     if attempt == 2 or self._alive():
                         raise
                     self._kill()
                     print(f"Text worker restarted: {e}", file=sys.stderr)
         raise TtsError("unreachable")
+
+    def _ask(self, req):
+        "One request with the same restart rule as the others: a dead worker is restarted once, a model error is final."
+        with self._lock:
+            for attempt in (1, 2):
+                try:
+                    if not self._alive():
+                        self._start()
+                    return self._request(req)
+                except TtsError as e:
+                    if attempt == 2 or self._alive():
+                        raise
+                    self._kill()
+                    print(f"Worker restarted: {e}", file=sys.stderr)
+        raise TtsError("unreachable")
+
+    def duration(self, audio):
+        "Seconds of audio in a file (aligner engine)."
+        return self._ask({"op": "duration", "audio": audio})["seconds"]
+
+    def onsets(self, audio, intervals):
+        "Where sound begins in each (start, end) interval of a file (aligner engine)."
+        return self._ask({"op": "onsets", "audio": audio, "intervals": intervals})["starts"]
+
+    def align(self, audio, offset, length, text):
+        "Word times for the text spoken in part of a file (aligner engine): [[word, start, end], ...]."
+        return self._ask({"op": "align", "audio": audio, "offset": offset, "length": length, "text": text})["words"]
 
     def synth(self, text, lang, voice, out, ref_text=None):
         """

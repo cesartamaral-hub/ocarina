@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getTranslateSettings, putTranslateSettings, testTranslation, type TranslateSettings, type Translation as Result } from './api'
+import { compareModels, getLanguages, getTranslateSettings, putTranslateSettings, testTranslation, type Comparison, type Language, type TranslateSettings, type Translation as Result } from './api'
 import { formatBytes } from './format'
 import { notify } from './notices'
 
@@ -9,6 +9,12 @@ export function Translation() {
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
   const [test, setTest] = useState<{ busy: boolean; ok?: Result; error?: string }>({ busy: false })
+  const [languages, setLanguages] = useState<Language[]>([])
+  const [compare, setCompare] = useState<{ languageId: number | null; text: string; busy: boolean; results?: Comparison[]; error?: string }>({
+    languageId: null,
+    text: 'Goedemorgen, hoe gaat het met je? Ik hoop dat je een fijne dag hebt.',
+    busy: false,
+  })
 
   useEffect(() => {
     getTranslateSettings().then(
@@ -19,6 +25,22 @@ export function Translation() {
       (e) => setError(e.message),
     )
   }, [])
+
+  useEffect(() => {
+    getLanguages().then(setLanguages, () => undefined)
+  }, [])
+
+  async function runCompare() {
+    const languageId = compare.languageId ?? languages[0]?.id
+    if (languageId === undefined) return
+    setCompare((c) => ({ ...c, busy: true, results: undefined, error: undefined }))
+    try {
+      const { results } = await compareModels(languageId, compare.text)
+      setCompare((c) => ({ ...c, busy: false, results }))
+    } catch (e) {
+      setCompare((c) => ({ ...c, busy: false, error: (e as Error).message }))
+    }
+  }
 
   async function save(change: Parameters<typeof putTranslateSettings>[0], message?: string) {
     setError('')
@@ -74,6 +96,27 @@ export function Translation() {
           )
         })}
       </fieldset>
+
+      {s.provider === 'local' && (
+        <fieldset className="choices">
+          <legend>Model on this Mac</legend>
+          {s.localModels.map((m) => (
+            <label key={m.id} className={`choice${m.installed ? '' : ' unavailable'}`}>
+              <input type="radio" name="localModel" checked={s.localModel.id === m.id} onChange={() => save({ localModel: m.id })} />
+              <span>
+                <strong>{m.name}</strong> <span className="muted">{formatBytes(m.sizeBytes)}</span>
+                <span className="muted"> {m.description}</span>
+                {!m.installed && (
+                  <span className="choice-note">
+                    {' '}
+                    Not downloaded yet. <a href="#/settings">Download it in Settings</a>.
+                  </span>
+                )}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <div className="form translation-form">
         <label>
@@ -147,6 +190,53 @@ export function Translation() {
         </div>
         {error && <p className="error">{error}</p>}
       </div>
+
+      {s.localModels.filter((m) => m.installed).length > 0 && (
+        <section className="compare">
+          <h2>Compare the models on this Mac</h2>
+          <p className="muted">
+            Translates one sentence with every model you have downloaded, so you can see which you like best. Nothing leaves this Mac. The first answer from a model includes
+            loading it.
+          </p>
+          <div className="form">
+            <label>
+              Language of the sentence
+              <select value={compare.languageId ?? languages[0]?.id ?? ''} onChange={(e) => setCompare((c) => ({ ...c, languageId: Number(e.target.value) }))}>
+                {languages.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Sentence
+              <textarea rows={3} value={compare.text} onChange={(e) => setCompare((c) => ({ ...c, text: e.target.value }))} />
+            </label>
+            <div className="actions">
+              <button disabled={compare.busy || !compare.text.trim() || languages.length === 0} onClick={runCompare}>
+                {compare.busy ? 'Translating…' : 'Compare'}
+              </button>
+            </div>
+          </div>
+          <div aria-live="polite">
+            {compare.error && <p className="error">{compare.error}</p>}
+            {compare.results && (
+              <ul className="comparison">
+                {compare.results.map((r) => (
+                  <li key={r.id}>
+                    <strong>{r.name}</strong>{' '}
+                    <span className="muted">
+                      {r.seconds} s{r.cached ? ' · saved earlier' : ''}
+                    </span>
+                    <p className={r.error ? 'error' : undefined}>{r.error ?? r.translation}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
     </>
   )
 }

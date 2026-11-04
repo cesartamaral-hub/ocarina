@@ -238,3 +238,68 @@ def test_the_local_model_unloads_after_a_quiet_spell(app):
     assert runner._supervisor is first  # pylint: disable=protected-access
     time.sleep(0.8)
     assert runner._supervisor is None  # pylint: disable=protected-access
+
+
+def test_you_can_choose_which_model_translates(app, client):
+    "The list shows every translation model; the choice is saved, and an unknown one is refused."
+    settings = client.get(f"{URL}/settings").json
+    ids = [m["id"] for m in settings["localModels"]]
+    assert ids[0] == "qwen3-4b-instruct-mlx" and "translategemma-4b-mlx" in ids and "qwen3-8b-mlx" in ids
+    assert settings["localModel"]["id"] == "qwen3-4b-instruct-mlx"
+    assert client.put(f"{URL}/settings", json={"localModel": "translategemma-4b-mlx"}).json["localModel"]["id"] == "translategemma-4b-mlx"
+    assert client.put(f"{URL}/settings", json={"localModel": "chatterbox-multilingual-v3-mlx"}).status_code == 400  # a voice
+    assert client.put(f"{URL}/settings", json={"localModel": "nope"}).status_code == 400
+
+
+def test_each_model_keeps_its_own_saved_translations(app, client):
+    "Switching models never serves another model's answer; the first model keeps the key it always had."
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    client.put(f"{URL}/settings", json={"provider": "local"})
+    a = _ask(client, app, "Hoe gaat het?").json
+    client.put(f"{URL}/settings", json={"localModel": "qwen3-8b-mlx"})
+    b = _ask(client, app, "Hoe gaat het?").json
+    assert a["cached"] is False and b["cached"] is False  # not served from the first model's file
+    assert _ask(client, app, "Hoe gaat het?").json["cached"] is True
+    assert translate.cache_provider("local", "qwen3-4b-instruct-mlx") == "local" == translate.cache_provider("local", None)
+    assert translate.cache_provider("local", "qwen3-8b-mlx") == "local:qwen3-8b-mlx"
+    assert translate.cache_provider("deepl", "qwen3-8b-mlx") == "deepl"
+    translate.local_model.unload()
+
+
+def test_translategemma_is_given_the_text_and_the_two_languages(app, client):
+    "Its prompt format has no instruction: the engine gets style, source and target codes."
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    client.put(f"{URL}/settings", json={"provider": "local", "localModel": "translategemma-4b-mlx"})
+    r = _ask(client, app, "Hoe gaat het?").json
+    assert r["translation"] == "[fake translategemma nl>en] Hoe gaat het?"
+    translate.local_model.unload()
+
+
+def test_a_model_that_is_gone_falls_back_to_the_first_one(app, client):
+    "A saved choice that is no longer in the list is ignored."
+    prefs.update(prefs.path_for(app.env_config.datapath), {"translate.localModel": "removed-model"})
+    assert client.get(f"{URL}/settings").json["localModel"]["id"] == "qwen3-4b-instruct-mlx"
+
+
+def test_comparing_models_translates_with_each_installed_one(app, client):
+    "With the test engine every text model counts as installed; each answer says which model gave it and how long it took."
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    with app.app_context():
+        language_id = _get_test_language("Dutch").id
+    r = client.post(f"{URL}/compare", json={"languageId": language_id, "text": "Hoe gaat het?"})
+    assert r.status_code == 200
+    results = r.json["results"]
+    assert {x["id"] for x in results} >= {"qwen3-4b-instruct-mlx", "translategemma-4b-mlx"}
+    by_id = {x["id"]: x for x in results}
+    assert by_id["qwen3-4b-instruct-mlx"]["translation"] == "[fake translation] Hoe gaat het?"
+    assert by_id["translategemma-4b-mlx"]["translation"].startswith("[fake translategemma")
+    assert all(x["seconds"] >= 0 for x in results)
+    assert client.post(f"{URL}/compare", json={"languageId": language_id, "text": ""}).status_code == 400
+    translate.local_model.unload()
+
+
+def test_comparing_skips_models_that_are_not_downloaded(app, client):
+    "Without the test engine and without downloads there is nothing to compare."
+    with app.app_context():
+        language_id = _get_test_language("Dutch").id
+    assert client.post(f"{URL}/compare", json={"languageId": language_id, "text": "Hoe gaat het?"}).json["results"] == []

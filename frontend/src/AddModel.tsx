@@ -63,7 +63,7 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
     <>
       <h2>Add a model</h2>
       <p className="muted">
-        Any Hugging Face model that works with one of the two styles below. The app looks up its files, remembers the exact version, and downloads
+        Any Hugging Face model that works with one of the styles below: a voice, or a chat model that translates sentences. The app looks up its files, remembers the exact version, and downloads
         it like the others. A model of another kind won't load.
       </p>
       <div className="form add-model">
@@ -81,8 +81,8 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
             <p className="muted">
               {found.files} files · {size(found.totalBytes)} · license: {found.license}
               {found.modelType && <> · type: {found.modelType}</>}
-              {found.support.known === true && <> · recognised by Ocarina's speech engine ✓</>}
-              {found.support.known === false && <> · not recognised ✗</>}
+              {(found.support.known === true || found.support.text?.known === true) && <> · recognised by Ocarina ✓</>}
+              {found.support.known === false && found.support.text?.known !== true && <> · not recognised ✗</>}
             </p>
             <ul className="lookup-notes">
               {found.notes.map((n, i) => (

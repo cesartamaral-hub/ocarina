@@ -65,6 +65,7 @@ def code_for(language_name):
 
 
 def _cache_path(datapath, provider, source, target, text):
+    "Where a translation is kept. provider is the service, or local:<model> for a model on this Mac (see cache_provider)."
     key = hashlib.sha256("\n".join([provider, source, target, text]).encode("utf-8")).hexdigest()
     return os.path.join(datapath, "translation_cache", key[:2], key + ".json")
 
@@ -137,12 +138,21 @@ def _deepl(text, source, target, key):
         raise TranslateError("DeepL sent an answer that could not be read.", "failed") from e
 
 
-def _local(text, source_name, target, engine):
-    model = model_files.find_model(LOCAL_MODEL)
+def cache_provider(provider, model_id):
+    "What a translation is filed under: each model on this Mac keeps its own (the first model keeps the key it always had)."
+    return provider if provider != "local" or model_id in (None, LOCAL_MODEL) else f"local:{model_id}"
+
+
+def _local(text, source_name, source, target, engine, model_id=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    model = model_files.find_model(model_id or LOCAL_MODEL)
+    if model is None or model_files.kind_of(model) != "text":
+        raise TranslateError("That translation model is not in the list any more. Pick another in Settings.", "no_model")
     if engine is None and not model_files.is_installed(model):
-        raise TranslateError("Download the translation model in Settings first.", "no_model")
+        raise TranslateError(f"Download {model['name']} in Settings first.", "no_model")
+    # Models with their own prompt format (TranslateGemma) are given the text and the two languages, nothing more.
+    extra = {"style": model.get("prompt"), "source": source, "target": target, "text": text} if model.get("prompt") == "translategemma" else {}
     try:
-        answer = local_model.complete(model, LOCAL_PROMPT.format(target=TARGETS[target]), f"{source_name} sentence:\n{text}", engine=engine)
+        answer = local_model.complete(model, LOCAL_PROMPT.format(target=TARGETS[target]), f"{source_name} sentence:\n{text}", engine=engine, **extra)
     except Exception as e:  # pylint: disable=broad-exception-caught
         raise TranslateError(f"The translation model failed ({type(e).__name__}).", "failed") from e
     answer = answer.strip().strip("\"“”").strip()
@@ -153,7 +163,7 @@ def _local(text, source_name, target, engine):
 
 def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
     """
-    Translate a sentence from a Lute language into the target language. settings: {provider, target, email}.
+    Translate a sentence from a Lute language into the target language. settings: {provider, target, email, localModel}.
     Returns {translation, provider, source, target, cached}. Raises TranslateError. use_cache=False always asks the service (to test a key). local_engine overrides the local model's engine (tests).
     """
     text = re.sub(r"\s+", " ", (text or "").replace("​", "")).strip()
@@ -167,12 +177,13 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
         raise TranslateError(f"Ocarina does not know the language code for {language_name} yet.", "unsupported_language")
     if source == target:
         raise TranslateError(f"The sentence is already in {TARGETS.get(target, target)}. Pick another target language in Settings.", "bad_input")
-    path = _cache_path(datapath, provider, source, target, text)
+    model_id = settings.get("localModel")
+    path = _cache_path(datapath, cache_provider(provider, model_id), source, target, text)
     cached = _read(path) if use_cache else None
     if cached is not None:
         return {"translation": cached, "provider": provider, "source": source, "target": target, "cached": True}
     if provider == "local":
-        answer = _local(text, dictionary.section_name(language_name), target, local_engine)
+        answer = _local(text, dictionary.section_name(language_name), source, target, local_engine, model_id)
     elif provider == "deepl":
         key = keystore.get(datapath, "deepl")
         if not key:

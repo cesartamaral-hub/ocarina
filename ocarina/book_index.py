@@ -9,6 +9,7 @@ status and the next list shows it. Only single words count; a multi-word phrase 
 
 import hashlib
 import threading
+import time
 from collections import Counter
 
 from sqlalchemy import text as sql
@@ -130,3 +131,14 @@ def stats_by_book():
         s["knownPercent"] = round(100 * s["known"] / counted, 1) if counted > 0 else 100.0
         s["minutes"] = round(s["words"] / WORDS_PER_MINUTE)
     return result
+
+
+def wait_until_idle(seconds=10):
+    "Wait for background indexing to finish (the tests do, so a thread never outlives the database it writes to)."
+    end = time.time() + seconds
+    while time.time() < end:
+        with _lock:
+            if not _building:
+                return True
+        time.sleep(0.02)
+    return False

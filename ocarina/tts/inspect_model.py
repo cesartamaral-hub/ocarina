@@ -27,5 +27,19 @@ def inspect(model_type, repo):
         return {"known": None, "module": None, "problem": "Could not check this automatically."}
 
 
+def inspect_text(model_type):
+    "{known}: whether mlx-lm has code for this model type (a chat model that can translate sentences)."
+    import importlib.util  # pylint: disable=import-outside-toplevel
+
+    if not model_type:
+        return {"known": None}
+    try:
+        return {"known": importlib.util.find_spec(f"mlx_lm.models.{model_type}") is not None}
+    except Exception:  # pylint: disable=broad-exception-caught
+        return {"known": None}
+
+
 if __name__ == "__main__":
-    print(json.dumps(inspect(sys.argv[1] if len(sys.argv) > 1 else "", sys.argv[2] if len(sys.argv) > 2 else "")))
+    kind = sys.argv[1] if len(sys.argv) > 1 else ""
+    result = inspect(kind, sys.argv[2] if len(sys.argv) > 2 else "")
+    print(json.dumps({**result, "text": inspect_text(kind)}))

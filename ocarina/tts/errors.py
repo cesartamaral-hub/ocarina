@@ -34,6 +34,10 @@ RULES = [
         lambda m: "Ocarina's speech engine does not recognise this kind of model.",
     ),
     (
+        r"ffmpeg",
+        lambda m: "This kind of audio file needs ffmpeg, which is not available here. Use an mp3, wav or flac file, or install ffmpeg.",
+    ),
+    (
         r"data type 'bfloat16' not understood",
         lambda m: "This model stores its weights in a format Ocarina cannot read here.",
     ),

@@ -204,13 +204,13 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
                   <input type="checkbox" checked={d.active} onChange={(e) => setDict(i, { active: e.target.checked })} />
                 </td>
                 <td className="row-inline">
-                  <button className="secondary" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up">
+                  <button className="secondary small icon" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up">
                     ↑
                   </button>
-                  <button className="secondary" disabled={i === lang.dictionaries.length - 1} onClick={() => move(i, 1)} aria-label="Move down">
+                  <button className="secondary small icon" disabled={i === lang.dictionaries.length - 1} onClick={() => move(i, 1)} aria-label="Move down">
                     ↓
                   </button>
-                  <button className="secondary" onClick={() => set({ dictionaries: lang.dictionaries.filter((_, j) => j !== i) })} aria-label="Remove">
+                  <button className="secondary small icon" onClick={() => set({ dictionaries: lang.dictionaries.filter((_, j) => j !== i) })} aria-label="Remove">
                     ✕
                   </button>
                 </td>
@@ -247,7 +247,7 @@ export function LanguageEditor({ languageId }: { languageId: number | null }) {
         <div className="actions">
           <button onClick={save}>{languageId === null ? 'Add language' : 'Save'}</button>
           {languageId !== null && (
-            <button className="secondary" onClick={remove}>
+            <button className="danger" onClick={remove}>
               Delete language
             </button>
           )}

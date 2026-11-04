@@ -6,6 +6,8 @@ JSON API for the audio versions of a book (your own recordings and generated aud
     PATCH  /ocarina/api/books/<id>/audio/versions/<version>           rename ({"label": ...})
     DELETE /ocarina/api/books/<id>/audio/versions/<version>           remove it (generated files are deleted,
                                                                       your own recording stays on disk)
+    POST   /ocarina/api/books/<id>/audio/versions/<version>/sync      start a job that syncs your own recording with
+                                                                      the text, so sentences can follow it
 Generating audio and uploading your own add versions (see audio.py).
 """
 
@@ -13,8 +15,12 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions
+from ocarina import audio_sync, audio_versions
 from ocarina.api import jobs
+from ocarina.audio_sync import ALIGNER_ID
+from ocarina.tts import models as model_files
+from ocarina.tts.book_audio import tts_lang
+from ocarina.tts.supervisor import Supervisor
 
 bp = Blueprint("ocarina_audio_versions", __name__, url_prefix="/ocarina/api")
 
@@ -63,9 +69,64 @@ def delete_version(book_id, version_id):
     book = _book(book_id)
     if book is None:
         return jsonify({"error": "No such book"}), 404
-    if jobs.active(kind="audio", book_id=book_id):
-        return jsonify({"error": "Audio for this book is being generated. Cancel it first."}), 409
+    if jobs.active(kind="audio", book_id=book_id) or jobs.active(kind="sync", book_id=book_id):
+        return jsonify({"error": "Audio for this book is being generated or synced. Cancel that first."}), 409
     removed = audio_versions.remove(book, version_id, _dir())
     if removed is None:
         return jsonify({"error": "No such audio version"}), 404
     return jsonify({"removed": removed, "versions": audio_versions.list_versions(book, _dir())})
+
+
+def _run_sync(app, job, check, book_id, filename, model):
+    "Queued job: align the recording with the book's text and write its timings."
+    cfg = app.env_config
+    engine = audio_sync.aligner_engine(app.config.get("OCARINA_TTS_ENGINE", model["engine"]))
+    supervisor = Supervisor(engine, repo=model["repositories"][0]["id"], timeout=900)
+
+    def progress(done, total):
+        job["done"], job["total"] = done, total
+
+    check()
+    if "OCARINA_TTS_ENGINE" not in app.config and not model_files.is_installed(model):
+        raise RuntimeError(f"{model['name']} is not installed.")
+    with app.app_context():
+        try:
+            book = BookRepository(db.session).find(book_id)
+            try:
+                code = tts_lang(book.language)
+            except ValueError:
+                code = None
+            job["phase"] = "aligning"
+            suspect = audio_sync.sync_book_audio(book, cfg.useraudiopath, filename, supervisor, code, check, progress)
+            job["suspect"] = len(suspect)
+        finally:
+            supervisor.unload()
+
+
+@bp.route("/books/<int:book_id>/audio/versions/<int:version_id>/sync", methods=["POST"])
+def sync_version(book_id, version_id):
+    "Start syncing one of your own recordings with the book's text; returns the job."
+    book = _book(book_id)
+    row = audio_versions.find(book, version_id) if book else None
+    if row is None:
+        return jsonify({"error": "No such audio version"}), 404
+    if row.BaKind != audio_versions.OWN:
+        return jsonify({"error": "Audio made by Ocarina already follows the text."}), 400
+    if jobs.active(kind="sync", book_id=book_id) or jobs.active(kind="audio", book_id=book_id):
+        return jsonify({"error": "Audio for this book is already being generated or synced.", "code": "already_queued"}), 409
+    model = model_files.find_model(ALIGNER_ID)
+    # pylint: disable=protected-access
+    app = current_app._get_current_object()
+    if "OCARINA_TTS_ENGINE" not in app.config and not model_files.is_installed(model):
+        return (
+            jsonify({"error": f"{model['name']} is not downloaded yet. Download it in Settings.", "code": "model_not_installed", "model": model["id"]}),
+            409,
+        )
+    filename = row.BaFilename
+    job = jobs.submit(
+        "sync",
+        lambda job, check: _run_sync(app, job, check, book_id, filename, model),
+        book_id=book_id,
+        title=book.title,
+    )
+    return jsonify(job), 202

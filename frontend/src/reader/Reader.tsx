@@ -19,6 +19,7 @@ import { SentenceBlock } from './SentenceBlock'
 import { AudioPanel } from './AudioPanel'
 import { languageCode } from '../typography'
 import { useEscape } from '../escape'
+import { useLeaveGuard } from '../leaveGuard'
 import { TextEditor } from './TextEditor'
 import { isDirty } from './editing'
 import { classify } from './selection'
@@ -180,6 +181,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     if (editing === null || !isDirty(editing, original) || window.confirm('Discard your changes to this text?')) setEditing(null)
   }
   useEscape(editing !== null, cancelEditing)
+  useLeaveGuard(editing !== null && isDirty(editing, original), 'Discard your changes to this text?')
   useEscape(editing === null && (selected !== null || multi.size > 0 || help), () => {
     setSelected(null)
     setMulti(new Set())
