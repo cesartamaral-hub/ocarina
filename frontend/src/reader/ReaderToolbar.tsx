@@ -14,6 +14,9 @@ export function ReaderToolbar({
   onToggleHighlights,
   vocabOpen,
   onToggleVocab,
+  focus,
+  onToggleFocus,
+  onLeave,
   translation,
   translationOn,
   tpAnchor,
@@ -29,6 +32,9 @@ export function ReaderToolbar({
   onToggleHighlights: () => void
   vocabOpen: boolean
   onToggleVocab: () => void
+  focus: boolean
+  onToggleFocus: () => void
+  onLeave: () => void // the pointer left the toolbar (focus mode hides it again)
   translation: ReactNode // the content of the Translation popover
   translationOn: boolean // a translation is being shown
   tpAnchor: RefObject<HTMLButtonElement | null> // the Translation popover is opened here and by the T key (see Reader)
@@ -40,11 +46,11 @@ export function ReaderToolbar({
 }) {
   const { anchor, placement, toggle, close } = useAnchoredPopover(380, 'end')
   return (
-    <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
-      <a className="button quiet back" href="#/" title="Back to your books">
+    <div className="reader-toolbar" role="toolbar" aria-label="Page tools" onMouseLeave={onLeave}>
+      <a className="button quiet back focus-hide" href="#/" title="Back to your books">
         ← Books
       </a>
-      <span className="reader-title muted" title={title}>
+      <span className="reader-title muted focus-hide" title={title}>
         {title}
       </span>
       <span className="spacer" />
@@ -56,7 +62,7 @@ export function ReaderToolbar({
           {translation}
         </Popover>
       )}
-      <button className="quiet" aria-pressed={vocabOpen} onClick={onToggleVocab} title={`How well you know the words (${keyLabel(keyOf('toggleVocab'))})`}>
+      <button className="quiet focus-hide" aria-pressed={vocabOpen} onClick={onToggleVocab} title={`How well you know the words (${keyLabel(keyOf('toggleVocab'))})`}>
         Vocabulary
       </button>
       <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
@@ -70,6 +76,9 @@ export function ReaderToolbar({
           <TypographyControls />
         </Popover>
       )}
+      <button className="quiet focus-toggle" aria-pressed={focus} onClick={onToggleFocus} title={`${focus ? 'Leave' : 'Enter'} focus mode: only the text and the player (${keyLabel(keyOf('focus'))})`}>
+        {focus ? 'Leave focus' : 'Focus'}
+      </button>
       <MoreMenu
         title="More: audio, edit text, keyboard shortcuts"
         items={[

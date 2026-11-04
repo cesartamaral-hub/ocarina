@@ -19,6 +19,7 @@ export const ACTIONS: Action[] = [
   { id: 'highlights', label: 'Hide or show the word colours', key: 'h' },
   { id: 'togglePanel', label: 'Show or hide the word panel', key: 'p' },
   { id: 'cycleTranslation', label: 'Show the translation: original, side by side, translation only', key: 't' },
+  { id: 'focus', label: 'Focus mode: only the text and the player', key: 'f' },
   { id: 'toggleVocab', label: 'Show or hide the vocabulary panel', key: 'v' },
   { id: 'help', label: 'Show or hide the key list', key: '?' },
   { id: 'clear', label: 'Clear the selection', key: 'Escape' },

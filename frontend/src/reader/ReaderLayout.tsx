@@ -9,6 +9,7 @@ import { SIDE_DEFAULT, SIDE_MAX, SIDE_MIN, clampWidth, widthAfterKey } from './s
 export function ReaderLayout({
   left,
   leftOpen,
+  focus,
   main,
   side,
   selectionKey,
@@ -16,6 +17,7 @@ export function ReaderLayout({
 }: {
   left: ReactNode // the vocabulary panel, on the left
   leftOpen: boolean
+  focus: boolean // focus mode: the panels are gone; the word panel is only a drawer for a selected word
   main: ReactNode
   side: ReactNode
   selectionKey: string | null // identifies what is selected; null when nothing is
@@ -82,7 +84,7 @@ export function ReaderLayout({
 
   return (
     <div
-      className={`reader${collapsed ? ' collapsed' : ''}${hasSelection ? ' drawer-open' : ''}${leftOpen ? ' left-open' : ''}`}
+      className={`reader${collapsed ? ' collapsed' : ''}${hasSelection ? ' drawer-open' : ''}${leftOpen && !focus ? ' left-open' : ''}${focus ? ' focus' : ''}`}
       style={{ '--side-w': `${width}px` } as React.CSSProperties}
     >
       <aside className="reader-left" aria-label="Vocabulary" aria-hidden={!leftOpen} inert={!leftOpen}>

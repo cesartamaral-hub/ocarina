@@ -120,6 +120,23 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     setPref('reader.translationMode', m)
   }, [])
   const { anchor: tpAnchor, placement: tpPlacement, toggle: tpToggle, close: tpClose } = useAnchoredPopover(360, 'end')
+  // Focus mode: only the text, its display modes and the player. Not remembered; F, Esc or the button leave it.
+  const [focus, setFocus] = useState(false)
+  const toggleFocus = useCallback(() => {
+    if (!focus) notify('Focus mode. Press F or Esc to leave it.', 3500)
+    setFocus(!focus)
+  }, [focus])
+  useEffect(() => {
+    document.documentElement.classList.toggle('focus-mode', focus)
+    return () => document.documentElement.classList.remove('focus-mode')
+  }, [focus])
+  useEscape(focus, () => setFocus(false))
+  // In focus mode the controls hide in the corner until the pointer reaches for them (the little handle), and until it leaves again.
+  const [peek, setPeek] = useState(false)
+  useEffect(() => {
+    document.documentElement.classList.toggle('focus-peek', focus && peek)
+    return () => document.documentElement.classList.remove('focus-peek')
+  }, [focus, peek])
   const [pair, setPair] = useState<number | null>(null) // the sentence under the pointer, marked on both sides
   // The book's own numbers come from the server; they follow your status changes a moment after you make them.
   const [bookStats, setBookStats] = useState<BookStats | null | undefined>(undefined)
@@ -270,7 +287,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
       const action = actionFor(e)?.id
       // A key the app acts on is marked as handled: otherwise the web view hands it to macOS, which beeps.
-      if (action && ['clear', 'help', 'toggleVocab', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage'].includes(action)) e.preventDefault()
+      if (action && ['clear', 'help', 'toggleVocab', 'focus', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage'].includes(action)) e.preventDefault()
       if (action === 'clear') {
         setSelected(null)
         setMulti(new Set())
@@ -279,6 +296,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         setHelp((h) => !h)
       } else if (action === 'toggleVocab') {
         toggleVocab()
+      } else if (action === 'focus') {
+        toggleFocus()
       } else if (action === 'cycleTranslation') {
         if (pageTr.size > 0) chooseMode(nextMode(chosenMode, true))
         else tpToggle() // nothing to show yet: T opens the Translation menu, where it can be made
@@ -292,7 +311,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, chooseMode, chosenMode, pageTr, tpToggle])
+  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, toggleFocus, chooseMode, chosenMode, pageTr, tpToggle])
 
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
@@ -379,6 +398,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   return (
     <>
       <ReaderLayout
+        focus={focus}
         leftOpen={vocabOpen}
         left={
           <VocabularyPanel
@@ -416,6 +436,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               onToggleHighlights={toggleHighlights}
               vocabOpen={vocabOpen}
               onToggleVocab={toggleVocab}
+              focus={focus}
+              onToggleFocus={toggleFocus}
+              onLeave={() => setPeek(false)}
               translationOn={shown !== 'original'}
               tpAnchor={tpAnchor}
               tpPlacement={tpPlacement}
@@ -523,13 +546,18 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                   )
                 })}
             </article>
-            <p className="muted">
+            <p className="muted reader-hint">
               Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.
             </p>
           </>
               )}
             </div>
             </div>
+            {focus && (
+              <button className="focus-reveal" aria-label="Show the controls" title="Controls" onMouseEnter={() => setPeek(true)} onFocus={() => setPeek(true)} onClick={() => setPeek(true)}>
+                ⋯
+              </button>
+            )}
             <div className="reader-foot">
               {multi.size > 0 && (
                 <div className="bulk-bar" role="region" aria-label="Words picked with ⌘-click">
