@@ -102,8 +102,8 @@ audio { width: 100%; }
 .reader-column { max-width: var(--measure); margin: 0 auto; }
 .reader-toolbar-old { } /* its own fixed width, so it stays put while the text column resizes */
 .reader-column article, .appearance-sample { font-size: var(--r-size, 18px); line-height: var(--r-line, 2); font-family: var(--r-font, inherit); font-weight: var(--r-weight, 400); letter-spacing: var(--r-letter, 0); word-spacing: var(--r-word, 0); text-align: var(--r-align, start); hyphens: var(--r-hyphens, manual); }
-.aa-box { position: relative; display: inline-block; }
-.aa-popover { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; width: min(380px, 90vw); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18); }
+.popover { position: fixed; z-index: 70; overflow-y: auto; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25); }
+.aa-popover { padding: 14px; }
 .typography-controls { display: grid; gap: 10px; }
 .tc-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; margin: 0; }
 .tc-row > span { color: var(--muted); }
@@ -120,6 +120,20 @@ audio { width: 100%; }
 .w.s98 { border-bottom: 1px dotted var(--muted); }
 .w.s99 { background: none; }
 .w.sel { outline: 2px solid var(--select); outline-offset: 1px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--select) 22%, transparent); position: relative; }
+/* A sentence being read aloud has an outline and a faint tint; the sentence around your selection only a faint band. */
+.sentence { border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.sentence.active { background: color-mix(in srgb, var(--select) 7%, transparent); }
+.sentence.playing { outline: 2px solid var(--follow); outline-offset: 3px; background: color-mix(in srgb, var(--follow) 12%, transparent); }
+/* The card with a word's meaning when the pointer rests on it. */
+.hover-card { position: fixed; z-index: 60; max-width: 280px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); pointer-events: none; }
+.hover-card img { display: block; max-width: 100%; max-height: 140px; margin-top: 6px; border-radius: 4px; }
+/* In the word panel */
+.term-image { max-width: 100%; max-height: 180px; border-radius: 6px; display: block; margin-bottom: 6px; }
+.components { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+.chip { padding: 0 6px; border-radius: 4px; }
+.chip.s0 { background: var(--s0); } .chip.s1 { background: var(--s1); } .chip.s2 { background: var(--s2); }
+.chip.s3 { background: var(--s3); } .chip.s4 { background: var(--s4); } .chip.s5 { background: var(--s5); }
+.refs .ref { margin: 0 0 10px; font-size: 0.9rem; }
 .pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .reader-side { position: relative; height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line); min-width: 0; }
 .side-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 24px; }
@@ -341,7 +355,8 @@ div.error p { margin: 0; }
 .statusbar i { display: block; height: 100%; }
 .statusbar .k { background: #3a9a5b; } .statusbar .l { background: #d49a2a; } .statusbar .n { background: #6b86c9; }
 .more { position: relative; }
-.more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 4px; min-width: 130px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); }
+.more-menu { padding: 4px; }
+.more-menu ul { list-style: none; margin: 0; padding: 0; }
 .more-menu li { display: block; padding: 0; border: 0; }
 .more-menu button { width: 100%; text-align: left; padding: 6px 10px; border-radius: 5px; }
 .more-menu button:hover { background: var(--line); }
@@ -504,3 +519,6 @@ body:has(.reader) { overflow: hidden; }
 .card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 .job-strip { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--accent); border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
 .job-strip progress { flex: 1; min-width: 80px; }
+
+.ap-check { display: flex; align-items: center; gap: 10px; }
+.ap-check input { width: 18px; height: 18px; }

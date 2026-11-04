@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { useEscape } from '../escape'
 import { MoreMenu } from '../MoreMenu'
+import { Popover } from '../Popover'
+import { useAnchoredPopover } from '../useAnchoredPopover'
 import { TypographyControls } from '../TypographyControls'
 import { keyLabel, keyOf } from '../shortcutKeys'
 
@@ -20,19 +20,7 @@ export function ReaderToolbar({
   onEdit: () => void
   onHelp: () => void
 }) {
-  const [open, setOpen] = useState(false)
-  const box = useRef<HTMLSpanElement>(null)
-  useEscape(open, () => setOpen(false))
-  useEffect(() => {
-    if (!open) return
-    const away = (e: MouseEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', away)
-    return () => {
-      document.removeEventListener('mousedown', away)
-    }
-  }, [open])
+  const { anchor, placement, toggle, close } = useAnchoredPopover(380, 'end')
   return (
     <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
       <a className="button quiet back" href="#/" title="Back to your books">
@@ -45,16 +33,14 @@ export function ReaderToolbar({
       <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
         Highlights
       </button>
-      <span className="aa-box" ref={box}>
-        <button className="quiet aa-button" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)} title="Text appearance">
-          Aa
-        </button>
-        {open && (
-          <div className="aa-popover" role="dialog" aria-label="Text appearance">
-            <TypographyControls />
-          </div>
-        )}
-      </span>
+      <button ref={anchor} className="quiet aa-button" aria-expanded={placement !== null} aria-haspopup="dialog" onClick={() => toggle()} title="Text appearance">
+        Aa
+      </button>
+      {placement && (
+        <Popover anchor={anchor} placement={placement} onClose={close} label="Text appearance" className="aa-popover">
+          <TypographyControls />
+        </Popover>
+      )}
       <MoreMenu
         title="More: audio, edit text, keyboard shortcuts"
         items={[
