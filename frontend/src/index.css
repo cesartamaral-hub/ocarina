@@ -622,6 +622,7 @@ body:has(.reader) { overflow: hidden; }
 .tp-actions .translate-split > button:first-child { flex: 1; }
 .method-menu { width: 310px; }
 .method-head { margin: 6px 10px 2px; font-size: 0.82rem; }
+.method-picked { font-weight: 400; opacity: 0.8; }
 .method-menu .link-button { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding-top: 4px; padding-bottom: 4px; min-height: 36px; justify-content: center; }
 .method-menu .link-button:disabled { opacity: 0.55; cursor: default; }
 
