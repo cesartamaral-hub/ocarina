@@ -24,9 +24,9 @@ export function TranslateSplit({
   const picked = methods.find((m) => `${m.provider}:${m.model}` === chosen && m.available)
   return (
     <span className="split translate-split">
-      <button className={primary ? undefined : 'secondary'} disabled={disabled} title={title} onClick={() => onRun(picked && { provider: picked.provider, model: picked.model })}>
+      <button className={primary ? undefined : 'secondary'} disabled={disabled} title={picked ? `${label} with ${picked.name}` : title} onClick={() => onRun(picked && { provider: picked.provider, model: picked.model })}>
         {label}
-        {picked && <small className="method-picked"> · {picked.name}</small>}
+        {picked && <small className="method-picked"> · {picked.name.replace(/\s*\(.*\)\s*$/, '')}</small>}
       </button>
       <button
         ref={anchor}

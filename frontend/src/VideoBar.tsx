@@ -27,6 +27,7 @@ export function VideoBar({
   const speedNow = useRef(speed)
   const onTimeNow = useRef(onTime)
   const [problem, setProblem] = useState('')
+  const [large, setLarge] = useState(() => getPref<boolean>('video.large', true)) // big and centred above the text, or small beside the controls
 
   useEffect(() => {
     speedNow.current = speed
@@ -84,6 +85,7 @@ export function VideoBar({
 
   return (
     <>
+      <div className={`video-stage${large ? ' large' : ''}`}>
       <div className="video-frame">
         {problem ? (
           <p className="video-problem">
@@ -93,6 +95,7 @@ export function VideoBar({
           <div ref={host} className="video-host" />
         )}
       </div>
+      </div>
       <div className="controls">
         <div className="speed-control">
           <label>
@@ -101,6 +104,16 @@ export function VideoBar({
           </label>
           <SpeedMenu speed={speed} onChange={choose} />
         </div>
+        <button
+          className="secondary"
+          aria-pressed={large}
+          onClick={() => {
+            setLarge(!large)
+            setPref('video.large', !large)
+          }}
+        >
+          {large ? 'Smaller video' : 'Larger video'}
+        </button>
         {children}
       </div>
       <p className="muted key-hint">

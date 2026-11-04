@@ -619,7 +619,7 @@ body:has(.reader) { overflow: hidden; }
 .menu-check { display: inline-block; width: 1em; text-align: center; }
 
 .tp-actions .translate-split { display: flex; }
-.tp-actions .translate-split > button:first-child { flex: 1; }
+.tp-actions .translate-split > button:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .method-menu { width: 310px; }
 .method-head { margin: 6px 10px 2px; font-size: 0.82rem; }
 .method-picked { font-weight: 400; opacity: 0.8; }
@@ -715,6 +715,8 @@ body:has(.reader) { overflow: hidden; }
 .source-hint { margin: 6px 0 0; }
 .controls label:has(.row-inline) { flex: 1 1 22rem; }
 .controls .row-inline input { flex: 1; min-width: 0; }
+.video-stage.large { flex: 0 0 100%; display: flex; justify-content: center; }
+.video-stage.large .video-frame { flex: 0 0 auto; width: min(100%, 640px, calc(36dvh * 16 / 9)); }
 .video-frame { flex: 0 0 240px; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
 .video-host, .video-host iframe { width: 100%; height: 100%; display: block; }
 .video-problem { margin: 0; padding: 10px; font-size: 0.82rem; color: #ddd; }
