@@ -17,7 +17,7 @@ import { notify } from '../notices'
 import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { Definition } from './Definition'
 import { dictUrl } from './dictUrl'
-import { SentenceBlock } from './SentenceBlock'
+import { SentenceCard } from './SentenceCard'
 import { STATUS_BUTTONS } from './statuses'
 
 function dictName(d: Dictionary): string {
@@ -36,6 +36,7 @@ export function TermPanel({
   page,
   target,
   sentenceText,
+  storedTranslation,
   playStart,
   onPlay,
   keysEnabled,
@@ -47,6 +48,7 @@ export function TermPanel({
   page: ReaderPage
   target: Target
   sentenceText: string
+  storedTranslation?: string // the book's own translation of that sentence, when it has one
   playStart?: number
   onPlay: (seconds: number) => void
   keysEnabled: boolean
@@ -187,10 +189,12 @@ export function TermPanel({
       ) : null}
 
       {sentenceText && (
-        <SentenceBlock
+        <SentenceCard
           key={sentenceText}
+          kind="sentence"
           languageId={page.language.id}
           text={sentenceText}
+          stored={storedTranslation}
           playStart={playStart}
           onPlay={onPlay}
           onOpenInBrowser={page.language.sentenceDictionaries[0] ? () => openOutside(page.language.sentenceDictionaries[0], sentenceText) : undefined}

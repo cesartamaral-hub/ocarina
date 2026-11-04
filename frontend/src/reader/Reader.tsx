@@ -17,7 +17,8 @@ import {
   type Term,
 } from '../api'
 import { dictUrl } from './dictUrl'
-import { SentenceBlock } from './SentenceBlock'
+import { SentenceCard } from './SentenceCard'
+import { isWholeSentence } from './cardWording'
 import { AudioPanel } from './AudioPanel'
 import { languageCode } from '../typography'
 import { useEscape } from '../escape'
@@ -600,20 +601,24 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         side={
           selected?.kind === 'text' ? (
           <section className="text-selection" key={`text:${selected.text}`}>
-            <h2>Selected text</h2>
-            <SentenceBlock
+            <SentenceCard
+              kind={isWholeSentence(flat, selected.sentence, selected.span) ? 'sentence' : 'text'}
               languageId={page.language.id}
               text={selected.text}
+              stored={isWholeSentence(flat, selected.sentence, selected.span) ? pageTr.get(selected.sentence)?.text : undefined}
               playStart={audio.startOf(selected.sentence)}
               onPlay={audio.playAt}
-              noun="text"
               onOpenInBrowser={
                 page.language.sentenceDictionaries[0] ? () => openExternal(dictUrl(page.language.sentenceDictionaries[0], selected.text)).catch((e) => setError(e.message)) : undefined
               }
             />
-            <button className="secondary" onClick={() => setSelected({ termId: null, text: selected.text, sentence: selected.sentence })}>
-              Save as phrase anyway
-            </button>
+            <section className="sc-learn" aria-labelledby="learn-phrase">
+              <h3 id="learn-phrase">Learn it as a phrase</h3>
+              <p className="muted">Makes these words one item to learn, with its own status and meaning. It suits short expressions best.</p>
+              <button className="secondary" onClick={() => setSelected({ termId: null, text: selected.text, sentence: selected.sentence })}>
+                Save as a phrase
+              </button>
+            </section>
           </section>
         ) : selected ? (
           <TermPanel
@@ -621,6 +626,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             page={page}
             target={selected}
             sentenceText={sentenceText(selected.sentence)}
+            storedTranslation={pageTr.get(selected.sentence)?.text}
             playStart={audio.startOf(selected.sentence)}
             onPlay={audio.playAt}
             keysEnabled={multi.size === 0}
