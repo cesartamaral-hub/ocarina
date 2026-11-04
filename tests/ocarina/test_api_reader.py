@@ -2,6 +2,9 @@
 Reader JSON API.
 """
 
+from lute.db import db
+from lute.models.term import Term as DBTerm
+from tests.conftest import _get_test_language
 from tests.ocarina.helpers import make_dutch_book
 
 
@@ -166,3 +169,18 @@ def test_prefs_are_saved_in_the_data_folder_and_merged(client, monkeypatch, tmp_
     assert client.get("/ocarina/api/prefs").json["speed.Dutch"] == 0.8
     assert client.put("/ocarina/api/prefs", json=["not", "an", "object"]).status_code == 400
 
+
+
+def test_bulk_status_by_text_creates_missing_terms(app, client):
+    "Words you never opened have no term; setting their status by text creates one."
+    with app.app_context():
+        language_id = _get_test_language("Dutch").id
+    r = client.post(
+        "/ocarina/api/terms/bulk-status",
+        json={"languageId": language_id, "texts": ["Woon", "kaas"], "status": 3},
+    )
+    assert r.status_code == 200 and r.json["count"] == 2
+    with app.app_context():
+        found = {t.text_lc: t.status for t in db.session.query(DBTerm).filter(DBTerm.text_lc.in_(["woon", "kaas"]))}
+    assert found == {"woon": 3, "kaas": 3}
+    assert client.post("/ocarina/api/terms/bulk-status", json={"texts": ["x"], "status": 3}).status_code == 400

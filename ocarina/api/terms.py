@@ -203,19 +203,25 @@ def term_references(term_id):
 
 @bp.route("/terms/bulk-status", methods=["POST"])
 def bulk_status():
-    "Set the same status on several terms."
+    "Set the same status on several terms, given by id or (with languageId) by text; a text without a term gets one."
     body = request.get_json(silent=True) or {}
     status = body.get("status")
     ids = body.get("termIds") or []
-    if status not in STATUSES or not ids:
-        return jsonify({"error": "status and termIds are required"}), 400
+    texts = [t for t in (body.get("texts") or []) if isinstance(t, str) and t.strip()]
+    language_id = body.get("languageId")
+    if status not in STATUSES or not (ids or (texts and language_id)):
+        return jsonify({"error": "status and termIds (or texts with languageId) are required"}), 400
     repo = TermRepository(db.session)
     for term_id in ids:
         term = repo.load(term_id)
         term.status = status
         repo.add(term)
+    for text_ in texts:
+        term = repo.find_or_new(language_id, text_)
+        term.status = status
+        repo.add(term)
     repo.commit()
-    return jsonify({"status": status, "count": len(ids)})
+    return jsonify({"status": status, "count": len(ids) + len(texts)})
 
 
 @bp.route("/terms/<int:term_id>/image", methods=["POST"])

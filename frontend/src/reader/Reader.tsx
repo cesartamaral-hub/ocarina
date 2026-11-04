@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notify } from '../notices'
 import { usePlaybackKeys } from '../playbackKeys'
 import {
-  bulkStatus,
+  bulkStatusByText,
   finishPage,
   getPage,
   getPageText,
@@ -34,7 +34,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [help, setHelp] = useState(false)
   const [selected, setSelected] = useState<Target | null>(null)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-  const [multi, setMulti] = useState<Set<number>>(new Set())
+  // Words picked with Cmd-click, by lowercase text (a word you never opened has no term yet).
+  const [multi, setMulti] = useState<Set<string>>(new Set())
+  const [dragSpan, setDragSpan] = useState<[number, number] | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
   const [follow, setFollow] = useState(true)
@@ -109,39 +111,63 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     [flat],
   )
 
-  function onWordClick(e: React.MouseEvent, it: Item) {
-    if (e.metaKey || e.ctrlKey) {
-      if (it.termId === null) return
-      const id = it.termId
+  const byIndex = useMemo(() => new Map(flat.map((it) => [it.index, it])), [flat])
+  const itemAt = useCallback(
+    (target: EventTarget | null) => {
+      const el = target instanceof Element ? target.closest('[data-i]') : null
+      const v = el?.getAttribute('data-i')
+      return v === null || v === undefined ? undefined : byIndex.get(Number(v))
+    },
+    [byIndex],
+  )
+
+  // A click on a word, with what the modifier keys mean.
+  function clickWord(mods: { meta: boolean; shift: boolean; alt: boolean }, it: Item) {
+    if (!it.isWord) return
+    if (mods.meta) {
+      const key = it.text.toLowerCase()
       setMulti((m) => {
         const next = new Set(m)
-        if (next.has(id)) next.delete(id)
-        else next.add(id)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
         return next
       })
       return
     }
-    if (e.altKey) {
+    if (mods.alt) {
       const own = flat.filter((x) => x.sentence === it.sentence)
       if (own.length && selectRange(own[0].index, own[own.length - 1].index, true)) return
     }
-    if (e.shiftKey && selectedIndex !== null && selectRange(selectedIndex, it.index)) return
+    if (mods.shift && selectedIndex !== null && selectRange(selectedIndex, it.index)) return
     setSelected({ termId: it.termId, text: it.text, sentence: it.sentence })
     setSelectedIndex(it.index)
   }
 
-  // Dragging across several words makes a phrase.
-  function onMouseUp() {
-    const sel = window.getSelection()
-    if (!sel || sel.isCollapsed) return
-    const index = (n: Node | null) => {
-      const el = n instanceof Element ? n : n?.parentElement
-      const v = el?.closest('[data-i]')?.getAttribute('data-i')
-      return v === null || v === undefined ? null : Number(v)
+  // Our own mouse handling instead of the browser's text selection and click events, which behave differently
+  // in the desktop app's web view: press on a word, drag across the text, release.
+  function onMouseDown(e: React.MouseEvent) {
+    if (e.button !== 0 || e.ctrlKey) return
+    const start = itemAt(e.target)
+    if (!start) return
+    e.preventDefault() // no native text selection; we draw our own
+    window.getSelection()?.removeAllRanges()
+    const mods = { meta: e.metaKey, shift: e.shiftKey, alt: e.altKey }
+    let last = start.index
+    const move = (m: MouseEvent) => {
+      const over = itemAt(document.elementFromPoint(m.clientX, m.clientY))
+      if (!over || over.index === last) return
+      last = over.index
+      setDragSpan(last === start.index ? null : [Math.min(start.index, last), Math.max(start.index, last)])
     }
-    const a = index(sel.anchorNode)
-    const f = index(sel.focusNode)
-    if (a !== null && f !== null && selectRange(a, f)) sel.removeAllRanges()
+    const up = () => {
+      document.removeEventListener('mousemove', move)
+      document.removeEventListener('mouseup', up)
+      setDragSpan(null)
+      if (last !== start.index && selectRange(start.index, last)) return
+      clickWord(mods, start)
+    }
+    document.addEventListener('mousemove', move)
+    document.addEventListener('mouseup', up)
   }
 
   // Page turning, and clearing the selection, from the keyboard.
@@ -171,21 +197,18 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
     async (status: number) => {
-      const ids = [...multi]
-      if (ids.length === 0) return
+      if (multi.size === 0 || !page) return
+      const count = multi.size
       try {
-        await bulkStatus(ids, status)
-        ids.forEach((id) => {
-          applyStatus(id, status)
-          hoverCard.forget(id)
-        })
+        await bulkStatusByText(page.language.id, [...multi], status)
         setMulti(new Set())
-        notify(`${ids.length} ${ids.length === 1 ? 'word' : 'words'} set to ${statusName(status)}`)
+        setReloadKey((k) => k + 1) // words that had no term now have one
+        notify(`${count} ${count === 1 ? 'word' : 'words'} set to ${statusName(status)}`)
       } catch (e) {
         setError((e as Error).message)
       }
     },
-    [multi, applyStatus, hoverCard],
+    [multi, page],
   )
   useEffect(() => {
     if (multi.size === 0) return
@@ -297,7 +320,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           </div>
         ) : (
           <>
-            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseUp={onMouseUp}>
+            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseDown={onMouseDown}>
               {page.paragraphs
                 .filter((para) => para.length > 0) // blank lines come as empty paragraphs
                 .map((para, pi) => (
@@ -315,10 +338,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                               data-i={it.index}
                               className={`w s${it.status}${
                                 selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
-                              }${it.termId !== null && multi.has(it.termId) ? ' multi' : ''}${
-                                selected?.span && it.index >= selected.span[0] && it.index <= selected.span[1] ? ' in-span' : ''
+                              }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
+                                ((dragSpan ?? selected?.span) && it.index >= (dragSpan ?? selected!.span!)[0] && it.index <= (dragSpan ?? selected!.span!)[1]) ? ' in-span' : ''
                               }`}
-                              onClick={(e) => onWordClick(e, it)}
                               onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
                               onMouseLeave={hoverCard.end}
                             >

@@ -53,6 +53,10 @@ export const getReferences = (id: number) =>
 export const bulkStatus = (termIds: number[], status: number) =>
   send<{ status: number; count: number }>('POST', `${API}/terms/bulk-status`, { termIds, status })
 
+// Words that have no term yet get one.
+export const bulkStatusByText = (languageId: number, texts: string[], status: number) =>
+  send<{ status: number; count: number }>('POST', `${API}/terms/bulk-status`, { languageId, texts, status })
+
 export const uploadImage = (id: number, file: File) => {
   const form = new FormData()
   form.append('file', file)
