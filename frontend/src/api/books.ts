@@ -11,6 +11,21 @@ export type Book = {
   sourceUri: string
   tags: string[]
   archived: boolean
+  stats: BookStats | null // null until the book's word index is built
+  indexing: boolean
+  lastRead: string | null
+}
+
+export type BookStats = {
+  words: number
+  unique: number
+  known: number
+  learning: number
+  ignored: number
+  new: number
+  newUnique: number
+  knownPercent: number
+  minutes: number
 }
 
 export type Sentence = { page: number; text: string; start?: number }

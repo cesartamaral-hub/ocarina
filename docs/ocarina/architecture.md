@@ -80,3 +80,7 @@ Unit tests of pure logic (`*.test.ts`) run with `npm test`.
 ## Selecting text in the reader
 
 `reader/selection.ts` (`classify`, unit tested) decides what a drag or Shift-click range means: 2 to 6 words in one sentence is a phrase (word panel, as before); more words or a sentence end inside it is text. Text opens "Selected text" in the side panel (translate, play from the first sentence, "Save as phrase anyway") and outlines the span; Option-click on a word selects its whole sentence as text.
+
+## Book statistics
+
+`ocarina/book_index.py` keeps a word index per book (tables `bookwords`, `bookindex`; migration `20261104_create_bookwords.sql`). `GET /books` starts a background thread for books whose index is missing or built from other text (a SHA-1 of all pages), and returns `stats: null, indexing: true` for them; the book list polls every 1.5 s until the numbers arrive. Statistics are one SQL join with `words`, so they follow status changes at once. "Known" is status 4, 5, 99; learning 1–3; 98 (ignored) is left out of the percentage; only single-word terms count. Reading time is words / 150 per minute. The list's sorting, difficulty chips (98 / 95 / 90 %) and bar are pure functions in `frontend/src/bookStats.ts` with tests.

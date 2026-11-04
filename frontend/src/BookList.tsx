@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { changeBook, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, type Book } from './api'
+import { changeBook, getPref, setPref, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, type Book } from './api'
+import { BookRow } from './BookRow'
+import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
@@ -51,6 +53,8 @@ export function BookList() {
   const [archived, setArchived] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
   const [tag, setTag] = useState('')
+  const [sort, setSort] = useState<SortKey>(() => getPref<SortKey>('books.sort', 'title'))
+  const [onlyAudio, setOnlyAudio] = useState(false)
   const [error, setError] = useState('')
   const [firstRun, setFirstRun] = useState(false)
   const [backupWarning, setBackupWarning] = useState('')
@@ -62,6 +66,13 @@ export function BookList() {
   useEffect(() => {
     load()
   }, [load])
+  // Word counts are made in the background; ask again until every book has its numbers.
+  const counting = books?.some((b) => b.indexing) ?? false
+  useEffect(() => {
+    if (!counting) return
+    const timer = window.setInterval(load, 1500)
+    return () => window.clearInterval(timer)
+  }, [counting, load])
   // A library without languages is new: show the first-run screen (it stays until its steps are done).
   useEffect(() => {
     getLanguages().then((l) => l.length === 0 && setFirstRun(true), () => undefined)
@@ -98,7 +109,7 @@ export function BookList() {
     )
 
   const allTags = [...new Set(books.flatMap((b) => b.tags))].sort()
-  const shown = tag ? books.filter((b) => b.tags.includes(tag)) : books
+  const shown = sortBooks(books.filter((b) => (!tag || b.tags.includes(tag)) && (!onlyAudio || b.hasAudio)), sort)
   const languages = [...new Set(shown.map((b) => b.language))]
   return (
     <>
@@ -117,6 +128,26 @@ export function BookList() {
         <label className="inline">
           <input type="checkbox" checked={archived} onChange={(e) => (setBooks(null), setArchived(e.target.checked))} />
           Show archived books
+        </label>
+        <label className="inline">
+          Sort by
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as SortKey)
+              setPref('books.sort', e.target.value)
+            }}
+          >
+            {SORTS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="inline">
+          <input type="checkbox" checked={onlyAudio} onChange={(e) => setOnlyAudio(e.target.checked)} />
+          Has audio
         </label>
         {allTags.length > 0 && (
           <label className="inline">
@@ -140,30 +171,12 @@ export function BookList() {
               .filter((b) => b.language === lang)
               .map((b) => (
                 <li key={b.id} className={editing === b.id ? 'editing' : ''}>
-                  <div className="book-row">
-                    <div>
-                      <a href={`#/book/${b.id}`}>{b.title}</a>
-                      {b.tags.length > 0 && <span className="muted"> · {b.tags.join(', ')}</span>}
-                    </div>
-                    <span className="muted">
-                      {b.pages > 1 ? `page ${b.currentPage} of ${b.pages}` : '1 page'}
-                      {b.hasAudio ? (b.ocarinaAudio ? ' · generated audio' : ' · own audio') : ''}
-                    </span>
-                    <span className="row-actions">
-                      <a className="button secondary small" href={`#/book/${b.id}/read/${b.currentPage}`}>
-                        {b.currentPage > 1 ? 'Continue' : 'Read'}
-                      </a>
-                      <button className="secondary" onClick={() => setEditing(editing === b.id ? null : b.id)}>
-                        Edit
-                      </button>
-                      <button className="secondary" onClick={() => act(changeBook(b.id, { archived: !b.archived }))}>
-                        {b.archived ? 'Unarchive' : 'Archive'}
-                      </button>
-                      <button className="secondary" onClick={() => remove(b)}>
-                        Delete
-                      </button>
-                    </span>
-                  </div>
+                  <BookRow
+                    book={b}
+                    onEdit={() => setEditing(editing === b.id ? null : b.id)}
+                    onArchive={() => act(changeBook(b.id, { archived: !b.archived }))}
+                    onDelete={() => remove(b)}
+                  />
                   {editing === b.id && (
                     <EditForm
                       book={b}

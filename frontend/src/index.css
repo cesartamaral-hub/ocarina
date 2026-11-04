@@ -212,8 +212,7 @@ table.dicts select, table.dicts input:not([type='checkbox']) { font: inherit; co
 .backup-form { max-width: 640px; margin-bottom: 24px; }
 
 .books li:has(.book-row) { flex-direction: column; gap: 8px; }
-.book-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; flex-wrap: wrap; }
-.row-actions { display: flex; gap: 6px; }
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
 .row-actions button { padding: 3px 10px; font-size: 0.85rem; }
 .book-edit { max-width: 640px; }
 
@@ -229,7 +228,6 @@ a.button.small { padding: 3px 10px; font-size: 0.85rem; }
 
 .models .row select { margin-left: 8px; }
 .voice-form { max-width: 520px; margin-top: 12px; }
-.book-row > span.muted:not(.row-actions) { margin-left: auto; }
 
 /* Highlights off: the words stay clickable, but only the open word and ignored words are marked. */
 article.plain .w { background: none; }
@@ -335,3 +333,24 @@ div.error p { margin: 0; }
 .key-hint { margin: 8px 0 0; font-size: 0.8rem; }
 .w.in-span { box-shadow: 0 3px 0 var(--select); border-radius: 0; }
 .text-selection h2 { margin: 0 0 4px; }
+
+/* Book rows: title, numbers, actions */
+.book-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, 260px) 130px; gap: 8px 20px; align-items: center; }
+.book-title .muted { font-size: 0.85rem; }
+.audio-icon { display: inline-flex; vertical-align: -3px; margin-left: 8px; color: var(--muted); }
+.book-numbers { font-size: 0.85rem; }
+.numbers-line { display: flex; gap: 8px; align-items: center; }
+.chip-level { font-size: 0.75rem; padding: 0 7px; border-radius: 10px; border: 1px solid var(--line); }
+.chip-level.easy { background: color-mix(in srgb, #3a9a5b 22%, transparent); }
+.chip-level.comfortable { background: color-mix(in srgb, #8aa63a 22%, transparent); }
+.chip-level.challenging { background: color-mix(in srgb, #d49a2a 24%, transparent); }
+.chip-level.hard { background: color-mix(in srgb, #c4503f 24%, transparent); }
+.statusbar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); margin-top: 5px; }
+.statusbar i { display: block; height: 100%; }
+.statusbar .k { background: #3a9a5b; } .statusbar .l { background: #d49a2a; } .statusbar .n { background: #6b86c9; }
+.more { position: relative; }
+.more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; list-style: none; margin: 0; padding: 4px; min-width: 130px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); }
+.more-menu li { display: block; padding: 0; border: 0; }
+.more-menu button { width: 100%; text-align: left; padding: 6px 10px; border-radius: 5px; }
+.more-menu button:hover { background: var(--line); }
+@media (max-width: 700px) { .book-row { grid-template-columns: 1fr auto; } .book-numbers { grid-column: 1 / -1; order: 3; } }

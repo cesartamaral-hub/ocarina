@@ -13,7 +13,7 @@ import os
 from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
-from ocarina import audio_versions
+from ocarina import audio_versions, book_index
 from lute.models.book import Book as DBBook, BookTag
 from lute.models.repositories import BookRepository
 from ocarina.tts.book_audio import book_sentences, is_ocarina_audio, timings_path
@@ -24,7 +24,12 @@ bp = Blueprint("ocarina_books", __name__, url_prefix="/ocarina/api")
 MAX_TITLE, MAX_SOURCE, MAX_TAG = 200, 1000, 20
 
 
-def _book_json(book, audio_dir):
+def _last_read(book):
+    latest = max((t.read_date for t in book.texts if t.read_date), default=None)
+    return latest.isoformat() if latest else None
+
+
+def _book_json(book, audio_dir, stats=None):
     page = next((t.order for t in book.texts if t.id == book.current_tx_id), 1)
     return {
         "id": book.id,
@@ -37,6 +42,9 @@ def _book_json(book, audio_dir):
         "currentPage": page,
         "sourceUri": book.source_uri or "",
         "tags": sorted(t.text for t in book.book_tags),
+        "stats": (stats or {}).get(book.id),
+        "indexing": book_index.is_building(book.id),
+        "lastRead": _last_read(book),
     }
 
 
@@ -47,7 +55,11 @@ def books():
     audio_dir = current_app.env_config.useraudiopath
     found = db.session.query(DBBook).filter(DBBook.archived == archived).all()
     found.sort(key=lambda b: (b.language.name.lower(), b.title.lower()))
-    return jsonify([_book_json(b, audio_dir) for b in found])
+    stale = book_index.stale_book_ids()
+    if stale:
+        book_index.build_in_background(current_app._get_current_object(), stale)  # the numbers appear on the next load
+    stats = book_index.stats_by_book()
+    return jsonify([_book_json(b, audio_dir, stats) for b in found])
 
 
 @bp.route("/books/<int:book_id>", methods=["PATCH"])
