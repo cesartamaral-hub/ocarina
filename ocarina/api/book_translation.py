@@ -2,7 +2,8 @@
 JSON API for the translated version of a book (see ocarina/book_translation.py).
 
     GET    /ocarina/api/books/<id>/translation                    every sentence with its translation, and what is left
-    POST   /ocarina/api/books/<id>/translation                    {"scope": "page" | "book", "page": n}: start a job
+    POST   /ocarina/api/books/<id>/translation                    {"scope": "page" | "book", "page": n, "provider", "model"}: start a job
+                                                                  (provider and model only to use another method for this run)
     PUT    /ocarina/api/books/<id>/translation/<page>/<index>     {"text": ...}: correct one sentence by hand
     DELETE /ocarina/api/books/<id>/translation                    remove the translation of the book
 """
@@ -11,7 +12,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import book_translation, translate
+from ocarina import book_translation, keystore, translate
 from ocarina.api import jobs
 from ocarina.api import translate as translate_api
 from ocarina.tts import models as model_files
@@ -23,6 +24,41 @@ def _book(book_id):
     return BookRepository(db.session).find(book_id)
 
 
+def _methods(settings):
+    """
+    The ways this book can be translated, for the page to offer: each model on this Mac, MyMemory and DeepL, with whether it can be
+    used now and why not. The one in the settings is the default.
+    """
+    fake = current_app.config.get("OCARINA_TTS_ENGINE") is not None  # the tests use a fake engine: models count as downloaded
+    methods = []
+    for m in model_files.text_models():
+        ready = fake or model_files.is_installed(m)
+        methods.append(
+            {
+                "provider": "local",
+                "model": m["id"],
+                "name": m["name"],
+                "available": ready,
+                "reason": None if ready else "Not downloaded yet (Settings)",
+                "isDefault": settings["provider"] == "local" and settings.get("localModel") == m["id"],
+            }
+        )
+    has_key = keystore.get(current_app.env_config.datapath, "deepl") is not None
+    for key in ("mymemory", "deepl"):
+        ready = key != "deepl" or has_key
+        methods.append(
+            {
+                "provider": key,
+                "model": None,
+                "name": translate.PROVIDERS[key]["name"],
+                "available": ready,
+                "reason": None if ready else "Needs your API key (Translation settings)",
+                "isDefault": settings["provider"] == key,
+            }
+        )
+    return methods
+
+
 def _info(settings):
     "Who translates and into what, for the page to show."
     return {
@@ -30,6 +66,7 @@ def _info(settings):
         "targetName": translate.TARGETS[settings["target"]],
         "provider": settings["provider"],
         "providerName": book_translation.provider_label(settings, model_files.text_models()),
+        "methods": _methods(settings),
         "dailyLimit": 5000 if settings["provider"] == "mymemory" and not settings.get("email") else (50000 if settings["provider"] == "mymemory" else None),
     }
 
@@ -59,6 +96,25 @@ def _run(app, job, check, book_id, scope, page, settings, label):  # pylint: dis
             raise RuntimeError(str(e)) from e  # the job shows the message as it is
 
 
+def _method_for_this_run(settings, body):
+    "The settings with the method asked for (if any) in place of the default, or an error reply when it cannot be used."
+    provider, model = body.get("provider"), body.get("model")
+    if provider is None:
+        return settings, None
+    if provider not in translate.PROVIDERS:
+        return None, (jsonify({"error": "Unknown translation service"}), 400)
+    changed = {**settings, "provider": provider}
+    if provider == "local":
+        if not any(m["id"] == model for m in model_files.text_models()):
+            return None, (jsonify({"error": "Unknown translation model"}), 400)
+        changed["localModel"] = model
+    method = next((m for m in _methods(changed) if m["provider"] == provider and (provider != "local" or m["model"] == model)), None)
+    if method is None or not method["available"]:
+        reason = (method or {}).get("reason") or "That method cannot be used now."
+        return None, (jsonify({"error": reason, "code": "no_model" if provider == "local" else "no_key"}), 409)
+    return changed, None
+
+
 @bp.route("/books/<int:book_id>/translation", methods=["POST"])
 def start_translation(book_id):
     "Translate a page or the whole book with the service chosen under Translation; returns the job."
@@ -70,6 +126,10 @@ def start_translation(book_id):
     if scope not in ("page", "book") or (scope == "page" and not isinstance(page, int)):
         return jsonify({"error": "Choose a page or the whole book"}), 400
     settings = translate_api._settings()  # pylint: disable=protected-access
+    chosen, problem = _method_for_this_run(settings, body)
+    if problem:
+        return problem
+    settings = chosen
     source = translate.code_for(book.language.name)
     if source is None:
         return jsonify({"error": f"Ocarina does not know the language code for {book.language.name} yet.", "code": "unsupported_language"}), 400

@@ -617,3 +617,21 @@ body:has(.reader) { overflow: hidden; }
 .tp-popover { max-height: min(80vh, 640px); }
 .para { margin: 0; }
 .tr-sentence:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+.speed-control { display: flex; align-items: flex-end; gap: 6px; }
+.reader-audio .speed-control { align-items: center; }
+.speed-menu .link-button { display: flex; align-items: center; gap: 8px; }
+.menu-check { display: inline-block; width: 1em; text-align: center; }
+
+.tp-actions .translate-split { display: flex; }
+.tp-actions .translate-split > button:first-child { flex: 1; }
+.method-menu { width: 310px; }
+.method-head { margin: 6px 10px 2px; font-size: 0.82rem; }
+.method-menu .link-button { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding-top: 4px; padding-bottom: 4px; min-height: 36px; justify-content: center; }
+.method-menu .link-button:disabled { opacity: 0.55; cursor: default; }
+
+/* The mode icons above the text */
+.mode-bar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: center; gap: 2px; padding: 8px 0 6px; background: linear-gradient(var(--bg) 70%, transparent); }
+.mode-icon { width: 36px; color: var(--muted); }
+.mode-icon.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.mode-icon.empty:not(.on) { opacity: 0.5; }

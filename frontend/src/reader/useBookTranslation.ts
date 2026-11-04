@@ -29,10 +29,10 @@ export function useBookTranslation(bookId: number) {
   }, [jobId, refresh])
 
   const start = useCallback(
-    async (scope: 'page' | 'book', page?: number) => {
+    async (scope: 'page' | 'book', page?: number, method?: { provider: string; model: string | null }) => {
       setError('')
       try {
-        setJob(await startBookTranslation(bookId, scope, page))
+        setJob(await startBookTranslation(bookId, scope, page, method))
       } catch (e) {
         setError((e as Error).message)
       }

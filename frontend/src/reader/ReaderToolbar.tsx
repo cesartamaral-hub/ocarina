@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
+import type { Placement } from '../placement'
 import { MoreMenu } from '../MoreMenu'
 import { Popover } from '../Popover'
 import { useAnchoredPopover } from '../useAnchoredPopover'
@@ -15,6 +16,10 @@ export function ReaderToolbar({
   onToggleVocab,
   translation,
   translationOn,
+  tpAnchor,
+  tpPlacement,
+  tpToggle,
+  tpClose,
   onEdit,
   onHelp,
 }: {
@@ -26,11 +31,14 @@ export function ReaderToolbar({
   onToggleVocab: () => void
   translation: ReactNode // the content of the Translation popover
   translationOn: boolean // a translation is being shown
+  tpAnchor: RefObject<HTMLButtonElement | null> // the Translation popover is opened here and by the T key (see Reader)
+  tpPlacement: Placement | null
+  tpToggle: () => void
+  tpClose: () => void
   onEdit: () => void
   onHelp: () => void
 }) {
   const { anchor, placement, toggle, close } = useAnchoredPopover(380, 'end')
-  const { anchor: tpAnchor, placement: tpPlacement, toggle: tpToggle, close: tpClose } = useAnchoredPopover(360, 'end')
   return (
     <div className="reader-toolbar" role="toolbar" aria-label="Page tools">
       <a className="button quiet back" href="#/" title="Back to your books">

@@ -1,5 +1,6 @@
 import { isActive } from '../api'
 import { MODES, type TranslationMode } from './translationView'
+import { TranslateSplit } from './TranslateSplit'
 import type { useBookTranslation } from './useBookTranslation'
 
 const n = (x: number) => x.toLocaleString('en')
@@ -60,12 +61,15 @@ export function TranslationPanel({
         </div>
       ) : (
         <div className="tp-actions">
-          <button disabled={pageChars === 0} onClick={() => tr.start('page', page)} title={pageChars === 0 ? 'Every sentence of this page is translated' : undefined}>
-            Translate this page
-          </button>
-          <button className="secondary" disabled={d.remainingChars === 0} onClick={() => tr.start('book')}>
-            Translate the whole book
-          </button>
+          <TranslateSplit
+            label="Translate this page"
+            methods={d.methods}
+            primary
+            disabled={pageChars === 0}
+            title={pageChars === 0 ? 'Every sentence of this page is translated' : undefined}
+            onRun={(method) => tr.start('page', page, method)}
+          />
+          <TranslateSplit label="Translate the whole book" methods={d.methods} primary={false} disabled={d.remainingChars === 0} onRun={(method) => tr.start('book', undefined, method)} />
         </div>
       )}
       {tr.job?.state === 'error' && <p className="error tp-note">{tr.job.error}</p>}
@@ -74,7 +78,7 @@ export function TranslationPanel({
       {tr.error && <p className="error tp-note">{tr.error}</p>}
 
       <p className="muted tp-note">
-        Made with <strong>{d.providerName}</strong>. <a href="#/translation">Change</a>
+        {d.done > 0 ? 'Made with' : 'Translates with'} <strong>{d.providerName}</strong> by default. <a href="#/translation">Change</a>
       </p>
       {over && !running && (
         <p className="tp-warn">

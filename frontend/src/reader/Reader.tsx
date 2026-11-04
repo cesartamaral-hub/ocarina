@@ -24,11 +24,15 @@ import { useEscape } from '../escape'
 import { useLeaveGuard } from '../leaveGuard'
 import { TextEditor } from './TextEditor'
 import { VocabularyPanel } from './VocabularyPanel'
+import { TranslationModes } from './TranslationModes'
 import { TranslationPanel } from './TranslationPanel'
 import { effectiveMode, nextMode, pageTranslations, type TranslationMode } from './translationView'
 import { useBookTranslation } from './useBookTranslation'
+import { useAnchoredPopover } from '../useAnchoredPopover'
 import { pageVocabulary, type NewWord } from './vocabulary'
 import { useMediaQuery } from '../useMediaQuery'
+import { useWindowTitle } from '../desktop'
+import { useNowPlaying } from '../nowPlaying'
 import { isDirty } from './editing'
 import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
@@ -67,6 +71,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [audioVersion, setAudioVersion] = useState(0) // bumped when another audio version is picked
   const audio = useAudioFollow(bookId, page, follow, audioVersion)
   usePlaybackKeys(audio.audioRef, audio.starts)
+  useWindowTitle(page?.title ?? 'Ocarina')
+  useNowPlaying(audio.audioRef, page && audio.audioInfo?.hasAudio ? { title: page.title, artist: page.language.name, starts: audio.starts } : null)
 
   useEffect(() => {
     const run = { alive: true }
@@ -113,6 +119,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     setChosenMode(m)
     setPref('reader.translationMode', m)
   }, [])
+  const { anchor: tpAnchor, placement: tpPlacement, toggle: tpToggle, close: tpClose } = useAnchoredPopover(360, 'end')
   const [pair, setPair] = useState<number | null>(null) // the sentence under the pointer, marked on both sides
   // The book's own numbers come from the server; they follow your status changes a moment after you make them.
   const [bookStats, setBookStats] = useState<BookStats | null | undefined>(undefined)
@@ -262,6 +269,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
       const action = actionFor(e)?.id
+      // A key the app acts on is marked as handled: otherwise the web view hands it to macOS, which beeps.
+      if (action && ['clear', 'help', 'toggleVocab', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage'].includes(action)) e.preventDefault()
       if (action === 'clear') {
         setSelected(null)
         setMulti(new Set())
@@ -271,7 +280,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       } else if (action === 'toggleVocab') {
         toggleVocab()
       } else if (action === 'cycleTranslation') {
-        chooseMode(nextMode(chosenMode, pageTr.size > 0))
+        if (pageTr.size > 0) chooseMode(nextMode(chosenMode, true))
+        else tpToggle() // nothing to show yet: T opens the Translation menu, where it can be made
       } else if (action === 'highlights') {
         toggleHighlights()
       } else if (action === 'prevPage' && pageNumber > 1) {
@@ -282,7 +292,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, chooseMode, chosenMode, pageTr])
+  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, chooseMode, chosenMode, pageTr, tpToggle])
 
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
@@ -407,11 +417,18 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               vocabOpen={vocabOpen}
               onToggleVocab={toggleVocab}
               translationOn={shown !== 'original'}
+              tpAnchor={tpAnchor}
+              tpPlacement={tpPlacement}
+              tpToggle={tpToggle}
+              tpClose={tpClose}
               translation={<TranslationPanel tr={tr} mode={shown} onMode={chooseMode} page={page.page} pageHasTranslation={pageTr.size > 0} />}
               onEdit={startEditing}
               onHelp={() => setHelp(true)}
             />
             <div className={`reader-column${shown === 'both' ? ' parallel' : ''}`}>
+              {editing === null && (
+                <TranslationModes mode={shown} hasTranslation={pageTr.size > 0} targetName={tr.data?.targetName ?? 'Translation'} onMode={chooseMode} onMake={tpToggle} />
+              )}
               {help && <KeyHelp onClose={() => setHelp(false)} />}
               {error && <p className="error">{error}</p>}
               {editing !== null ? (

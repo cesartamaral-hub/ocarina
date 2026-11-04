@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode, type RefObject } from 'react'
 import { getPref, setPref } from './api'
 import { keyLabel, keyOf } from './shortcutKeys'
+import { SPEED, clampSpeed, speedLabel } from './speeds'
+import { SpeedMenu } from './SpeedMenu'
 
-const MIN_SPEED = 0.5
 
 // The book's audio player with a slow-down control (pitch preserved, remembered per language).
 // children go in the controls row, after the speed slider.
@@ -21,7 +22,13 @@ export function AudioBar({
   onTime?: (seconds: number) => void
   children?: ReactNode
 }) {
-  const [speed, setSpeed] = useState(() => getPref<number>(`speed.${language}`, 1))
+  const [speed, setSpeed] = useState(() => clampSpeed(getPref<number>(`speed.${language}`, 1)))
+
+  const choose = (value: number) => {
+    const s = clampSpeed(value)
+    setSpeed(s)
+    setPref(`speed.${language}`, s)
+  }
 
   // Applied again whenever the audio element is replaced (new version).
   useEffect(() => {
@@ -45,21 +52,13 @@ export function AudioBar({
         }}
       />
       <div className="controls">
-        <label>
-          Speed {speed.toFixed(2)}×
-          <input
-            type="range"
-            min={MIN_SPEED}
-            max={1}
-            step={0.05}
-            value={speed}
-            onChange={(e) => {
-              const s = Number(e.target.value)
-              setSpeed(s)
-              setPref(`speed.${language}`, s)
-            }}
-          />
-        </label>
+        <div className="speed-control">
+          <label>
+            Speed {speedLabel(speed)}
+            <input type="range" min={SPEED.min} max={SPEED.max} step={SPEED.step} value={speed} aria-valuetext={speedLabel(speed)} onChange={(e) => choose(Number(e.target.value))} />
+          </label>
+          <SpeedMenu speed={speed} onChange={choose} />
+        </div>
         {children}
       </div>
       <p className="muted key-hint">

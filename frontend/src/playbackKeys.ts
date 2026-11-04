@@ -12,9 +12,10 @@ export function usePlaybackKeys(audioRef: RefObject<HTMLAudioElement | null>, st
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const id = actionFor(e)?.id
+      if (id !== 'playPause' && id !== 'skipBack' && id !== 'skipForward') return
+      e.preventDefault() // handled, even with no player on the page: an unhandled key makes macOS beep
       const audio = audioRef.current
-      if (!audio || (id !== 'playPause' && id !== 'skipBack' && id !== 'skipForward')) return
-      e.preventDefault()
+      if (!audio) return
       if (id === 'playPause') {
         if (e.repeat) return // holding the key should not flicker between play and pause
         if (audio.paused) audio.play().catch(() => undefined)

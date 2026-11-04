@@ -127,3 +127,29 @@ def test_deleting_the_book_deletes_its_translation(app, client):
     with app.app_context():
         assert db.session.execute(db.text("select count(*) from booktranslations where BtBkID = :b"), {"b": book_id}).scalar() == 0
         assert BookRepository(db.session).find(book_id) is None
+
+
+def test_the_ways_to_translate_are_listed_with_the_default_marked(app, client):
+    methods = _get(client, _book(app, "Methoden"))["methods"]
+    names = [m["name"] for m in methods]
+    assert "MyMemory" in names and "DeepL" in names and any("Qwen3" in n for n in names) and any("TranslateGemma" in n for n in names)
+    assert [m["provider"] for m in methods if m["isDefault"]] == ["local"]
+    assert next(m for m in methods if m["provider"] == "deepl")["available"] is False  # no key saved
+    assert "key" in next(m for m in methods if m["provider"] == "deepl")["reason"]
+    assert all(m["available"] for m in methods if m["provider"] != "deepl")  # the test engine counts models as downloaded
+
+
+def test_another_method_can_be_used_for_one_run_without_changing_the_default(app, client):
+    book_id = _book(app, "Andere")
+    job = _make(client, book_id, scope="page", page=2, provider="local", model="translategemma-4b-mlx")
+    assert job["state"] == "done"
+    assert _get(client, book_id)["sentences"][3]["translation"].startswith("[fake translategemma")
+    assert client.get("/ocarina/api/translate/settings").json["localModel"]["id"] == "qwen3-4b-instruct-mlx"  # the default stays
+
+
+def test_a_method_that_cannot_be_used_is_refused_with_the_reason(app, client):
+    book_id = _book(app, "Geen sleutel")
+    r = client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "deepl"})
+    assert r.status_code == 409 and "key" in r.json["error"]
+    assert client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "nope"}).status_code == 400
+    assert client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "local", "model": "x"}).status_code == 400

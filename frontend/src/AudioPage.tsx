@@ -17,6 +17,8 @@ import {
 } from './api'
 import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
 import { AudioVersions } from './AudioVersions'
+import { useWindowTitle } from './desktop'
+import { useNowPlaying } from './nowPlaying'
 import { usePlaybackKeys } from './playbackKeys'
 
 const modelName = (o: AudioOptions, id: string) => o.models.find((m) => m.id === id)?.name ?? id
@@ -92,6 +94,8 @@ export function AudioPage({ bookId }: { bookId: number }) {
     [book],
   )
   usePlaybackKeys(audio, starts)
+  useWindowTitle(book ? `${book.title} · Audio` : 'Ocarina')
+  useNowPlaying(audio, book?.hasAudio ? { title: book.title, artist: book.language, starts } : null)
 
   const load = useCallback(() => {
     getSentences(bookId).then(

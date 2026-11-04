@@ -52,6 +52,11 @@ class Bridge:
         picked = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
         return picked[0] if picked else None
 
+    def set_title(self, title):
+        "Show a title in the window's title bar (the book being read), or the app's name when there is none."
+        if webview.windows:
+            webview.windows[0].set_title(str(title or "Ocarina")[:200])
+
 
 def main():
     app = create_app(_write_config(), output_func=lambda s: None)
