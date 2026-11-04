@@ -1,5 +1,12 @@
 // Small formatters for sizes, speeds and times shown while models download.
-export const formatBytes = (n: number): string => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.round(n / 1e6)} MB`)
+// 2.3 GB, 15 MB, 3.4 MB, 380 KB: enough digits to tell sizes apart, never more.
+export function formatBytes(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)} GB`
+  if (n >= 1e7) return `${Math.round(n / 1e6)} MB`
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} MB`
+  if (n >= 1e3) return `${Math.round(n / 1e3)} KB`
+  return n > 0 ? '1 KB' : '0 KB'
+}
 
 export const formatSpeed = (bytesPerSecond: number): string => `${(bytesPerSecond / 1e6).toFixed(bytesPerSecond >= 1e7 ? 0 : 1)} MB/s`
 

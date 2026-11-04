@@ -170,10 +170,48 @@ def download(model, on_progress=None):
     cb(state["total"], state["total"])
 
 
+def blob_links(folder):
+    "Where the files of a cached repository folder really are: paths in the shared blob store that its blobs link to."
+    found = set()
+    blobs = os.path.join(folder, "blobs")
+    try:
+        names = os.listdir(blobs)
+    except OSError:
+        return found
+    for name in names:
+        path = os.path.join(blobs, name)
+        if os.path.islink(path):
+            found.add(os.path.realpath(path))
+    return found
+
+
+def referenced_blobs():
+    "Every file of the shared blob store that some cached repository links to."
+    found = set()
+    try:
+        with os.scandir(constants.HF_HUB_CACHE) as entries:
+            for entry in entries:
+                if entry.is_dir(follow_symlinks=False):
+                    found |= blob_links(entry.path)
+    except OSError:
+        pass
+    return found
+
+
 def delete(model):
-    "Remove the model's files from the cache (blobs shared with nothing else go too)."
+    """
+    Remove the model's files from the cache. Large files live in a store shared by the whole cache, and the model's
+    folder only links to them, so those are deleted too unless another repository still uses them.
+    """
+    freed = set()
     for repo in model["repositories"]:
+        freed |= blob_links(_repo_dir(repo["id"]))
         shutil.rmtree(_repo_dir(repo["id"]), ignore_errors=True)
+    for path in freed - referenced_blobs():
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 class FolderError(Exception):

@@ -13,6 +13,7 @@ import { LanguageEditor, LanguageList } from './Languages'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
 import { Settings } from './Settings'
+import { Storage } from './Storage'
 import { Shortcuts } from './Shortcuts'
 import { Tags } from './Tags'
 import { Translation } from './Translation'
@@ -41,6 +42,7 @@ function useRoute() {
     translation: hash === '#/translation',
     appearance: hash === '#/appearance',
     backups: hash === '#/backups',
+    storage: hash === '#/storage',
     languages: hash === '#/languages',
     languageId: hash === '#/languages/new' ? 'new' : (hash.match(/^#\/languages\/(\d+)$/)?.[1] ?? null),
   }
@@ -59,10 +61,10 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, languages, languageId } = useRoute()
+  const { bookId, readPage, settings, newBook, terms, stats, tags, shortcuts, translation, appearance, backups, storage, languages, languageId } = useRoute()
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
   const reading = bookId !== null && readPage !== null
-  const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || languages || languageId)
+  const onHome = bookId === null && !(settings || newBook || terms || stats || tags || shortcuts || translation || appearance || backups || storage || languages || languageId)
   const medium = terms || onHome
   const [ready, setReady] = useState(false)
   useEffect(() => {
@@ -119,6 +121,8 @@ export default function App() {
           <Stats />
         ) : backups ? (
           <Backups />
+        ) : storage ? (
+          <Storage />
         ) : languages ? (
           <LanguageList />
         ) : languageId ? (

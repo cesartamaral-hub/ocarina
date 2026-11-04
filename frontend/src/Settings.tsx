@@ -17,6 +17,8 @@ import {
   type Job,
   type Model,
   type Voice,
+  getStorage,
+  type Storage as StorageInfo,
 } from './api'
 import { AddModel } from './AddModel'
 import { CheckResult } from './CheckResult'
@@ -25,6 +27,12 @@ import { notify } from './notices'
 import { TransferProgress } from './TransferProgress'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 import { Voices } from './Voices'
+
+// " · 5.8 GB" after a section title, when something of that kind is downloaded.
+const size = (storage: StorageInfo | null, kind: StorageInfo['groups'][number]['kind']) => {
+  const bytes = storage?.groups.find((g) => g.kind === kind)?.bytes ?? 0
+  return bytes > 0 ? ` · ${formatBytes(bytes)}` : ''
+}
 
 export function Settings() {
   const [models, setModels] = useState<Model[] | null>(null)
@@ -38,9 +46,12 @@ export function Settings() {
     loadVoices()
   }, [loadVoices])
 
+  const [storage, setStorage] = useState<StorageInfo | null>(null)
+
   const load = useCallback(
-    () =>
-      getModels().then(
+    () => {
+      getStorage().then(setStorage, () => undefined) // the sizes change whenever a model is downloaded or deleted
+      return getModels().then(
         (list) => {
           setModels(list)
           // A download started earlier (or in another window) keeps showing its progress.
@@ -48,7 +59,8 @@ export function Settings() {
           if (active?.downloadJob) getJob(active.downloadJob).then((j) => setJob((cur) => cur ?? j))
         },
         (e) => setError(e.message),
-      ),
+      )
+    },
     [],
   )
   useEffect(() => {
@@ -209,29 +221,39 @@ export function Settings() {
       <h1>Settings</h1>
       <p className="settings-links">
         <a href="#/appearance">Appearance</a> · <a href="#/shortcuts">Keyboard shortcuts</a> · <a href="#/tags">Tags</a> ·{' '}
-        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a>
+        <a href="#/languages">Languages</a> · <a href="#/translation">Translation</a> · <a href="#/backups">Backups</a> · <a href="#/storage">Storage</a>
       </p>
-      <h2>Voice models</h2>
+      {storage && storage.modelsBytes > 0 && (
+        <p className="storage-summary">
+          Models on this Mac use <strong>{formatBytes(storage.modelsBytes)}</strong>
+          <span className="muted">
+            {' '}
+            · {storage.groups.filter((g) => g.bytes > 0).map((g) => `${g.label.replace(' models', '').replace(' model', '')} ${formatBytes(g.bytes)}`).join(' · ')}
+          </span>{' '}
+          · <a href="#/storage">See Storage</a>
+        </p>
+      )}
+      <h2>Voice models{size(storage, 'speech')}</h2>
       <p className="muted">
         Models are downloaded once and run on this Mac. Audio generation needs one installed.
       </p>
       {error && <p className="error">{error}</p>}
       <ul className="models">{models.filter((m) => (m.kind ?? 'speech') === 'speech').map(renderModel)}</ul>
 
-      <h2>Translation models</h2>
+      <h2>Translation models{size(storage, 'text')}</h2>
       <p className="muted">
         Translate sentences on this Mac, offline and without limits. Download one, then choose it under Translation, where you can also compare them
         side by side. A model runs only while you translate, and is unloaded after a few minutes.
       </p>
       <ul className="models">{models.filter((m) => m.kind === 'text').map(renderModel)}</ul>
 
-      <AddModel onAdded={load} />
-
-      <h2>Audio sync model</h2>
+      <h2>Audio sync model{size(storage, 'aligner')}</h2>
       <p className="muted">
         Syncs a recording of your own with the text, so sentences light up as it plays. Used by “Sync with the text” on a book's page. It runs on this Mac.
       </p>
       <ul className="models">{models.filter((m) => m.kind === 'aligner').map(renderModel)}</ul>
+
+      <AddModel onAdded={load} />
 
       <h2>Voice per language</h2>
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>

@@ -35,7 +35,7 @@ export function parentRoute(hash: string): string | null {
   const read = hash.match(/^#\/book\/(\d+)\/read\/\d+/)
   if (read) return `#/book/${read[1]}`
   if (/^#\/book\/\d+/.test(hash)) return '#/'
-  if (['#/translation', '#/appearance', '#/shortcuts', '#/backups', '#/tags'].includes(hash)) return '#/settings'
+  if (['#/translation', '#/appearance', '#/shortcuts', '#/backups', '#/tags', '#/storage'].includes(hash)) return '#/settings'
   if (/^#\/languages\/(new|\d+)$/.test(hash)) return '#/languages'
   if (hash === '' || hash === '#' || hash === '#/') return null
   return '#/'

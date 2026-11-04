@@ -9,6 +9,7 @@ describe('parentRoute', () => {
   it('goes from settings pages to settings, and from settings to the list', () => {
     expect(parentRoute('#/appearance')).toBe('#/settings')
     expect(parentRoute('#/translation')).toBe('#/settings')
+    expect(parentRoute('#/storage')).toBe('#/settings')
     expect(parentRoute('#/settings')).toBe('#/')
   })
   it('goes from a language to the languages list', () => {

@@ -37,6 +37,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [error, setError] = useState('')
   const [help, setHelp] = useState(false)
   const [selected, setSelected] = useState<Target | null>(null)
+  const scroller = useRef<HTMLDivElement>(null)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   // Words picked with Cmd-click, by lowercase text (a word you never opened has no term yet).
   const [multi, setMulti] = useState<Set<string>>(new Set())
@@ -69,7 +70,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         if (shownPage.current !== pageNumber) {
           setSelected(null)
           setMulti(new Set())
-          window.scrollTo(0, 0)
+          scroller.current?.scrollTo(0, 0)
         }
         shownPage.current = pageNumber
       },
@@ -315,6 +316,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 onFollowChange={setFollow}
               />
             )}
+            <div className="reader-scroll" ref={scroller}>
             <ReaderToolbar
               bookId={bookId}
               title={page.title}
@@ -385,6 +387,26 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
           </>
               )}
             </div>
+            </div>
+            <div className="reader-foot">
+              {multi.size > 0 && (
+                <div className="bulk-bar" role="region" aria-label="Words picked with ⌘-click">
+                  <strong>
+                    {multi.size} word{multi.size === 1 ? '' : 's'} picked
+                  </strong>
+                  <span className="bulk-statuses">
+                    {STATUS_BUTTONS.map((b) => (
+                      <button key={b.status} title={`${b.title} (${statusKeyLabel(b.status)})`} className={`st s${b.status}`} onClick={() => applyMulti(b.status)}>
+                        {b.label}
+                      </button>
+                    ))}
+                  </span>
+                  <span className="muted bulk-hint">Press 1–5 to set them all · Esc to let go</span>
+                  <button className="secondary" onClick={() => setMulti(new Set())}>
+                    Clear
+                  </button>
+                </div>
+              )}
             {editing === null && (
               <nav className="page-bar" aria-label="Pages">
                 <button className="secondary" disabled={page.page <= 1} onClick={() => (window.location.hash = `#/book/${bookId}/read/${page.page - 1}`)}>
@@ -401,6 +423,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 </span>
               </nav>
             )}
+            </div>
           </>
         }
         side={
@@ -440,22 +463,6 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         )
         }
       />
-
-      {multi.size > 0 && (
-        <div className="bulk-bar">
-          <span>
-            {multi.size} word{multi.size === 1 ? '' : 's'} selected
-          </span>
-          {STATUS_BUTTONS.map((b) => (
-            <button key={b.status} title={`${b.title} (${statusKeyLabel(b.status)})`} className={`st s${b.status}`} onClick={() => applyMulti(b.status)}>
-              {b.label}
-            </button>
-          ))}
-          <button className="secondary" onClick={() => setMulti(new Set())}>
-            Clear
-          </button>
-        </div>
-      )}
 
       {hoverCard.card}
     </>
