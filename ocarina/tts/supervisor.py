@@ -11,6 +11,15 @@ import sys
 import threading
 
 
+TOOL_DIRS = ("/opt/homebrew/bin", "/usr/local/bin")  # where Homebrew puts ffmpeg; an app opened from the Dock does not have them on its PATH
+
+
+def path_with_tools(path=None):
+    "PATH with the folders of Homebrew's tools added at the end."
+    parts = [p for p in (path if path is not None else os.environ.get("PATH", "")).split(os.pathsep) if p]
+    return os.pathsep.join(parts + [d for d in TOOL_DIRS if d not in parts])
+
+
 def worker_command_and_env():
     """
     Command and environment that start a worker process.
@@ -26,6 +35,7 @@ def worker_command_and_env():
         "PYTORCH_ENABLE_MPS_FALLBACK": "1",
         "PYTHONUTF8": "1",
         "HF_HUB_OFFLINE": "1",
+        "PATH": path_with_tools(),
     }
     if getattr(sys, "frozen", False):
         lib = os.path.join(os.environ["RESOURCEPATH"], "lib")

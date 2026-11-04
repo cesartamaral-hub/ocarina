@@ -71,3 +71,11 @@ def test_fetch_errors(monkeypatch):
 def test_save_text_file(tmp_path):
     path = importer.save_text_file(importer.Imported("A: b", "text", "u"), str(tmp_path))
     assert path.endswith("A b.txt") and open(path, encoding="utf-8").read() == "text\n"
+
+
+def test_worker_path_gets_the_homebrew_folders():
+    from ocarina.tts.supervisor import path_with_tools
+
+    got = path_with_tools("/usr/bin:/bin").split(":")
+    assert got[:2] == ["/usr/bin", "/bin"] and "/opt/homebrew/bin" in got
+    assert path_with_tools("/opt/homebrew/bin:/usr/bin").split(":").count("/opt/homebrew/bin") == 1

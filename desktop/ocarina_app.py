@@ -14,6 +14,9 @@ from waitress import create_server
 
 from lute.app_factory import create_app
 from ocarina.startup import prepare_library
+from ocarina.tts.supervisor import path_with_tools
+
+os.environ["PATH"] = path_with_tools()  # ffmpeg from Homebrew: an app opened from the Dock has a bare PATH
 
 APP_DIR = os.environ.get("OCARINA_APP_DIR") or os.path.expanduser(
     "~/Library/Application Support/Ocarina"
