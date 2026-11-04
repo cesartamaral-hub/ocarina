@@ -2,12 +2,14 @@ import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download' | 'preview'
+  kind: 'audio' | 'download' | 'preview' | 'check'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number
   queuePosition?: number
   title?: string
+  phase?: string // 'testing' while a model is being tried after its download
+  detail?: string // the original error text, when the error above is a plain-language explanation
   book_id?: number
   model_id?: string
   preview?: string
@@ -15,6 +17,16 @@ export type Job = {
 }
 
 export const isActive = (job: Job | null) => job?.state === 'queued' || job?.state === 'running'
+
+export type ModelCheck = {
+  ok: boolean
+  error?: string
+  detail?: string
+  secondsPerSecondOfAudio?: number | null
+  secondsPerSentence?: number
+  loadSeconds?: number
+  at: number
+}
 
 export type Model = {
   id: string
@@ -25,9 +37,10 @@ export type Model = {
   installed: boolean
   kind?: 'speech' | 'text'
   custom?: boolean
+  check?: ModelCheck | null
   sizeBytes: number
   downloadJob: string | null
-  benchmark?: { secondsPerSecondOfAudio: number; machine: string }
+  benchmark?: { secondsPerSecondOfAudio?: number; secondsPerSentence?: number; machine: string }
 }
 
 export const getModels = () => fetch(`${API}/tts/models`).then((r) => json<Model[]>(r))
@@ -69,7 +82,7 @@ export type AudioOptions = {
   language: string
   defaultModel: string
   defaultVoice: string
-  models: { id: string; name: string; installed: boolean; custom: boolean }[]
+  models: { id: string; name: string; installed: boolean; custom: boolean; problem?: string | null }[]
   voices: { id: string; name: string; builtin: boolean }[]
 }
 
@@ -129,10 +142,23 @@ export const previewVoice = (voice: string, language: string) =>
 
 export const previewUrl = (name: string) => `${API}/tts/previews/${name}`
 
-export type HubLookup = { repo: string; revision: string; license: string; files: number; totalBytes: number }
+export type HubLookup = {
+  repo: string
+  revision: string
+  license: string
+  files: number
+  totalBytes: number
+  modelType: string | null
+  support: { known: boolean | null; module: string | null; problem: string | null }
+  memoryGb: number
+  converted: boolean
+  notes: string[]
+}
 
 export const getEngines = () =>
   fetch(`${API}/tts/engines`).then((r) => json<{ engines: { id: string; name: string }[]; languages: string[] }>(r))
+
+export const checkModel = (id: string) => send<Job>('POST', `${API}/tts/models/${id}/check`, {})
 
 export const lookupModel = (repo: string) => send<HubLookup>('POST', `${API}/tts/models/lookup`, { repo })
 

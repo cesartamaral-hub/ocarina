@@ -113,3 +113,58 @@ def test_download_progress_ignores_the_reconstructing_bar():
     files = progress(total=3, unit="it", desc="Fetching 3 files", disable=False)
     files.update(1)
     assert seen == [40, 70]
+
+
+def test_lookup_describes_the_model_for_the_form(client, hub, monkeypatch):
+    "The look-up reports the model type, engine support, memory and notes; the helper process and config are faked."
+    monkeypatch.setattr(model_files, "_fetch_config", lambda repo, rev: {"model_type": "higgs_multimodal_qwen3"})
+    monkeypatch.setattr(model_files, "_inspect", lambda t, r: {"known": True, "module": "higgs_audio_v3", "problem": None})
+    hub["info"] = _info(files={"model.safetensors": 9_300_000_000, "config.json": 50})
+    r = client.post(f"{MODELS}/lookup", json={"repo": "bosonai/higgs-tts-3-4b"}).json
+    assert r["modelType"] == "higgs_multimodal_qwen3" and r["support"]["known"] is True and r["converted"] is False
+    assert r["memoryGb"] == 10.7
+    notes = " ".join(r["notes"])
+    assert "original release" in notes and "10.7 GB" in notes and "tries it once" in notes
+
+
+def test_lookup_warns_when_the_engine_does_not_know_the_model(client, hub, monkeypatch):
+    "An unrecognised type is said plainly, and an MLX conversion is not called an original release."
+    monkeypatch.setattr(model_files, "_fetch_config", lambda repo, rev: {"model_type": "mystery"})
+    monkeypatch.setattr(model_files, "_inspect", lambda t, r: {"known": False, "module": None, "problem": "ValueError: not supported"})
+    r = client.post(f"{MODELS}/lookup", json={"repo": "mlx-community/mystery-4bit"}).json
+    assert r["converted"] is True and any("does not recognise" in n for n in r["notes"])
+    assert not any("original release" in n for n in r["notes"])
+
+
+def test_lookup_still_works_when_the_helper_fails(client, hub, monkeypatch):
+    "A broken helper or unreadable config only means 'could not check'; the look-up itself succeeds."
+    monkeypatch.setattr(model_files, "_fetch_config", lambda repo, rev: {})
+    monkeypatch.setattr(model_files.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(OSError("no python")))
+    r = client.post(f"{MODELS}/lookup", json={"repo": "someone/some-model"})
+    assert r.status_code == 200 and r.json["support"]["known"] is None and r.json["modelType"] is None
+
+
+def test_inspect_only_says_not_supported_when_mlx_audio_does(monkeypatch):
+    "A failure of the check itself is 'cannot tell' (None), never 'not recognised'."
+    import sys, types  # pylint: disable=import-outside-toplevel
+    from ocarina.tts import inspect_model  # pylint: disable=import-outside-toplevel
+
+    def fake_modules(raises):
+        utils = types.ModuleType("mlx_audio.tts.utils")
+        utils.get_model_and_args = lambda t, parts: (_ for _ in ()).throw(raises)
+        base = types.ModuleType("mlx_audio.utils")
+        base.get_model_name_parts = lambda repo: [repo]
+        monkeypatch.setitem(sys.modules, "mlx_audio", types.ModuleType("mlx_audio"))
+        monkeypatch.setitem(sys.modules, "mlx_audio.utils", base)
+        monkeypatch.setitem(sys.modules, "mlx_audio.tts", types.ModuleType("mlx_audio.tts"))
+        monkeypatch.setitem(sys.modules, "mlx_audio.tts.utils", utils)
+
+    fake_modules(ValueError("Model type gpt2 not supported for tts."))
+    assert inspect_model.inspect("gpt2", "a/b")["known"] is False
+    fake_modules(OSError("outgoing traffic has been disabled"))
+    assert inspect_model.inspect("llama", "a/b")["known"] is None
+    fake_modules(ValueError("something else entirely"))
+    assert inspect_model.inspect("x", "a/b")["known"] is None
+    fake_modules(ModuleNotFoundError("No module named 'torch'", name="torch"))
+    found = inspect_model.inspect("y", "a/b")
+    assert found["known"] is True and "torch" in found["problem"]

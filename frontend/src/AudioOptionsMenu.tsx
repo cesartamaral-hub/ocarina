@@ -24,8 +24,8 @@ export function AudioOptionsMenu({
 
   const modelId = choice.model || options.defaultModel
   const voiceId = choice.voice || options.defaultVoice
-  const installed = options.models.filter((m) => m.installed)
-  const missing = options.models.filter((m) => !m.installed)
+  const installed = options.models.filter((m) => m.installed && !m.problem)
+  const missing = options.models.filter((m) => !m.installed || m.problem)
   const items: Item[] = [
     ...installed.map((m): Item => ({ group: 'model', id: m.id, label: m.name, note: m.id === options.defaultModel ? 'language default' : undefined })),
     ...options.voices.map((v): Item => ({ group: 'voice', id: v.id, label: v.name, note: v.id === options.defaultVoice ? 'language default' : undefined })),
@@ -129,7 +129,7 @@ export function AudioOptionsMenu({
                 <span className="menu-check" aria-hidden="true" />
                 <span className="menu-label">
                   {m.name}
-                  <small className="muted">not downloaded</small>
+                  <small className="muted">{m.installed ? `doesn't work here: ${m.problem}` : 'not downloaded'}</small>
                 </span>
               </div>
             ))}

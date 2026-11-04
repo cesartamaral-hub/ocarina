@@ -15,10 +15,14 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 
+import requests
 from huggingface_hub import HfApi, constants, snapshot_download
 from tqdm.auto import tqdm
+
+from ocarina.tts.supervisor import worker_command_and_env
 
 CATALOG = os.path.join(os.path.dirname(__file__), "catalog.json")
 
@@ -78,20 +82,22 @@ def speech_models():
     return [m for m in load_catalog() if kind_of(m) == "speech"]
 
 
-def choose_model(requested_id=None, preferred_id=None):
+def choose_model(requested_id=None, preferred_id=None, failing=()):
     """
     The model to voice a book with: the one asked for, else the user's choice
     for the book's language, else the first installed one, else the first in the catalog.
-    Only speech models count; None if the one asked for is unknown or not a speech model.
+    Only speech models count; None if the one asked for is unknown or not a speech model. Models in failing
+    (their last check failed) are not chosen by themselves.
     """
     if requested_id:
         asked = find_model(requested_id)
         return asked if asked and kind_of(asked) == "speech" else None  # the caller reports it
     preferred = find_model(preferred_id) if preferred_id else None
-    if preferred and kind_of(preferred) == "speech":
+    if preferred and kind_of(preferred) == "speech" and preferred["id"] not in failing:
         return preferred
     catalog = speech_models()
-    return next((m for m in catalog if is_installed(m)), catalog[0])
+    working = [m for m in catalog if m["id"] not in failing]
+    return next((m for m in working if is_installed(m)), (working or catalog)[0])
 
 
 def total_bytes(model):
@@ -256,6 +262,53 @@ def lookup_hub_repo(repo_id):
         "files": files,
         "totalBytes": sum(files.values()),
     }
+
+
+def _fetch_config(repo_id, revision):
+    "The model's config.json (small), or {} if it can't be read."
+    try:
+        response = requests.get(f"https://huggingface.co/{repo_id}/raw/{revision}/config.json", timeout=8)
+        config = response.json() if response.status_code == 200 else {}
+        return config if isinstance(config, dict) else {}
+    except (requests.exceptions.RequestException, ValueError):
+        return {}
+
+
+def _inspect(model_type, repo_id):
+    "Ask a helper process whether mlx-audio has code for this model type (importing it is heavy, so not here)."
+    command, env = worker_command_and_env()
+    try:
+        done = subprocess.run(
+            command[:-1] + ["ocarina.tts.inspect_model", model_type or "", repo_id],
+            capture_output=True, text=True, timeout=90, env={**env, "HF_HUB_OFFLINE": "1"}, check=False,
+        )
+        return json.loads(done.stdout.strip().splitlines()[-1])
+    except (subprocess.SubprocessError, OSError, ValueError, IndexError):
+        return {"known": None, "module": None, "problem": "Could not check this automatically."}
+
+
+def describe(found):
+    """
+    What a looked-up repository is, for the Add-a-model form: its model type, whether Ocarina's speech engine has
+    code for it, roughly how much memory it needs, and whether it is an MLX conversion. Adds a plain list of notes.
+    """
+    config = _fetch_config(found["repo"], found["revision"])
+    model_type = config.get("model_type") if isinstance(config.get("model_type"), str) else None
+    support = _inspect(model_type, found["repo"])
+    weights = sum(size for name, size in found["files"].items() if name.endswith(".safetensors"))
+    memory_gb = round(weights * 1.15 / 1e9, 1)
+    converted = found["repo"].split("/")[0].lower() == "mlx-community" or "mlx" in found["repo"].lower()
+    notes = []
+    if support["known"] is False:
+        notes.append("Ocarina's speech engine does not recognise this kind of model, so it will probably not load.")
+    elif support.get("problem") and support["known"]:
+        notes.append(f"Ocarina has code for this kind of model, but it {support['problem']}.")
+    if not converted:
+        notes.append("This looks like the original release, not an MLX conversion. Those can be larger and slower; an “mlx-community” version is safer when there is one.")
+    if memory_gb > 8:
+        notes.append(f"It needs about {memory_gb} GB of memory while it runs.")
+    notes.append("After it is downloaded, Ocarina tries it once and tells you if it works here.")
+    return {**found, "modelType": model_type, "support": support, "memoryGb": memory_gb, "converted": converted, "notes": notes}
 
 
 def add_custom_model(repo_id, engine, languages, name=None):

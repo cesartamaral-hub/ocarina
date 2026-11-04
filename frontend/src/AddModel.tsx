@@ -80,7 +80,17 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
           <>
             <p className="muted">
               {found.files} files · {size(found.totalBytes)} · license: {found.license}
+              {found.modelType && <> · type: {found.modelType}</>}
+              {found.support.known === true && <> · recognised by Ocarina's speech engine ✓</>}
+              {found.support.known === false && <> · not recognised ✗</>}
             </p>
+            <ul className="lookup-notes">
+              {found.notes.map((n, i) => (
+                <li key={i} className="muted">
+                  {n}
+                </li>
+              ))}
+            </ul>
             <label>
               Name (optional)
               <input value={name} onChange={(e) => setName(e.target.value)} />

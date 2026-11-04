@@ -39,3 +39,14 @@ Chatterbox Multilingual, about 25 words of Dutch, Polish and French, run after a
   "szkolić", *af* in *zich afvragen*, *entra* as passé composé) and "pick the right dictionary sense" (it chose
   "to ice (cover with icing)" for *une glace*). Wrong grammar notes would mislead a learner; definitions come from Wiktionary.
 - Setup for the packaged app: `pip install mlx-lm` in `.venv` and `.venv-build`; `mlx_lm` is in `desktop/setup.py`.
+
+## Higgs TTS 3-4b (added by the user, 2026-11-04, M1 Max)
+
+- `bosonai/higgs-tts-3-4b`: the original PyTorch release, 9.3 GB bf16 (license "other"), model type
+  `higgs_multimodal_qwen3`, which mlx-audio handles with its `higgs_audio_v3` code. Speaks Polish.
+- It first failed with "No module named 'torch'": the audio codec lives in the same bfloat16 checkpoint, mlx-audio reads
+  it with safetensors' MLX reader (which goes through numpy, and numpy has no bfloat16; true for safetensors 0.8.0, the
+  newest), and falls back to PyTorch. `ocarina/tts/mlx_compat.py` makes the worker read those tensors with `mx.load`
+  instead, so PyTorch is not needed.
+- Speed: loads in about 5 s once cached; 0.85 s of compute per second of audio (Chatterbox is 0.54). A 55 s Polish book took
+  57 s. Quality by ear: not judged by me.

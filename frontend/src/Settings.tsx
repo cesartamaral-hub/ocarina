@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   cancelJob,
   canPickFolder,
+  checkModel,
   deleteModel,
   downloadModel,
   getJob,
@@ -18,6 +19,7 @@ import {
   type Voice,
 } from './api'
 import { AddModel } from './AddModel'
+import { CheckResult } from './CheckResult'
 import { formatBytes } from './format'
 import { notify } from './notices'
 import { TransferProgress } from './TransferProgress'
@@ -71,7 +73,7 @@ export function Settings() {
       setJob(j)
       if (!isActive(j)) {
         load()
-        if (j.state === 'done') notify(`${j.title ?? 'The model'} is ready to use`)
+        if (j.state === 'done' && j.kind === 'download') notify(`${j.title ?? 'The model'} is downloaded`)
       }
     }, 700)
     return () => clearInterval(timer)
@@ -103,6 +105,16 @@ export function Settings() {
   function choose(key: string, value: string) {
     setPref(key, value)
     setChosen((cur) => ({ ...cur, [key]: value }))
+  }
+
+  async function test(m: Model) {
+    setError('')
+    setSpeed(0)
+    try {
+      setJob(await checkModel(m.id))
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
 
   async function forget(m: Model) {
@@ -143,8 +155,10 @@ export function Settings() {
                   <div className="muted">{m.description}</div>
                   <div className="muted">
                     {m.languages.join(', ')} · {m.license.toUpperCase()} · {formatBytes(m.sizeBytes)}
-                    {m.benchmark && ` · about ${m.benchmark.secondsPerSecondOfAudio}s per second of audio`}
+                    {m.benchmark?.secondsPerSecondOfAudio != null && ` · about ${m.benchmark.secondsPerSecondOfAudio}s per second of audio`}
+                    {m.benchmark?.secondsPerSentence != null && ` · about ${m.benchmark.secondsPerSentence}s per sentence`}
                   </div>
+                  {m.installed && <CheckResult model={m} />}
                 </div>
                 <div className="actions">
                   {m.custom && (
@@ -155,6 +169,9 @@ export function Settings() {
                   {m.installed ? (
                     <>
                       <span className="muted">Installed</span>
+                      <button className="secondary" disabled={busy} onClick={() => test(m)}>
+                        {m.check ? 'Test again' : 'Test'}
+                      </button>
                       <button className="secondary" disabled={busy} onClick={() => remove(m)}>
                         Delete
                       </button>
@@ -214,7 +231,7 @@ export function Settings() {
       <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
       <ul className="models">
         {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
-          const options = models.filter((m) => m.kind !== 'text' && m.installed && m.languages.includes(code))
+          const options = models.filter((m) => m.kind !== 'text' && m.installed && !(m.check && !m.check.ok) && m.languages.includes(code))
           const value = chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
           const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (

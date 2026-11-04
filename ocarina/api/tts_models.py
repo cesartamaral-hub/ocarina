@@ -9,18 +9,23 @@ JSON API for the voice models.
     POST   /ocarina/api/tts/models/lookup         look up a Hugging Face repository (needs the internet)
     POST   /ocarina/api/tts/models/custom         add a Hugging Face model to the list
     DELETE /ocarina/api/tts/models/<id>/entry     take a model you added out of the list (and delete its files)
+    POST   /ocarina/api/tts/models/<id>/check     try an installed model once (a job); the result is in the model list
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
+from ocarina import model_check
 from ocarina.api import jobs
 from ocarina.tts import models as model_files
 
 bp = Blueprint("ocarina_tts_models", __name__, url_prefix="/ocarina/api")
 
 
-def _run_download(job, check, model, folder=None):
-    "Queued job: download a model's files, or copy them from a folder (cancelling keeps what is there)."
+def _run_download(job, check, model, folder=None, datapath=None, engine=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    """
+    Queued job: download a model's files, or copy them from a folder (cancelling keeps what is there). A model you
+    added yourself is then tried once, so you learn at once whether it works here (see ocarina/model_check.py).
+    """
 
     def progress(done, total):
         check()
@@ -31,17 +36,29 @@ def _run_download(job, check, model, folder=None):
         model_files.import_from_folder(model, folder, progress)
     else:
         model_files.download(model, progress)
+    if model.get("custom") and datapath:
+        job["phase"] = "testing"
+        model_check.check_model(datapath, model, engine)
+
+
+def _run_check(job, check, model, datapath, engine):
+    "Queued job: try an installed model once and store how it went."
+    check()
+    job["phase"] = "testing"
+    model_check.check_model(datapath, model, engine)
 
 
 @bp.route("/tts/models", methods=["GET"])
 def models():
     "The model catalog, with whether each model is installed and its download size."
     active = jobs.active(kind="download")
+    datapath = current_app.env_config.datapath
     return jsonify(
         [
             {
                 **m,
                 "kind": model_files.kind_of(m),
+                "check": model_check.result_for(datapath, m),
                 "installed": model_files.is_installed(m),
                 "sizeBytes": model_files.total_bytes(m),
                 "downloadJob": next((j["id"] for j in active if j["model_id"] == m["id"]), None),
@@ -61,9 +78,11 @@ def download_model(model_id):
         return jsonify({"error": "Model is already installed"}), 409
     if jobs.active(kind="download", model_id=model_id):
         return jsonify({"error": "This model is already being installed"}), 409
+    datapath = current_app.env_config.datapath
+    engine = current_app.config.get("OCARINA_TTS_ENGINE")  # the tests use a fake engine; None otherwise
     job = jobs.submit(
         "download",
-        lambda job, check: _run_download(job, check, model),
+        lambda job, check: _run_download(job, check, model, None, datapath, engine),
         model_id=model_id,
         title=model["name"],
         total=model_files.total_bytes(model),
@@ -86,9 +105,11 @@ def import_model(model_id):
         return jsonify({"error": str(e), "code": "bad_folder"}), 400
     if jobs.active(kind="download", model_id=model_id):
         return jsonify({"error": "This model is already being installed"}), 409
+    datapath = current_app.env_config.datapath
+    engine = current_app.config.get("OCARINA_TTS_ENGINE")  # the tests use a fake engine; None otherwise
     job = jobs.submit(
         "download",
-        lambda job, check: _run_download(job, check, model, folder),
+        lambda job, check: _run_download(job, check, model, folder, datapath, engine),
         model_id=model_id,
         title=model["name"],
         total=model_files.total_bytes(model),
@@ -111,7 +132,7 @@ def engines():
 def lookup_model():
     "What a Hugging Face repository holds: revision, license and size."
     try:
-        found = model_files.lookup_hub_repo((request.get_json(silent=True) or {}).get("repo", "").strip())
+        found = model_files.describe(model_files.lookup_hub_repo((request.get_json(silent=True) or {}).get("repo", "").strip()))
     except model_files.HubError as e:
         return jsonify({"error": str(e)}), 400
     return jsonify({**found, "files": len(found["files"])})
@@ -140,7 +161,29 @@ def remove_model_entry(model_id):
         return jsonify({"error": "Wait for the running jobs to finish, or cancel them"}), 409
     model_files.delete(model)
     model_files.remove_custom_model(model_id)
+    model_check.forget(current_app.env_config.datapath, model_id)
     return jsonify({"removed": model_id})
+
+
+@bp.route("/tts/models/<model_id>/check", methods=["POST"])
+def check_model(model_id):
+    "Try an installed model once (loads it, uses it) and store the result."
+    model = model_files.find_model(model_id)
+    if model is None:
+        return jsonify({"error": "Unknown model"}), 404
+    engine = current_app.config.get("OCARINA_TTS_ENGINE")
+    if engine is None and not model_files.is_installed(model):
+        return jsonify({"error": "Download the model first"}), 409
+    if jobs.active(kind="check", model_id=model_id):
+        return jsonify({"error": "This model is already being tested"}), 409
+    datapath = current_app.env_config.datapath
+    job = jobs.submit(
+        "check",
+        lambda job, check: _run_check(job, check, model, datapath, engine),
+        model_id=model_id,
+        title=model["name"],
+    )
+    return jsonify(job), 202
 
 
 @bp.route("/tts/models/<model_id>", methods=["DELETE"])
@@ -152,4 +195,5 @@ def delete_model(model_id):
     if jobs.active():
         return jsonify({"error": "Wait for the running jobs to finish, or cancel them"}), 409
     model_files.delete(model)
+    model_check.forget(current_app.env_config.datapath, model_id)
     return jsonify({"ok": True})

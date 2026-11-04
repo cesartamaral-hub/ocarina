@@ -15,6 +15,8 @@ import uuid
 
 from flask import Blueprint, jsonify
 
+from ocarina.tts.errors import explain
+
 bp = Blueprint("ocarina_jobs", __name__, url_prefix="/ocarina/api")
 
 MAX_KEPT = 50  # finished jobs to remember; older ones are dropped
@@ -67,11 +69,15 @@ def _dispatch():
         except Cancelled:
             outcome = ("cancelled", None)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            outcome = ("error", f"{type(e).__name__}: {e}")
+            technical = f"{type(e).__name__}: {e}"
+            friendly = explain(technical)
+            outcome = ("error", friendly or technical, technical if friendly else None)
         with _cond:
             job["state"] = outcome[0]
             if outcome[1]:
                 job["error"] = outcome[1]
+            if len(outcome) > 2 and outcome[2]:
+                job["detail"] = outcome[2]  # the original message, for those who want it
             _stop.pop(job["id"], None)
 
 

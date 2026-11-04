@@ -152,6 +152,9 @@ def _handle(engine, req):
 
 def main():
     "Serve requests until quit or stdin closes."
+    from ocarina.tts import mlx_compat  # pylint: disable=import-outside-toplevel
+
+    mlx_compat.install()  # before any model library imports safe_open: bfloat16 weights then load without PyTorch
     proto_out = os.fdopen(os.dup(1), "w", encoding="utf-8")
     os.dup2(2, 1)  # stray prints from libraries must not corrupt the protocol
     engine = None

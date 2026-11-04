@@ -30,6 +30,7 @@ Models: ~/.cache/huggingface/hub (the MLX library looks there)
 | `voices.py` | `GET/POST /tts/voices`, `DELETE /tts/voices/<id>`, `POST /tts/voices/preview` (a job), `GET /tts/previews/<name>`; clips in `<data>/voices/` as mono wav with an optional `.txt` of the words spoken |
 | `languages.py` also `POST /languages/predefined` (first run) |
 | `tags.py` | `GET /tag-list/<term|book>`, `PATCH/DELETE /tag-list/<kind>/<id>` |
+| `tts_models.py` also: `POST /tts/models/lookup` now describes the repo (model type, whether mlx-audio has code for it via a helper process `ocarina/tts/inspect_model.py`, memory estimate, notes) and `POST /tts/models/<id>/check` tries an installed model once (job kind `check`; `ocarina/model_check.py` stores `model_checks.json`; a model you add is tried automatically after its download, phase `testing`). A failing model is flagged, left out of the voice menus and never chosen by itself. Job errors are explained in plain words by `ocarina/tts/errors.py` (original text kept as `detail`). |
 | `languages.py` | `GET /languages` (with counts), `GET/PUT/DELETE /languages/<id>`, `POST /languages`, `GET /languages/template` (blank or predefined), `GET /languages/parsers`; delete needs `force=true` when it holds books or terms |
 | `book_import.py` | `POST /books/extract` (file or URL, nothing saved), `POST /books` (save, optional own audio) |
 | `system.py` | `POST /open-external` (http/https only), `GET/PUT /prefs` |

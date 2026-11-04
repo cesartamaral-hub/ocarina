@@ -15,7 +15,7 @@ from flask import Blueprint, current_app, jsonify, request
 from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, prefs
+from ocarina import audio_versions, model_check, prefs
 from ocarina.api import jobs
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 from ocarina.tts import models as model_files
@@ -93,9 +93,13 @@ def start_audio(book_id):
     except ValueError:
         code = None
     preferred = saved.get(f"model.{code}") if code else None
-    model = model_files.choose_model(body.get("model"), preferred)
+    failing = model_check.failing_ids(cfg.datapath)
+    model = model_files.choose_model(body.get("model"), preferred, failing)
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
+    if model["id"] in failing:
+        problem = (model_check.result_for(cfg.datapath, model) or {}).get("error", "it failed its test")
+        return jsonify({"error": f"{model['name']} does not work here: {problem} Test it again in Settings.", "code": "model_failed"}), 409
     # pylint: disable=protected-access
     app = current_app._get_current_object()
     if _uses_real_engine(app) and not model_files.is_installed(model):
@@ -168,7 +172,8 @@ def audio_options(book_id):
         return jsonify({"error": f"Ocarina can't make audio for {book.language.name} yet", "code": "unsupported_language"}), 400
     datapath = current_app.env_config.datapath
     saved = prefs.load(prefs.path_for(datapath))
-    default_model = model_files.choose_model(None, saved.get(f"model.{code}"))
+    failing = model_check.failing_ids(datapath)
+    default_model = model_files.choose_model(None, saved.get(f"model.{code}"), failing)
     voice_list = voices.list_voices(datapath)
     voice_id = saved.get(f"voice.{code}") or voices.default_voice_id(code)
     default_voice = next((v for v in voice_list if v["id"] == voices.LEGACY_IDS.get(voice_id, voice_id)), voice_list[0])
@@ -178,7 +183,13 @@ def audio_options(book_id):
             "defaultModel": default_model["id"],
             "defaultVoice": default_voice["id"],
             "models": [
-                {"id": m["id"], "name": m["name"], "installed": model_files.is_installed(m), "custom": bool(m.get("custom"))}
+                {
+                    "id": m["id"],
+                    "name": m["name"],
+                    "installed": model_files.is_installed(m),
+                    "custom": bool(m.get("custom")),
+                    "problem": (model_check.result_for(datapath, m) or {}).get("error") if m["id"] in failing else None,
+                }
                 for m in model_files.speech_models()
                 if code in m.get("languages", [])
             ],
