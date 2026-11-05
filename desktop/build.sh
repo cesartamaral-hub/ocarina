@@ -4,6 +4,7 @@
 set -e
 cd "$(dirname "$0")"
 PY=../.venv-build/bin/python
+[ -f ../ocarina/web/dist/index.html ] || { echo "The frontend is not built (ocarina/web/dist/index.html is missing): run npm run build in frontend/ first and look at its errors." >&2; exit 1; }
 rm -rf build dist
 $PY setup.py py2app
 # mlx is a namespace package (no __init__.py), which py2app cannot discover:

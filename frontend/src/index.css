@@ -795,7 +795,6 @@ button.mr-grade:hover { border-color: var(--muted); }
   .mr-more { opacity: 1; }
   .model-row > p, .model-row > .check-failed, .model-row > .transfer { margin-left: 14px; }
 }
-}
 
 /* The Vocabulary page: a toolbar, filter chips, and a table of words with the sentence each was saved from. */
 .vl { display: flex; flex-direction: column; height: 100%; min-height: 0; }
