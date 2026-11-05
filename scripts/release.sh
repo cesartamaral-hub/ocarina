@@ -16,7 +16,7 @@ CURRENT=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' ocarina/version.py)
 NOTES="${2:-}"
 if [ -z "$NOTES" ]; then
   LAST=$(git describe --tags --abbrev=0 2>/dev/null || true)
-  NOTES=$(git log ${LAST:+$LAST..}HEAD --pretty='- %s' | head -30)
+  NOTES=$(git log -n 30 ${LAST:+$LAST..}HEAD --pretty='- %s')
 fi
 
 echo "Releasing $VERSION (now $CURRENT)"
