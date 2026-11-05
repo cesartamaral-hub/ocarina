@@ -5,6 +5,7 @@ import { gradeLevel, speedLevel } from './modelRows'
 import { TransferProgress } from './TransferProgress'
 import { CheckResult } from './CheckResult'
 import { cancelJob, isActive, type Job, type Model } from './api'
+import { SPEECH_LANGUAGES } from './speechLanguages'
 
 export type ModelActions = {
   busy: boolean
@@ -12,7 +13,8 @@ export type ModelActions = {
   speed: number
   codes: string[] // the languages shown as columns
   usedFor: (m: Model) => string[] | 'all' | null // where the model is used: all your languages, some of them, or nowhere
-  onUse?: (m: Model) => void // makes it the model in use (when more than one can be)
+  onUse?: (m: Model) => void // makes it the model in use for every language (when more than one can be)
+  onUseFor?: (m: Model, code: string) => void // makes it the model in use for one language
   onDownload: (id: string) => void
   onImport: (m: Model) => void
   onTest: (m: Model) => void
@@ -22,6 +24,9 @@ export type ModelActions = {
 }
 
 const CHECK = <path d="M4 8.5l2.7 2.7L12 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+const BIN = (
+  <path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8M7 7v3.5M9 7v3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+)
 const DOWNLOAD = <path d="M8 2.5v7.5M4.8 7.2L8 10.4l3.2-3.2M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 
 function Menu({ m, a }: { m: Model; a: ModelActions }) {
@@ -43,7 +48,7 @@ function Menu({ m, a }: { m: Model; a: ModelActions }) {
   )
   return (
     <>
-      <button ref={anchor} className="quiet small icon" aria-label={`More for ${m.name}`} title="More" aria-haspopup="menu" aria-expanded={placement !== null} onClick={() => toggle()}>
+      <button ref={anchor} className="quiet small icon mr-more" aria-label={`More for ${m.name}`} title="More" aria-haspopup="menu" aria-expanded={placement !== null} onClick={() => toggle()}>
         ⋯
       </button>
       {placement && (
@@ -52,7 +57,6 @@ function Menu({ m, a }: { m: Model; a: ModelActions }) {
             {m.installed && item(m.check ? 'Test again' : 'Test', () => a.onTest(m))}
             {!m.installed && item('Import from a folder…', () => a.onImport(m))}
             {m.custom && item('Remove from the list', () => a.onForget(m))}
-            {m.installed && item(`Delete (${formatBytes(m.sizeBytes)})`, () => a.onDelete(m), true)}
           </ul>
         </Popover>
       )}
@@ -95,9 +99,30 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
           {a.codes.map((code) => {
             const grade = m.grades?.[code]
             const supported = m.languages.includes(code)
+            const name = SPEECH_LANGUAGES[code] ?? code.toUpperCase()
+            const here = used === 'all' || (Array.isArray(used) && used.includes(code))
+            const canPick = supported && m.installed && !failed && !downloading && !!a.onUseFor
+            const level = gradeLevel(supported ? grade : undefined)
+            const text = supported ? (grade ?? '—') : '·'
+            const className = `mr-grade ${level}${here ? ' used' : ''}`
+            if (canPick) {
+              return (
+                <button
+                  key={code}
+                  data-code={code.toUpperCase()}
+                  className={className}
+                  aria-pressed={here}
+                  title={here ? `Used for ${name} (${grade ?? 'not rated'})` : `Use for ${name} only (${grade ?? 'not rated'})`}
+                  disabled={a.busy || here}
+                  onClick={() => a.onUseFor!(m, code)}
+                >
+                  {text}
+                </button>
+              )
+            }
             return (
-              <span key={code} data-code={code.toUpperCase()} className={`mr-grade ${gradeLevel(supported ? grade : undefined)}`} title={supported ? `${code.toUpperCase()}: ${grade ?? 'not rated'}` : `Does not support ${code.toUpperCase()}`}>
-                {supported ? (grade ?? '—') : '·'}
+              <span key={code} data-code={code.toUpperCase()} className={className} title={supported ? `${name}: ${grade ?? 'not rated'}` : `Does not support ${name}`}>
+                {text}
               </span>
             )
           })}
@@ -109,8 +134,19 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
         </span>
         <span className="muted mr-size">{formatBytes(m.sizeBytes)}</span>
         <span className="mr-actions">
-          {m.installed && m.check?.ok && <span className="mr-ok" title="Works here" aria-label="Works here">✓</span>}
+          {m.installed && m.check?.ok && (
+            <span className="mr-ok" title="Works here" aria-label="Works here">
+              ✓
+            </span>
+          )}
           <Menu m={m} a={a} />
+          {m.installed && (
+            <button className="quiet small icon mr-bin" aria-label={`Delete ${m.name}`} title={`Delete (frees ${formatBytes(m.sizeBytes)})`} disabled={a.busy} onClick={() => a.onDelete(m)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                {BIN}
+              </svg>
+            </button>
+          )}
         </span>
       </div>
       {m.installed && failed && <CheckResult model={m} />}
@@ -133,9 +169,9 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
 export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
   const have = models.filter((m) => m.installed)
   const more = models.filter((m) => !m.installed)
-  const head = (title: string) => (
+  const head = (
     <div className="mr-head" aria-hidden="true">
-      <span className="mr-head-title">{title}</span>
+      <span className="mr-head-title">{have.length > 0 ? 'On this Mac' : 'Available'}</span>
       <span className="mr-grades">
         {a.codes.map((c) => (
           <span key={c}>{c.toUpperCase()}</span>
@@ -148,19 +184,17 @@ export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
   )
   return (
     <div className="model-list">
+      {head}
       {have.length > 0 && (
-        <>
-          {head('On this Mac')}
-          <ul>
-            {have.map((m) => (
-              <Row key={m.id} m={m} a={a} />
-            ))}
-          </ul>
-        </>
+        <ul>
+          {have.map((m) => (
+            <Row key={m.id} m={m} a={a} />
+          ))}
+        </ul>
       )}
       {more.length > 0 && (
         <>
-          {head(have.length > 0 ? 'To download' : 'Available')}
+          {have.length > 0 && <div className="mr-sub">To download</div>}
           <ul>
             {more.map((m) => (
               <Row key={m.id} m={m} a={a} />

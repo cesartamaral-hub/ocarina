@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlignPicker } from './AlignPicker'
 import { getPref, setPref } from './api'
 import { appearance, saveAppearance, type Theme } from './appearanceSettings'
 import { HOVER_DELAYS, HOVER_PREFS } from './reader/useHoverCard'
 import { RadioCards, type CardOption } from './RadioCards'
 import { useTypography } from './useTypography'
-import { FONTS, LIMITS, PRESETS, WEIGHTS, matchingPreset, spacingLabel, stepSize, widthLabel, type FontKey, type Typography } from './typography'
+import { FONTS, LIMITS, PRESETS, WEIGHTS, matchingPreset, measurePx, spacingLabel, stepSize, widthLabel, type FontKey, type Typography } from './typography'
 
 // A tiny page in the colours of a theme: a title bar, lines of text and a few coloured words.
 function MiniPage({ palette }: { palette: 'light' | 'dark' }) {
@@ -54,9 +54,22 @@ function Slider({ label, text, value, min, max, step, onChange }: { label: strin
 }
 
 // What the text looks like with the current settings, including the colours words have in the reader.
-function Preview() {
+// The lines are as long as the setting says, so the line length can be seen; when that is wider than the room here, it is all shown smaller.
+function Preview({ measure }: { measure: number }) {
+  const box = useRef<HTMLDivElement>(null)
+  const [room, setRoom] = useState(0)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const watch = new ResizeObserver(() => setRoom(el.clientWidth))
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [])
+  const full = measure + 50 // the text, and the frame around it
+  const scale = room > 0 ? Math.max(0.5, Math.min(1, room / full)) : 1 // not smaller than can be read; longer lines scroll sideways
   return (
-    <article className="appearance-sample" aria-label="Preview of the reading text">
+    <div className="ap-sample-box" ref={box}>
+      <article className="appearance-sample" aria-label="Preview of the reading text" style={{ width: full, maxWidth: 'none', zoom: scale }}>
       <p lang="nl">
         Elke <span className="w s1">ochtend</span> sta ik <span className="w s3">vroeg</span> op, ik <span className="w s4">drink</span> koffie en ik{' '}
         <span className="w s0">fiets</span> naar mijn werk. Daarna lees ik de krant en <span className="w s2">bereid</span> ik het ontbijt voor.
@@ -68,7 +81,13 @@ function Preview() {
       <p lang="fr">
         Chaque <span className="w s4">matin</span>, je <span className="w s5">me lève</span> tôt. Je <span className="w s1">prends</span> mon café et je pars travailler.
       </p>
-    </article>
+      </article>
+      {scale < 0.98 && (
+        <p className="muted ap-note">
+          Shown at {Math.round(scale * 100)}% to fit; the lines are as long as you set{full * scale > room + 1 ? ' (scroll sideways to see them all)' : ''}.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -196,7 +215,7 @@ export function Appearance() {
 
         <aside className="ap-preview" aria-label="Preview">
           <h2>Preview</h2>
-          <Preview />
+          <Preview measure={measurePx(t)} />
           <p className="muted ap-note">The same settings apply while you read. You can also change them there with the “Aa” button.</p>
         </aside>
       </div>

@@ -77,7 +77,7 @@ def get_translation(book_id):
     book = _book(book_id)
     if book is None:
         return jsonify({"error": "No such book"}), 404
-    settings = translate_api._settings()  # pylint: disable=protected-access
+    settings = translate.settings_for(translate_api._settings(), translate.code_for(book.language.name))  # pylint: disable=protected-access
     found = book_translation.status(book, settings["target"])
     return jsonify({**_info(settings), **found, "running": bool(jobs.active(kind="translate", book_id=book_id))})
 
@@ -103,7 +103,7 @@ def _method_for_this_run(settings, body):
         return settings, None
     if provider not in translate.PROVIDERS:
         return None, (jsonify({"error": "Unknown translation service"}), 400)
-    changed = {**settings, "provider": provider}
+    changed = {**settings, "provider": provider, "localModelByLanguage": {}}  # this run's choice wins over a model chosen for the language
     if provider == "local":
         if not any(m["id"] == model for m in model_files.text_models()):
             return None, (jsonify({"error": "Unknown translation model"}), 400)
@@ -120,7 +120,7 @@ def queue_translation(book, body):
     scope, page = body.get("scope", "book"), body.get("page")
     if scope not in ("page", "book") or (scope == "page" and not isinstance(page, int)):
         return None, ({"error": "Choose a page or the whole book"}, 400)
-    settings = translate_api._settings()  # pylint: disable=protected-access
+    settings = translate.settings_for(translate_api._settings(), translate.code_for(book.language.name))  # pylint: disable=protected-access
     chosen, problem = _method_for_this_run(settings, body)
     if problem:
         reply, status = problem

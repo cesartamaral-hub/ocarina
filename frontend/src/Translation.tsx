@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { compareModels, getLanguages, getTranslateSettings, putTranslateSettings, testTranslation, type Comparison, type Language, type TranslateSettings, type Translation as Result } from './api'
 import { formatBytes } from './format'
 import { notify } from './notices'
+import { SPEECH_LANGUAGES } from './speechLanguages'
 
 export function Translation() {
   const [s, setS] = useState<TranslateSettings | null>(null)
@@ -95,24 +96,16 @@ export function Translation() {
       </fieldset>
 
       {s.provider === 'local' && (
-        <fieldset className="choices">
-          <legend>Model on this Mac</legend>
-          {s.localModels.map((m) => (
-            <label key={m.id} className={`choice${m.installed ? '' : ' unavailable'}`}>
-              <input type="radio" name="localModel" checked={s.localModel.id === m.id} onChange={() => save({ localModel: m.id })} />
-              <span>
-                <strong>{m.name}</strong> <span className="muted">{formatBytes(m.sizeBytes)}</span>
-                <span className="muted"> {m.description}</span>
-                {!m.installed && (
-                  <span className="choice-note">
-                    {' '}
-                    Not downloaded yet. <a href="#/settings/models">Download it in Settings</a>.
-                  </span>
-                )}
-              </span>
-            </label>
-          ))}
-        </fieldset>
+        <p className="muted tr-model-line">
+          On this Mac: <strong>{s.localModel.name.replace(/\s*\(.*\)\s*$/, '')}</strong>
+          {Object.entries(s.localModelByLanguage ?? {}).map(([code, id]) => (
+            <span key={code}>
+              {' '}
+              · {SPEECH_LANGUAGES[code] ?? code.toUpperCase()}: <strong>{(s.localModels.find((m) => m.id === id)?.name ?? id).replace(/\s*\(.*\)\s*$/, '')}</strong>
+            </span>
+          ))}{' '}
+          · <a href="#/settings/models">change under Models</a>
+        </p>
       )}
 
       <div className="form translation-form">

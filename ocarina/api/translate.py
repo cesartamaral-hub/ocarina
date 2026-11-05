@@ -42,9 +42,13 @@ def _settings():
     if provider not in translate.PROVIDERS:
         # Not chosen yet: a model on this Mac once one is downloaded (private, no limits), else the free online service.
         provider = "local" if any(model_files.is_installed(m) for m in model_files.text_models()) else "mymemory"
+    by_language = saved.get("translate.localModelByLanguage")
+    ids = {m["id"] for m in model_files.text_models()}
+    by_language = {k: v for k, v in by_language.items() if v in ids} if isinstance(by_language, dict) else {}  # a model that is gone is forgotten
     return {
         "provider": provider,
         "localModel": local,
+        "localModelByLanguage": by_language,
         "target": target if target in translate.TARGETS else "en",
         "email": saved.get("translate.email") or "",
     }
@@ -101,6 +105,14 @@ def put_settings():
         if not any(m["id"] == body["localModel"] for m in model_files.text_models()):
             return jsonify({"error": "Unknown translation model"}), 400
         changes["translate.localModel"] = body["localModel"]
+        if body.get("allLanguages"):
+            changes["translate.localModelByLanguage"] = {}  # chosen for every language: no language keeps a choice of its own
+    if "localModelFor" in body:
+        choice = body["localModelFor"] or {}
+        code, model_id = choice.get("language"), choice.get("model")
+        if code not in set(translate.CODES.values()) or not any(m["id"] == model_id for m in model_files.text_models()):
+            return jsonify({"error": "Unknown language or translation model"}), 400
+        changes["translate.localModelByLanguage"] = {**_settings()["localModelByLanguage"], code: model_id}
     if "target" in body:
         if body["target"] not in translate.TARGETS:
             return jsonify({"error": "Unknown target language"}), 400

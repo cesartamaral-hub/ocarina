@@ -11,6 +11,7 @@ export type TranslateSettings = {
   providers: { id: string; name: string; needsKey: boolean; description: string }[]
   localModel: LocalModel // the one in use
   localModels: LocalModel[] // every translation model that can run on this Mac
+  localModelByLanguage: Record<string, string> // the model chosen for one source language (a language code), in place of the one above
   targets: { code: string; name: string }[]
 }
 
@@ -18,7 +19,7 @@ export type Translation = { translation: string; provider: string; source: strin
 
 export const getTranslateSettings = () => fetch(`${API}/translate/settings`).then((r) => json<TranslateSettings>(r))
 
-export const putTranslateSettings = (change: Partial<{ provider: string; target: string; email: string; deeplKey: string; localModel: string }>) =>
+export const putTranslateSettings = (change: Partial<{ provider: string; target: string; email: string; deeplKey: string; localModel: string; allLanguages: boolean; localModelFor: { language: string; model: string } }>) =>
   send<TranslateSettings>('PUT', `${API}/translate/settings`, change)
 
 export const translateSentence = (languageId: number, text: string) => send<Translation>('POST', `${API}/translate`, { languageId, text })

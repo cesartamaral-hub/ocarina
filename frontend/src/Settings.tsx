@@ -26,7 +26,7 @@ import {
 } from './api'
 import { AddModel } from './AddModel'
 import { ModelList, type ModelActions } from './ModelList'
-import { speechCodesUsing } from './modelRows'
+import { speechCodesUsing, speechModelFor } from './modelRows'
 import { formatBytes } from './format'
 import { notify } from './notices'
 import { SPEECH_LANGUAGES, codeOfLanguage } from './speechLanguages'
@@ -181,13 +181,22 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
           setPrefs(values)
           setChosen((cur) => ({ ...cur, ...values }))
         },
+        onUseFor: (m, code) => {
+          setPrefs({ [`model.${code}`]: m.id })
+          setChosen((cur) => ({ ...cur, [`model.${code}`]: m.id }))
+        },
       }
     }
     if (kind === 'text') {
       return {
         ...base,
-        usedFor: (m) => (translation?.provider === 'local' && translation.localModel.id === m.id ? 'all' : null),
-        onUse: (m) => putTranslateSettings({ provider: 'local', localModel: m.id }).then(setTranslation, (e) => setError(e.message)),
+        usedFor: (m) => {
+          if (translation?.provider !== 'local') return null
+          const used = codes.filter((c) => (translation.localModelByLanguage?.[c] ?? translation.localModel.id) === m.id)
+          return everyone(used)
+        },
+        onUse: (m) => putTranslateSettings({ provider: 'local', localModel: m.id, allLanguages: true }).then(setTranslation, (e) => setError(e.message)),
+        onUseFor: (m, code) => putTranslateSettings({ provider: 'local', localModelFor: { language: code, model: m.id } }).then(setTranslation, (e) => setError(e.message)),
       }
     }
     const first = ofKind.find((m) => m.installed && !(m.check && !m.check.ok))
@@ -212,15 +221,17 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
         <>
       <h2>Voice models{size(storage, 'speech')}</h2>
       <p className="muted">
-        They make the audio of your books and say words aloud, on this Mac. Audio generation needs one. The one with the tick is used for all your languages; each language can have its own under Voices.
+        They make the audio of your books and say words aloud, on this Mac. Audio generation needs one. The tick means it is used for all your languages.
       </p>
+      <p className="muted mr-hint">Click a language's grade to use the model for that language only. Voices and how words are said are under <a href="#/settings/voices">Voices</a>.</p>
       {error && <p className="error">{error}</p>}
       <ModelList models={models.filter((m) => (m.kind ?? 'speech') === 'speech')} a={actions('speech')} />
 
       <h2>Translation models{size(storage, 'text')}</h2>
       <p className="muted">
-        Translate sentences on this Mac, offline and without limits. The tick is the one used when Translation is set to your Mac; compare them side by side under Translation. A model is loaded only while you translate.
+        Translate sentences on this Mac, offline and without limits. The tick is the one used when Translation is set to your Mac. A model is loaded only while you translate.
       </p>
+      <p className="muted mr-hint">Click a language's grade to use the model for that language only. The service, your key and the language to translate into are under <a href="#/settings/translation">Translation</a>.</p>
       <ModelList models={models.filter((m) => m.kind === 'text')} a={actions('text')} />
 
       <h2>Audio sync model{size(storage, 'aligner')}</h2>
@@ -241,24 +252,18 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
       <Pronunciation />
 
       <h2>Voice per language</h2>
-      <p className="muted">Which installed model and which voice make the audio of books in each language.</p>
+      <p className="muted">Which voice speaks the audio of books in each language. The model that makes it is chosen under <a href="#/settings/models">Models</a>.</p>
       <ul className="models">
         {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
-          const options = models.filter((m) => (m.kind ?? 'speech') === 'speech' && m.installed && !(m.check && !m.check.ok) && m.languages.includes(code))
-          const value = chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
+          const model = speechModelFor(code, models, chosenFor(code))
           const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (
             <li key={code}>
               <div className="row">
                 <div className="name">{name}</div>
-                <select value={value} onChange={(e) => choose(`model.${code}`, e.target.value)}>
-                  <option value="">Automatic (first installed)</option>
-                  {options.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <span className="muted">
+                  {model ? model.name.replace(/\s*\(.*\)\s*$/, '') : 'No voice model yet'} · <a href="#/settings/models">change</a>
+                </span>
                 <select value={voice} onChange={(e) => choose(`voice.${code}`, e.target.value)} aria-label={`Voice for ${name}`}>
                   <option value="">Automatic</option>
                   {voices.map((v) => (
