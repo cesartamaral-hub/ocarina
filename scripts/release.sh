@@ -40,7 +40,7 @@ echo "Notes:"; echo "$NOTES"; echo
 read -r -p "Push $TAG and publish the release on GitHub? [y/N] " answer
 if [ "$answer" = "y" ]; then
   git push && git push origin "$TAG"
-  gh release create "$TAG" desktop/dist/Ocarina.dmg desktop/dist/Ocarina.dmg.sha256 --title "Ocarina $VERSION" --notes "$NOTES"
+  gh release create "$TAG" desktop/dist/Ocarina.dmg desktop/dist/Ocarina.dmg.sha256 --repo cesartamaral-hub/ocarina --title "Ocarina $VERSION" --notes "$NOTES"
   echo "Published. Installed apps will offer $VERSION the next time they start."
 else
   echo "Not published. The commit and tag are local: undo with  git tag -d $TAG && git reset --hard HEAD~1"
