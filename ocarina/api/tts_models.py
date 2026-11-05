@@ -35,7 +35,7 @@ def _run_download(job, check, model, folder=None, datapath=None, engine=None):  
     if folder:
         model_files.import_from_folder(model, folder, progress)
     else:
-        model_files.download(model, progress)
+        model_files.download(model, progress, check)
     if model.get("custom") and datapath:
         job["phase"] = "testing"
         model_check.check_model(datapath, model, engine)

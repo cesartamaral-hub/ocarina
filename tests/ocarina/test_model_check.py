@@ -124,7 +124,7 @@ def test_a_model_you_added_is_checked_automatically_after_its_download(app, clie
         json.dump({"schema": 1, "models": [entry]}, f)
     state = {"installed": False}
     monkeypatch.setattr(model_files, "is_installed", lambda m: state["installed"])
-    monkeypatch.setattr(model_files, "download", lambda m, cb: (state.update(installed=True), cb(10, 10)))
+    monkeypatch.setattr(model_files, "download", lambda m, cb, check=None: (state.update(installed=True), cb(10, 10)))
     app.config["OCARINA_TTS_ENGINE"] = "fake"
     job = wait_for_job(client, client.post(f"{MODELS}/custom-x-y/download").json["id"])
     assert job["state"] == "done" and job["phase"] == "testing"

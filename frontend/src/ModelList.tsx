@@ -4,7 +4,7 @@ import { formatBytes } from './format'
 import { gradeLevel, speedLevel } from './modelRows'
 import { TransferProgress } from './TransferProgress'
 import { CheckResult } from './CheckResult'
-import { cancelJob, isActive, type Job, type Model } from './api'
+import { cancelJob, getJob, isActive, type Job, type Model } from './api'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 
 export type ModelActions = {
@@ -150,7 +150,12 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
         </span>
       </div>
       {m.installed && failed && <CheckResult model={m} />}
-      {downloading && mine && <TransferProgress job={mine} speed={a.speed} onCancel={() => cancelJob(mine.id).then(a.onJob, () => undefined)} />}
+      {downloading && mine && <TransferProgress job={mine} speed={a.speed} onCancel={() =>
+            cancelJob(mine.id)
+              .then(() => new Promise((resolve) => setTimeout(resolve, 250))) // the process is ended at once: look again right away
+              .then(() => getJob(mine.id))
+              .then(a.onJob, () => undefined)
+          } />}
       {mine?.state === 'error' && (
         <p className="error">
           {mine.error}{' '}

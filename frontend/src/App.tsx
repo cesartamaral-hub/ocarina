@@ -52,9 +52,9 @@ function Logo() {
 export default function App() {
   const { bookId, readPage, audioPage, settings, newBook, vocabulary, stats, raw } = useRoute()
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
-  const reading = (bookId !== null && readPage !== null) || vocabulary // the reader and the vocabulary use the whole window
+  const reading = (bookId !== null && readPage !== null) || vocabulary || settings !== null // the reader, the vocabulary and settings use the whole window
   const onHome = bookId === null && !(settings || newBook || vocabulary || stats || raw.startsWith('#/settings'))
-  const medium = onHome || stats || settings !== null
+  const medium = onHome || stats
   const [ready, setReady] = useState(false)
   // Older addresses (and plain "#/settings") go to their section.
   useEffect(() => {

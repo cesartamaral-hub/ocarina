@@ -20,7 +20,7 @@ def path_with_tools(path=None):
     return os.pathsep.join(parts + [d for d in TOOL_DIRS if d not in parts])
 
 
-def worker_command_and_env():
+def worker_command_and_env(module="ocarina.tts.worker", offline=True):
     """
     Command and environment that start a worker process.
 
@@ -29,14 +29,15 @@ def worker_command_and_env():
     The app's own launcher is not used: it starts Python in ASCII mode,
     which breaks libraries that read files without an encoding.
     """
-    # HF_HUB_OFFLINE: the worker never downloads; the download manager does that.
+    # HF_HUB_OFFLINE: the model worker never downloads; the download manager does that (offline=False, for its own process).
     env = {
         **os.environ,
         "PYTORCH_ENABLE_MPS_FALLBACK": "1",
         "PYTHONUTF8": "1",
-        "HF_HUB_OFFLINE": "1",
         "PATH": path_with_tools(),
     }
+    if offline:
+        env["HF_HUB_OFFLINE"] = "1"
     if getattr(sys, "frozen", False):
         lib = os.path.join(os.environ["RESOURCEPATH"], "lib")
         env["PYTHONPATH"] = os.pathsep.join(
@@ -46,7 +47,7 @@ def worker_command_and_env():
                 os.path.join(lib, "python3.12", "lib-dynload"),
             ]
         )
-    return [sys.executable, "-m", "ocarina.tts.worker"], env
+    return [sys.executable, "-m", module], env
 
 
 class TtsError(Exception):

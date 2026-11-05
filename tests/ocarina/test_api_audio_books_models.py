@@ -111,7 +111,7 @@ def test_download_job_reports_progress_and_then_installs(client, monkeypatch):
     state = {"installed": False}
     monkeypatch.setattr(model_files, "is_installed", lambda m: state["installed"])
 
-    def fake_download(model, on_progress):
+    def fake_download(model, on_progress, check=None):
         on_progress(50, 100)
         state["installed"] = True
         on_progress(100, 100)

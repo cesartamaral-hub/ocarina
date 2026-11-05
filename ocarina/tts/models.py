@@ -13,10 +13,12 @@ never fetches anything on its own.
 
 import json
 import os
+import queue
 import re
 import shutil
 import subprocess
 import tempfile
+import threading
 
 import requests
 from huggingface_hub import HfApi, constants, snapshot_download
@@ -155,8 +157,8 @@ def _progress_class(state, on_progress):
     return Progress
 
 
-def download(model, on_progress=None):
-    "Download all files of a model; on_progress(done_bytes, total_bytes)."
+def download_here(model, on_progress=None):
+    "Download all files of a model in this process; on_progress(done_bytes, total_bytes)."
     state = {"done": 0, "total": total_bytes(model)}
     cb = on_progress or (lambda done, total: None)
     for repo in model["repositories"]:
@@ -173,6 +175,58 @@ def download(model, on_progress=None):
     if not is_installed(model):
         raise RuntimeError("Download finished but some files are missing or the wrong size.")
     cb(state["total"], state["total"])
+
+
+def _download_command():
+    "Command and environment of the process that downloads (patched by the tests)."
+    return worker_command_and_env("ocarina.tts.download_worker", offline=False)
+
+
+def download(model, on_progress=None, check=None):
+    """
+    Download all files of a model; on_progress(done_bytes, total_bytes). With `check` (a job's, which raises when the user cancels) the
+    files are fetched by a process of its own, which is stopped the moment check() raises: in this process the downloads in flight
+    would have to finish first, which can take minutes for a large file. What was downloaded stays, and the next download continues it.
+    """
+    if check is None:
+        return download_here(model, on_progress)
+    cb = on_progress or (lambda done, total: None)
+    command, env = _download_command()
+    proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)  # pylint: disable=consider-using-with
+    lines = queue.Queue()
+
+    def pump():
+        for line in proc.stdout:
+            lines.put(line)
+        lines.put(None)
+
+    threading.Thread(target=pump, daemon=True).start()
+    try:
+        proc.stdin.write(json.dumps(model) + "\n")
+        proc.stdin.flush()
+        while True:
+            check()
+            try:
+                line = lines.get(timeout=0.1)
+            except queue.Empty:
+                if proc.poll() is not None and lines.empty():
+                    raise RuntimeError("The download stopped unexpectedly.") from None
+                continue
+            if line is None:  # the process closed its output without saying it was done
+                raise RuntimeError("The download stopped unexpectedly.")
+            message = json.loads(line)
+            if "error" in message:
+                raise RuntimeError(message["error"])
+            if message.get("ok"):
+                return
+            cb(message["done"], message["total"])
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
 
 def blob_links(folder):
