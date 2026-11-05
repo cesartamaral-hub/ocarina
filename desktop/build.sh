@@ -1,11 +1,17 @@
 #!/bin/bash
 # Build dist/Ocarina.app. Run from the desktop/ folder.
-# Needs ../.venv-build (pyenv Python 3.12) and a built frontend (cd ../frontend && npm run build).
+# Needs ../.venv-build2 (Python 3.12 from python.org, which runs on old macOS; see docs/ocarina/packaging.md) and a built frontend (cd ../frontend && npm run build).
 set -e
 cd "$(dirname "$0")"
-PY=../.venv-build/bin/python
+PY=../.venv-build2/bin/python
 [ -f ../ocarina/web/dist/index.html ] || { echo "The frontend is not built (ocarina/web/dist/index.html is missing): run npm run build in frontend/ first and look at its errors." >&2; exit 1; }
+# MLX comes in one build per macOS; pip takes the newest this Mac allows, which then needs that macOS. Take the one for macOS 14, the oldest MLX supports.
+$PY -m pip download -q mlx==0.32.4 mlx-metal==0.32.4 --no-deps --platform macosx_14_0_arm64 --python-version 3.12 --only-binary=:all: -d ../.mlx14
+$PY -m pip install -q --force-reinstall --no-deps ../.mlx14/*.whl
 $PY ../scripts/build_wikdict.py  # the dictionaries that come with the app (WikDict; made once, not in git)
+# py2app's tkinter recipe starts Tcl; the python.org Python used here is not in /Library/Frameworks, so say where its Tcl is
+FW=$(cd "$($PY -c 'import sys; print(sys.base_prefix)')" && pwd)
+export TCL_LIBRARY="$FW/lib/tcl8.6" TK_LIBRARY="$FW/lib/tk8.6"
 rm -rf build dist
 $PY setup.py py2app
 # mlx is a namespace package (no __init__.py), which py2app cannot discover:

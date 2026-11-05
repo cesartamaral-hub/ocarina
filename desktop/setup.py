@@ -30,13 +30,14 @@ setup(
                 "youtube_transcript_api",
             ],
             "includes": ["sqlite3", "yaml"],
-            "excludes": ["mlx"],  # copied by hand in build.sh, see there
+            "excludes": ["mlx", "tkinter", "_tkinter"],  # copied by hand in build.sh, see there
             "resources": ["../LICENSE.txt", "../NOTICE.md"],
             "iconfile": "../assets/Ocarina.icns",
             "plist": {
                 "CFBundleName": "Ocarina",
                 "CFBundleIdentifier": "app.ocarina.Ocarina",
                 "NSHighResolutionCapable": True,
+                "LSMinimumSystemVersion": "14.0",
             },
         }
     },

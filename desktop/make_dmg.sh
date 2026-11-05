@@ -16,7 +16,7 @@ Ocarina
    Open Terminal (Applications > Utilities), paste this line and press Return, then open Ocarina normally:
        xattr -cr /Applications/Ocarina.app
    (Other way: right-click Ocarina > Open > Open, or System Settings > Privacy & Security > "Open Anyway".) Needed only once.
-3. Needs a Mac with Apple silicon (M1 or later) and macOS 13 or later.
+3. Needs a Mac with Apple silicon (M1 or later) and macOS 14 (Sonoma) or later.
 
 Models (voices, translation) are downloaded from inside the app, so the first start needs the internet.
 Credits and licences: Settings > About and licences, or NOTICE.md inside the app.
