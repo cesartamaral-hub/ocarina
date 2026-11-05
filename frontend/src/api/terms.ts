@@ -36,7 +36,7 @@ export type References = {
 
 export const getTerm = (id: number) => fetch(`${API}/terms/${id}`).then((r) => json<Term>(r))
 
-export const saveTerm = (term: Partial<Term> & { status: number }) =>
+export const saveTerm = (term: Partial<Term> & { status: number; context?: { sentence: string; bookId?: number; page?: number } }) =>
   send<Term>('POST', `${API}/terms`, term)
 
 export const setTermStatus = (id: number, status: number) =>

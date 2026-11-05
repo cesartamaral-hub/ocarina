@@ -39,3 +39,7 @@ export type Stats = {
 }
 
 export const getStats = () => fetch(`${API}/stats`).then((r) => json<Stats>(r))
+
+// Words known and being learned per language, for the level bar on the book list.
+export type VocabularyCount = { id: number; name: string; known: number; learning: number }
+export const getVocabularyCounts = () => fetch(`${API}/stats/vocabulary`).then((r) => json<VocabularyCount[]>(r))

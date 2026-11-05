@@ -115,36 +115,45 @@ def _method_for_this_run(settings, body):
     return changed, None
 
 
-@bp.route("/books/<int:book_id>/translation", methods=["POST"])
-def start_translation(book_id):
-    "Translate a page or the whole book with the service chosen under Translation; returns the job."
-    book = _book(book_id)
-    if book is None:
-        return jsonify({"error": "No such book"}), 404
-    body = request.get_json(silent=True) or {}
+def queue_translation(book, body):
+    "Queue the job that translates a page or the whole book: (job, None), or (None, ({error, code}, status))."
     scope, page = body.get("scope", "book"), body.get("page")
     if scope not in ("page", "book") or (scope == "page" and not isinstance(page, int)):
-        return jsonify({"error": "Choose a page or the whole book"}), 400
+        return None, ({"error": "Choose a page or the whole book"}, 400)
     settings = translate_api._settings()  # pylint: disable=protected-access
     chosen, problem = _method_for_this_run(settings, body)
     if problem:
-        return problem
+        reply, status = problem
+        return None, (reply.get_json(), status)
     settings = chosen
     source = translate.code_for(book.language.name)
     if source is None:
-        return jsonify({"error": f"Ocarina does not know the language code for {book.language.name} yet.", "code": "unsupported_language"}), 400
+        return None, ({"error": f"Ocarina does not know the language code for {book.language.name} yet.", "code": "unsupported_language"}, 400)
     if source == settings["target"]:
-        return jsonify({"error": f"This book is already in {translate.TARGETS[source]}. Pick another language under Translation.", "code": "bad_input"}), 400
-    if jobs.active(kind="translate", book_id=book_id):
-        return jsonify({"error": "This book is already being translated.", "code": "already_queued"}), 409
+        return None, ({"error": f"This book is already in {translate.TARGETS[source]}. Pick another language under Translation.", "code": "bad_input"}, 400)
+    if jobs.active(kind="translate", book_id=book.id):
+        return None, ({"error": "This book is already being translated.", "code": "already_queued"}, 409)
     app = current_app._get_current_object()  # pylint: disable=protected-access
     label = book_translation.provider_label(settings, model_files.text_models())
+    book_id = book.id
     job = jobs.submit(
         "translate",
         lambda job, check: _run(app, job, check, book_id, scope, page, settings, label),
         book_id=book_id,
         title=book.title,
     )
+    return job, None
+
+
+@bp.route("/books/<int:book_id>/translation", methods=["POST"])
+def start_translation(book_id):
+    "Translate a page or the whole book with the service chosen under Translation; returns the job."
+    book = _book(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    job, problem = queue_translation(book, request.get_json(silent=True) or {})
+    if problem:
+        return jsonify(problem[0]), problem[1]
     return jsonify(job), 202
 
 

@@ -22,6 +22,7 @@ from lute.models.term import Term as DBTerm, Status
 from lute.read.render.service import Service as RenderService
 from lute.term.model import ReferencesRepository
 from lute.term.model import Repository as TermRepository
+from ocarina import term_context
 from ocarina.api.common import ZWS, clean
 
 bp = Blueprint("ocarina_terms", __name__, url_prefix="/ocarina/api")
@@ -115,6 +116,9 @@ def save_term():
     repo.add(term)
     repo.commit()
     saved = repo.find(term.language_id, term.text)
+    context = body.get("context") or {}
+    if saved is not None and context.get("sentence"):
+        term_context.remember(saved.id, context["sentence"], context.get("bookId"), context.get("page"))  # the sentence it was saved from
     return jsonify(_term_json(saved))
 
 

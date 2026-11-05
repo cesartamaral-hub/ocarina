@@ -52,7 +52,7 @@ export function SentenceCard({
   text: string
   languageId: number
   playStart?: number
-  onPlay: (seconds: number) => void
+  onPlay?: (seconds: number) => void
   onOpenInBrowser?: () => void
   stored?: string // the book's own translation of exactly this text
 }) {
@@ -84,7 +84,7 @@ export function SentenceCard({
       <div className="sc-head">
         <span className="sc-label">{cardLabel(kind, text)}</span>
         <span className="sc-tools">
-          {playStart !== undefined && (
+          {playStart !== undefined && onPlay && (
             <Tool label="Play from here" onClick={() => onPlay(playStart)}>
               {PLAY}
             </Tool>

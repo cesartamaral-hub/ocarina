@@ -16,6 +16,7 @@ from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
 from ocarina import audio_versions, model_check, prefs
+from ocarina.api import audio_versions as audio_versions_api
 from ocarina.api import jobs
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
 from ocarina.tts import models as model_files
@@ -154,7 +155,8 @@ def upload_audio(book_id):
     filename = Service().save_audio_file(audio)
     label = os.path.splitext(os.path.basename(audio.filename))[0].strip()[:60] or "Original"
     version_id = audio_versions.add(book, filename, audio_versions.OWN, label)
-    return jsonify({"audio_filename": filename, "versionId": version_id}), 201
+    sync = audio_versions_api.sync_new_audio(book, version_id)  # every recording is synced with the text
+    return jsonify({"audio_filename": filename, "versionId": version_id, "sync": sync}), 201
 
 
 @bp.route("/books/<int:book_id>/audio/options", methods=["GET"])

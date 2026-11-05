@@ -463,7 +463,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               tpPlacement={tpPlacement}
               tpToggle={tpToggle}
               tpClose={tpClose}
-              translation={<TranslationPanel tr={tr} mode={shown} onMode={chooseMode} page={page.page} pageHasTranslation={pageTr.size > 0} />}
+              translation={<TranslationPanel tr={tr} mode={shown} onMode={chooseMode} page={page.page} pageCount={page.pageCount} pageHasTranslation={pageTr.size > 0} />}
               onEdit={startEditing}
               onHelp={() => setHelp(true)}
             />
@@ -641,7 +641,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         ) : selected ? (
           <TermPanel
             key={selected.termId ?? `new:${selected.text}`}
-            page={page}
+            language={page.language}
+            where={{ bookId: page.bookId, page: page.page }}
             target={selected}
             sentenceText={sentenceText(selected.sentence)}
             storedTranslation={pageTr.get(selected.sentence)?.text}

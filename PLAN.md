@@ -129,3 +129,6 @@ Order: quick ones first (1 to 5), then the focus mode (6), the selected-text red
 
 ## Add study material: web pages and YouTube (2026-11-05, done except the packaged-app check)
 "Add a book" is now "Add study material" (`#/new`). One block "get the text from": a file, or a web page or YouTube link; or paste. `ocarina/importer.py` (web pages: trafilatura, paragraph fallback; CLI `python -m ocarina.importer --url … --language nl [--save]`), `ocarina/youtube.py` (captions: written, automatic, translated; else the sound is downloaded with yt-dlp and transcribed), `ocarina/transcribe.py` (Whisper large-v3-turbo through the model worker, a new model kind "transcriber" in Settings, Models). A video that must be transcribed runs as a job ("import"); optionally the video's sound is kept as the material's audio (m4a, `importAudio` token). Left: try it in the rebuilt app (the bundle must contain trafilatura, yt-dlp and youtube-transcript-api; ffmpeg is found at /opt/homebrew/bin or /usr/local/bin).
+
+## Vocabulary page (2026-11-05, done except the packaged-app check)
+The Terms page became Vocabulary: statuses 1-5 and well known, chips with counts, sentence each word was saved from (kept from now on; found in the books for older words), word panel on the right, arrow keys and S/Enter. See architecture.md.

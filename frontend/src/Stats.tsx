@@ -1,3 +1,4 @@
+import { CefrBar } from './CefrBar'
 import { useEffect, useState } from 'react'
 import { getPref, getStats, setPref, type LanguageStats, type Stats as StatsData } from './api'
 import { DIFFICULTY_LABEL, difficulty, duration } from './bookStats'
@@ -56,6 +57,8 @@ function Section({ lang, detail, onOpen }: { lang: LanguageStats; detail: boolea
           </button>
         )}
       </div>
+
+      <CefrBar known={lang.terms.known} learning={lang.terms.learning} detail={detail} />
 
       <div className="kpis">
         <Kpi

@@ -11,12 +11,14 @@ export function TranslationPanel({
   mode,
   onMode,
   page,
+  pageCount,
   pageHasTranslation,
 }: {
   tr: ReturnType<typeof useBookTranslation>
   mode: TranslationMode
   onMode: (mode: TranslationMode) => void
   page: number
+  pageCount: number
   pageHasTranslation: boolean
 }) {
   const d = tr.data
@@ -61,15 +63,28 @@ export function TranslationPanel({
         </div>
       ) : (
         <div className="tp-actions">
-          <TranslateSplit
-            label="Translate this page"
-            methods={d.methods}
-            primary
-            disabled={pageChars === 0}
-            title={pageChars === 0 ? 'Every sentence of this page is translated' : undefined}
-            onRun={(method) => tr.start('page', page, method)}
-          />
-          <TranslateSplit label="Translate the whole book" methods={d.methods} primary={false} disabled={d.remainingChars === 0} onRun={(method) => tr.start('book', undefined, method)} />
+          {pageCount > 1 ? (
+            <>
+              <TranslateSplit
+                label="Translate this page"
+                methods={d.methods}
+                primary
+                disabled={pageChars === 0}
+                title={pageChars === 0 ? 'Every sentence of this page is translated' : undefined}
+                onRun={(method) => tr.start('page', page, method)}
+              />
+              <TranslateSplit label="Translate the whole material" methods={d.methods} primary={false} disabled={d.remainingChars === 0} onRun={(method) => tr.start('book', undefined, method)} />
+            </>
+          ) : (
+            <TranslateSplit
+              label="Translate this material"
+              methods={d.methods}
+              primary
+              disabled={d.remainingChars === 0}
+              title={d.remainingChars === 0 ? 'Every sentence is translated' : undefined}
+              onRun={(method) => tr.start('book', undefined, method)}
+            />
+          )}
         </div>
       )}
       {tr.job?.state === 'error' && <p className="error tp-note">{tr.job.error}</p>}
@@ -82,7 +97,7 @@ export function TranslationPanel({
       </p>
       {over && !running && (
         <p className="tp-warn">
-          {d.providerName} allows about {n(d.dailyLimit!)} characters a day, and this book needs about {n(d.remainingChars)}. A model on this Mac, or DeepL, has no such limit.
+          {d.providerName} allows about {n(d.dailyLimit!)} characters a day, and this material needs about {n(d.remainingChars)}. A model on this Mac, or DeepL, has no such limit.
         </p>
       )}
 
@@ -90,7 +105,7 @@ export function TranslationPanel({
         <button
           className="link-button danger-text"
           onClick={() => {
-            if (window.confirm('Remove the translation of this whole book? You can make it again.')) tr.remove()
+            if (window.confirm('Remove the translation of this whole material? You can make it again.')) tr.remove()
           }}
         >
           Remove the translation

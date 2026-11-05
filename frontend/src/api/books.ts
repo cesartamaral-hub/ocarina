@@ -1,5 +1,5 @@
 import { API, json, send } from './client'
-import type { Job } from './tts'
+import type { Job, SyncStart } from './tts'
 
 export type Book = {
   id: number
@@ -87,6 +87,13 @@ export type NewBook = {
   audio: File | null
   importAudio?: string | null // the sound of an imported video (see Extracted.audioToken)
   video?: { videoId: string; anchors: [number, number][] } | null // the video to play in the reader
+  translate?: { provider: string; model: string | null } | null // translate the whole text once it is saved, this way
+}
+
+export type BookSaved = {
+  id: number
+  sync?: SyncStart
+  translation?: { state: 'started'; job: Job } | { state: 'failed'; error: string }
 }
 
 export const createBook = (b: NewBook) => {
@@ -97,9 +104,14 @@ export const createBook = (b: NewBook) => {
   form.append('sourceUri', b.sourceUri)
   if (b.audio) form.append('audio', b.audio)
   else if (b.importAudio) form.append('importAudio', b.importAudio)
+  if (b.translate) {
+    form.append('translate', '1')
+    form.append('translateProvider', b.translate.provider)
+    if (b.translate.model) form.append('translateModel', b.translate.model)
+  }
   if (b.video) {
     form.append('videoId', b.video.videoId)
     form.append('videoAnchors', JSON.stringify(b.video.anchors))
   }
-  return fetch(`${API}/books`, { method: 'POST', body: form }).then((r) => json<{ id: number }>(r))
+  return fetch(`${API}/books`, { method: 'POST', body: form }).then((r) => json<BookSaved>(r))
 }

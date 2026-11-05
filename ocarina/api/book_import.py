@@ -25,6 +25,8 @@ from lute.db import db
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
 from ocarina import audio_versions, importer, transcribe, video, youtube
+from ocarina.api import audio_versions as audio_versions_api
+from ocarina.api import book_translation as book_translation_api
 from ocarina.api import jobs
 from ocarina.tts.book_audio import tts_lang
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
@@ -188,4 +190,14 @@ def create_book():
         except ValueError:
             pass  # the book is saved; it just has no video to play
     audio_versions.sync(saved, current_app.env_config.useraudiopath)  # an audio file sent with the book is its first version
-    return jsonify({"id": saved.id}), 201
+    reply = {"id": saved.id}
+    own = next((v for v in audio_versions.list_versions(saved, current_app.env_config.useraudiopath) if v["kind"] == audio_versions.OWN), None)
+    if own:
+        reply["sync"] = audio_versions_api.sync_new_audio(saved, own["id"])  # a recording is synced with the text as soon as it is added
+    if form.get("translate") == "1":
+        body = {"scope": "book"}
+        if form.get("translateProvider"):
+            body.update(provider=form["translateProvider"], model=form.get("translateModel") or None)
+        job, problem = book_translation_api.queue_translation(saved, body)
+        reply["translation"] = {"state": "started", "job": job} if job else {"state": "failed", **problem[0]}  # the book is saved either way
+    return jsonify(reply), 201

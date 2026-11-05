@@ -136,11 +136,14 @@ export function AudioPage({ bookId }: { bookId: number }) {
   async function upload(file: File) {
     setError('')
     try {
-      await uploadAudio(bookId, file)
+      const added = await uploadAudio(bookId, file)
       setJob(null)
       setAudioVersion((v) => v + 1)
       setVersionsKey((k) => k + 1)
       load()
+      // The recording is synced with the text at once (see ocarina/api/audio_versions.py); the job shows here like one you started.
+      if (added.sync?.state === 'started') setJob(added.sync.job)
+      else if (added.sync?.state === 'model_missing') setNeedsAligner(true)
     } catch (e) {
       setError((e as Error).message)
     }

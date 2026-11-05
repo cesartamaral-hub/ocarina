@@ -99,3 +99,67 @@ def test_export_is_csv_of_all_matching_rows(app, client):
     lines = r.get_data(as_text=True).strip().splitlines()
     assert lines[0].startswith("term,parent,translation") and len(lines) == 2
     assert lines[1].startswith("chat,")
+
+
+def test_statuses_filter_and_counts(app, client):
+    "The status chips: only the asked statuses, and how many there are of each under the other filters."
+    _terms(app)
+    assert _texts(client, "statuses=1,3") == ["Hond", "huis"]
+    assert _texts(client, "statuses=98") == ["kat"]
+    assert _texts(client, "statuses=") == []  # no chip on: nothing
+    page = client.get(f"{LIST}?statuses=1&counts=true").json
+    assert page["counts"] == {"1": 1, "2": 1, "3": 1, "98": 1}  # the counts ignore the status filter itself
+    with app.app_context():
+        dutch_id = _get_test_language("Dutch").id
+    only_dutch = client.get(f"{LIST}?statuses=1,2,3&counts=true&language={dutch_id}").json
+    assert only_dutch["counts"] == {"1": 1, "3": 1, "98": 1}
+
+
+def test_a_status_0_word_is_never_vocabulary(app, client):
+    with app.app_context():
+        t = DBTerm(_get_test_language("Dutch"), "nieuw")
+        t.status = 0
+        db.session.add(t)
+        db.session.commit()
+    assert "nieuw" not in _texts(client, "statuses=0,1,2,3,4,5,99")
+
+
+def test_the_sentence_a_term_was_saved_from_is_kept_and_listed(app, client):
+    from tests.ocarina.helpers import make_dutch_book
+
+    with app.app_context():
+        lang_id = _get_test_language("Dutch").id
+        book_id = make_dutch_book("Context boek").id
+    saved = client.post(
+        "/ocarina/api/terms",
+        json={"languageId": lang_id, "text": "Nederland", "status": 2, "context": {"sentence": "Ik woon in Nederland.", "bookId": book_id, "page": 1}},
+    )
+    assert saved.status_code == 200
+    row = next(r for r in client.get(f"{LIST}?statuses=2").json["rows"] if r["text"] == "Nederland")
+    assert row["context"] == {"sentence": "Ik woon in Nederland.", "bookId": book_id, "page": 1, "found": False}
+    # a second save from another sentence does not replace what was recorded
+    client.post("/ocarina/api/terms", json={"languageId": lang_id, "text": "Nederland", "status": 3, "context": {"sentence": "Anders.", "bookId": book_id, "page": 1}})
+    row = next(r for r in client.get(f"{LIST}?statuses=3").json["rows"] if r["text"] == "Nederland")
+    assert row["context"]["sentence"] == "Ik woon in Nederland."
+
+
+def test_words_without_a_recorded_sentence_get_one_from_the_books(app, client):
+    from ocarina import term_context
+    from tests.ocarina.helpers import make_dutch_book
+
+    with app.app_context():
+        lang_id = _get_test_language("Dutch").id
+        book = make_dutch_book("Zoek boek")
+        for page in book.texts:  # the sentences of a page exist once it has been opened
+            page.load_sentences()
+        db.session.commit()
+    client.post("/ocarina/api/terms", json={"languageId": lang_id, "text": "ochtend", "status": 2})
+    client.post("/ocarina/api/terms", json={"languageId": lang_id, "text": "onbekend", "status": 2})
+    with app.app_context():
+        term_context.backfill()
+    rows = {r["text"]: r for r in client.get(f"{LIST}?statuses=2").json["rows"]}
+    assert rows["ochtend"]["context"]["sentence"] == "Elke ochtend sta ik op." and rows["ochtend"]["context"]["found"]
+    assert rows["ochtend"]["context"]["page"] == 2
+    assert rows["onbekend"]["context"] is None  # no book has it, and it is not looked for again
+    with app.app_context():
+        assert term_context.missing_term_ids() == []

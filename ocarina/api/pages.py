@@ -9,6 +9,7 @@ JSON API for reading a book page by page.
 from flask import Blueprint, jsonify, request
 
 from lute.db import db
+from lute.models.language import Language
 from lute.models.repositories import BookRepository
 from lute.read.service import Service as ReadService
 from ocarina.api.common import ZWS
@@ -37,6 +38,15 @@ def _language_json(language):
         "dictionaries": language.active_dict_uris("terms"),
         "sentenceDictionaries": language.sentence_dict_uris,
     }
+
+
+@bp.route("/languages/<int:language_id>/reading", methods=["GET"])
+def language_for_reading(language_id):
+    "What the word panel needs of a language: its dictionaries, and whether it reads right to left or shows romanisation."
+    language = db.session.get(Language, language_id)
+    if language is None:
+        return jsonify({"error": "No such language"}), 404
+    return jsonify(_language_json(language))
 
 
 @bp.route("/books/<int:book_id>/pages/<int:page>", methods=["GET"])

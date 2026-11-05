@@ -10,14 +10,13 @@ export type ListRow = {
   tags: string[]
   status: number
   created: string
+  context: { sentence: string; bookId: number | null; page: number | null; found: boolean } | null // where it was saved from
 }
 
 export type TermFilters = {
   language: number
   q: string
-  statusMin: number
-  statusMax: number
-  includeIgnored: boolean
+  statuses: number[] // the status chips that are on
   parentsOnly: boolean
   tag: string
   sort: string
@@ -26,21 +25,20 @@ export type TermFilters = {
   pageSize: number
 }
 
-export type TermPage = { total: number; page: number; pageSize: number; rows: ListRow[] }
+export type TermPage = { total: number; page: number; pageSize: number; rows: ListRow[]; counts?: Record<string, number> }
 
 const query = (f: TermFilters) => {
   const p = new URLSearchParams({
     language: String(f.language),
     q: f.q,
-    statusMin: String(f.statusMin),
-    statusMax: String(f.statusMax),
-    includeIgnored: String(f.includeIgnored),
+    statuses: f.statuses.join(','),
     parentsOnly: String(f.parentsOnly),
     tag: f.tag,
     sort: f.sort,
     order: f.order,
     page: String(f.page),
     pageSize: String(f.pageSize),
+    counts: 'true',
   })
   return p.toString()
 }

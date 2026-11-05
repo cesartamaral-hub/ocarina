@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { BookStats } from '../api'
-import { DIFFICULTY_LABEL, duration } from '../bookStats'
-import { vocabularyBar, type NewWord, type PageVocabulary } from './vocabulary'
+import { DIFFICULTY_LABEL, difficulty, duration } from '../bookStats'
+import type { NewWord, PageVocabulary } from './vocabulary'
 
 const SHOWN = 12
 const n = (x: number) => x.toLocaleString('en')
@@ -16,7 +16,7 @@ function Bar({ parts }: { parts: { known: number; learning: number; fresh: numbe
   )
 }
 
-// How well you know the words of this page, updated as you set statuses, and of the book as a whole.
+// How well you know the words of the material, as a whole, updated as you set statuses; and the new words of this page.
 export function VocabularyPanel({
   vocab,
   page,
@@ -28,13 +28,25 @@ export function VocabularyPanel({
   vocab: PageVocabulary
   page: number
   pageCount: number
-  book: BookStats | null | undefined // undefined while loading, null while the book's words are being counted
+  book: BookStats | null | undefined // undefined while loading, null while the material's words are being counted
   onPick: (word: NewWord) => void
   onClose: () => void
 }) {
   const [all, setAll] = useState(false)
   const list = all ? vocab.newWords : vocab.newWords.slice(0, SHOWN)
-  const bookBar = book ? { known: (100 * book.known) / Math.max(book.known + book.learning + book.new, 1), learning: (100 * book.learning) / Math.max(book.known + book.learning + book.new, 1), fresh: (100 * book.new) / Math.max(book.known + book.learning + book.new, 1) } : null
+  // The numbers of the whole material; until they are counted, those of this page.
+  const stats = book ?? {
+    words: vocab.words,
+    known: vocab.known.running,
+    learning: vocab.learning.running,
+    new: vocab.fresh.running,
+    newUnique: vocab.fresh.unique,
+    knownPercent: vocab.knownPercent,
+    minutes: vocab.minutes,
+  }
+  const counted = Math.max(stats.known + stats.learning + stats.new, 1)
+  const parts = { known: (100 * stats.known) / counted, learning: (100 * stats.learning) / counted, fresh: (100 * stats.new) / counted }
+  const level = difficulty(stats.knownPercent)
   return (
     <div className="vocab">
       <div className="vocab-head">
@@ -43,63 +55,55 @@ export function VocabularyPanel({
           ✕
         </button>
       </div>
+      <p className="vocab-size">
+        {n(stats.words)} words · about {duration(stats.minutes)} to read
+        {book === undefined || book === null ? <span className="muted"> · counting…</span> : null}
+      </p>
 
-      <section aria-labelledby="vocab-page">
-        <h3 id="vocab-page">
-          This page <span className="muted">{pageCount > 1 ? `${page} of ${pageCount}` : ''}</span>
-        </h3>
+      <section aria-labelledby="vocab-stats">
+        <h3 id="vocab-stats">How well you know it</h3>
         <p className="vocab-big">
-          <strong>{Math.round(vocab.knownPercent)}%</strong> known <span className={`chip-level ${vocab.level}`}>{DIFFICULTY_LABEL[vocab.level]}</span>
+          <strong>{Math.round(stats.knownPercent)}%</strong> known <span className={`chip-level ${level}`}>{DIFFICULTY_LABEL[level]}</span>
         </p>
-        <Bar parts={vocabularyBar(vocab)} />
+        <Bar parts={parts} />
         <dl className="vocab-rows">
           <div>
             <dt>
               <i className="dot k" /> Known
             </dt>
-            <dd>
-              {n(vocab.known.running)} <span className="muted">· {n(vocab.known.unique)} different</span>
-            </dd>
+            <dd>{n(stats.known)}</dd>
           </div>
           <div>
             <dt>
               <i className="dot l" /> Learning
             </dt>
-            <dd>
-              {n(vocab.learning.running)} <span className="muted">· {n(vocab.learning.unique)} different</span>
-            </dd>
+            <dd>{n(stats.learning)}</dd>
           </div>
           <div>
             <dt>
               <i className="dot n" /> New
             </dt>
             <dd>
-              {n(vocab.fresh.running)} <span className="muted">· {n(vocab.fresh.unique)} different</span>
+              {n(stats.new)} <span className="muted">· {n(stats.newUnique)} different</span>
             </dd>
           </div>
-          {vocab.ignored.running > 0 && (
-            <div>
-              <dt>Ignored</dt>
-              <dd>{n(vocab.ignored.running)}</dd>
-            </div>
-          )}
         </dl>
-        {vocab.learning.unique > 0 && (
-          <p className="muted vocab-stages">
-            Learning stages: {([1, 2, 3] as const).map((s) => `${s}: ${vocab.learning.byStatus[s]}`).join(' · ')}
-          </p>
+        {pageCount > 1 && (
+          <div className="vocab-progress">
+            <progress value={page - 1} max={pageCount} aria-label="Pages read" />
+            <p className="muted vocab-small">
+              Page {page} of {pageCount}
+            </p>
+          </div>
         )}
-        <p className="muted vocab-small">
-          {n(vocab.words)} words · {n(vocab.unique)} different · {duration(vocab.minutes)} to read
-        </p>
       </section>
 
       <section aria-labelledby="vocab-new">
         <h3 id="vocab-new">
-          New on this page <span className="muted">{vocab.newWords.length}</span>
+          {pageCount > 1 ? 'New words on this page' : 'New words'} <span className="muted">{vocab.newWords.length}</span>
         </h3>
         {vocab.newWords.length === 0 ? (
-          <p className="muted">Every word on this page is one you have started on.</p>
+          <p className="muted">{pageCount > 1 ? 'Every word on this page is one you have started on.' : 'Every word here is one you have started on.'}</p>
         ) : (
           <>
             <ul className="vocab-new">
@@ -116,33 +120,6 @@ export function VocabularyPanel({
               <button className="link-button" onClick={() => setAll(!all)}>
                 {all ? 'Show fewer' : `Show all ${vocab.newWords.length}`}
               </button>
-            )}
-          </>
-        )}
-      </section>
-
-      <section aria-labelledby="vocab-book">
-        <h3 id="vocab-book">This book</h3>
-        {book === undefined ? (
-          <p className="muted">Loading…</p>
-        ) : book === null ? (
-          <p className="muted">Counting the words of the book…</p>
-        ) : (
-          <>
-            <p className="vocab-big">
-              <strong>{Math.round(book.knownPercent)}%</strong> known
-            </p>
-            {bookBar && <Bar parts={bookBar} />}
-            <p className="muted vocab-small">
-              {n(book.newUnique)} new words in all · {n(book.words)} words · about {duration(book.minutes)} to read
-            </p>
-            {pageCount > 1 && (
-              <>
-                <progress value={page - 1} max={pageCount} aria-label="Pages read" />
-                <p className="muted vocab-small">
-                  Page {page} of {pageCount}
-                </p>
-              </>
             )}
           </>
         )}

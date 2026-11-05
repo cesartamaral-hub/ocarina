@@ -42,3 +42,6 @@ export const putPageText = (bookId: number, page: number, text: string) =>
 
 export const openExternal = (url: string) =>
   send<{ ok: boolean }>('POST', `${API}/open-external`, { url })
+
+// What the word panel needs of a language outside the reader (the Vocabulary page).
+export const getReadingLanguage = (id: number) => fetch(`${API}/languages/${id}/reading`).then((r) => json<ReaderPage['language']>(r))

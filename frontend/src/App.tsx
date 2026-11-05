@@ -13,7 +13,7 @@ import { Reader } from './reader/Reader'
 import { SettingsShell } from './SettingsShell'
 import { legacyRedirect, parseSettings } from './settingsRoutes'
 import { Stats } from './Stats'
-import { TermList } from './TermList'
+import { Vocabulary } from './Vocabulary'
 
 // Tiny hash router: "#/" is the book list, "#/book/12" opens a book in the reader, "#/book/12/audio" is its audio page.
 function useRoute() {
@@ -31,7 +31,7 @@ function useRoute() {
     audioPage: /^#\/book\/\d+\/audio\/?$/.test(hash),
     settings: parseSettings(hash),
     newBook: hash === '#/new',
-    terms: hash === '#/terms',
+    vocabulary: hash === '#/vocabulary',
     stats: hash === '#/stats',
     raw: hash,
   }
@@ -50,16 +50,16 @@ function Logo() {
 }
 
 export default function App() {
-  const { bookId, readPage, audioPage, settings, newBook, terms, stats, raw } = useRoute()
+  const { bookId, readPage, audioPage, settings, newBook, vocabulary, stats, raw } = useRoute()
   // Page width: the reader uses the whole window; the book list and the term list are wider than forms.
-  const reading = bookId !== null && readPage !== null
-  const onHome = bookId === null && !(settings || newBook || terms || stats || raw.startsWith('#/settings'))
-  const medium = terms || onHome || stats || settings !== null
+  const reading = (bookId !== null && readPage !== null) || vocabulary // the reader and the vocabulary use the whole window
+  const onHome = bookId === null && !(settings || newBook || vocabulary || stats || raw.startsWith('#/settings'))
+  const medium = onHome || stats || settings !== null
   const [ready, setReady] = useState(false)
   // Older addresses (and plain "#/settings") go to their section.
   useEffect(() => {
     if (!ready) return
-    const to = legacyRedirect(raw, getPref<string | null>('settings.section', null))
+    const to = raw === '#/terms' ? '#/vocabulary' : legacyRedirect(raw, getPref<string | null>('settings.section', null))
     if (to) window.location.replace(to)
   }, [raw, ready])
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function App() {
         </a>
         <JobChip />
         <nav>
-          <a href="#/terms">Terms</a>
+          <a href="#/vocabulary">Vocabulary</a>
           <a href="#/settings/languages">Languages</a>
           <a href="#/stats">Reading</a>
           <a href="#/settings">Settings</a>
@@ -106,8 +106,8 @@ export default function App() {
           <SettingsShell section={settings.section} rest={settings.rest} />
         ) : stats ? (
           <Stats />
-        ) : terms ? (
-          <TermList />
+        ) : vocabulary ? (
+          <Vocabulary />
         ) : newBook ? (
           <NewBook />
         ) : bookId !== null && readPage !== null ? (

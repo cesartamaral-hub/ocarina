@@ -103,6 +103,43 @@ def _run_sync(app, job, check, book_id, filename, model):
             supervisor.unload()
 
 
+def queue_sync(book, row):
+    """
+    Queue the job that syncs one of the book's own recordings with its text. Returns (job, None), or (None, why) when it cannot be
+    queued: {"code": "model_not_installed" | "already_queued" | "not_own", "error": message, "model": id}.
+    """
+    if row.BaKind != audio_versions.OWN:
+        return None, {"code": "not_own", "error": "Audio made by Ocarina already follows the text."}
+    if jobs.active(kind="sync", book_id=book.id) or jobs.active(kind="audio", book_id=book.id):
+        return None, {"code": "already_queued", "error": "Audio for this book is already being generated or synced."}
+    model = model_files.find_model(ALIGNER_ID)
+    # pylint: disable=protected-access
+    app = current_app._get_current_object()
+    if "OCARINA_TTS_ENGINE" not in app.config and not model_files.is_installed(model):
+        return None, {"code": "model_not_installed", "error": f"{model['name']} is not downloaded yet. Download it in Settings.", "model": model["id"]}
+    filename = row.BaFilename
+    job = jobs.submit(
+        "sync",
+        lambda job, check: _run_sync(app, job, check, book.id, filename, model),
+        book_id=book.id,
+        title=book.title,
+    )
+    return job, None
+
+
+def sync_new_audio(book, version_id):
+    "Every recording added to a material is synced with its text: the answer for the page, {state: started | model_missing | busy}."
+    row = audio_versions.find(book, version_id)
+    if row is None:
+        return None
+    job, why = queue_sync(book, row)
+    if job is not None:
+        return {"state": "started", "job": job}
+    if why["code"] == "model_not_installed":
+        return {"state": "model_missing", "error": why["error"], "model": why.get("model")}
+    return {"state": "busy", "error": why["error"]}
+
+
 @bp.route("/books/<int:book_id>/audio/versions/<int:version_id>/sync", methods=["POST"])
 def sync_version(book_id, version_id):
     "Start syncing one of your own recordings with the book's text; returns the job."
@@ -110,23 +147,8 @@ def sync_version(book_id, version_id):
     row = audio_versions.find(book, version_id) if book else None
     if row is None:
         return jsonify({"error": "No such audio version"}), 404
-    if row.BaKind != audio_versions.OWN:
-        return jsonify({"error": "Audio made by Ocarina already follows the text."}), 400
-    if jobs.active(kind="sync", book_id=book_id) or jobs.active(kind="audio", book_id=book_id):
-        return jsonify({"error": "Audio for this book is already being generated or synced.", "code": "already_queued"}), 409
-    model = model_files.find_model(ALIGNER_ID)
-    # pylint: disable=protected-access
-    app = current_app._get_current_object()
-    if "OCARINA_TTS_ENGINE" not in app.config and not model_files.is_installed(model):
-        return (
-            jsonify({"error": f"{model['name']} is not downloaded yet. Download it in Settings.", "code": "model_not_installed", "model": model["id"]}),
-            409,
-        )
-    filename = row.BaFilename
-    job = jobs.submit(
-        "sync",
-        lambda job, check: _run_sync(app, job, check, book_id, filename, model),
-        book_id=book_id,
-        title=book.title,
-    )
-    return jsonify(job), 202
+    job, why = queue_sync(book, row)
+    if job is not None:
+        return jsonify(job), 202
+    status = {"not_own": 400, "already_queued": 409, "model_not_installed": 409}[why["code"]]
+    return jsonify(why), status

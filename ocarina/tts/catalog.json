@@ -40,7 +40,14 @@
         "secondsPerSecondOfAudio": 0.54,
         "loadSeconds": 2.5,
         "peakRamGb": 3.5
-      }
+      },
+      "grades": {
+        "nl": "B",
+        "pl": "B-",
+        "fr": "B+"
+      },
+      "speed": 3,
+      "badge": "Recommended"
     },
     {
       "id": "audio8-realistic-mlx",
@@ -77,7 +84,13 @@
         "machine": "M1 Max 32GB",
         "secondsPerSecondOfAudio": 0.7,
         "loadSeconds": 0.2
-      }
+      },
+      "grades": {
+        "nl": "B-",
+        "pl": "C+",
+        "fr": "B-"
+      },
+      "speed": 3
     },
     {
       "id": "qwen3-4b-instruct-mlx",
@@ -116,7 +129,14 @@
         "machine": "M1 Max 32GB",
         "secondsPerSentence": 0.3,
         "loadSeconds": 0.6
-      }
+      },
+      "grades": {
+        "nl": "B",
+        "pl": "C+",
+        "fr": "B+"
+      },
+      "speed": 3,
+      "badge": "Recommended"
     },
     {
       "id": "qwen3-forced-aligner-mlx",
@@ -148,7 +168,14 @@
         "nl",
         "pl",
         "fr"
-      ]
+      ],
+      "grades": {
+        "nl": "B+",
+        "pl": "B",
+        "fr": "B+"
+      },
+      "speed": 4,
+      "badge": "Recommended"
     },
     {
       "id": "qwen3-8b-mlx",
@@ -181,7 +208,13 @@
         "nl",
         "pl",
         "fr"
-      ]
+      ],
+      "grades": {
+        "nl": "B+",
+        "pl": "B-",
+        "fr": "A-"
+      },
+      "speed": 2
     },
     {
       "id": "translategemma-4b-mlx",
@@ -215,7 +248,13 @@
         "nl",
         "pl",
         "fr"
-      ]
+      ],
+      "grades": {
+        "nl": "B+",
+        "pl": "B",
+        "fr": "B+"
+      },
+      "speed": 3
     },
     {
       "id": "translategemma-12b-mlx",
@@ -250,7 +289,14 @@
         "nl",
         "pl",
         "fr"
-      ]
+      ],
+      "grades": {
+        "nl": "A-",
+        "pl": "B+",
+        "fr": "A-"
+      },
+      "speed": 2,
+      "badge": "More accurate"
     },
     {
       "id": "whisper-large-v3-turbo-mlx",
@@ -290,7 +336,17 @@
         "en",
         "pt",
         "it"
-      ]
+      ],
+      "grades": {
+        "nl": "B+",
+        "pl": "B+",
+        "fr": "A-",
+        "en": "A-",
+        "es": "A-",
+        "de": "A-"
+      },
+      "speed": 3,
+      "badge": "Recommended"
     }
   ]
 }

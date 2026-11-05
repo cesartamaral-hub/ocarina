@@ -34,7 +34,8 @@ function dictName(d: Dictionary): string {
 export type Target = { termId: number | null; text: string; sentence: number; kind?: 'text'; span?: [number, number] }
 
 export function TermPanel({
-  page,
+  language,
+  where,
   target,
   sentenceText,
   storedTranslation,
@@ -46,12 +47,13 @@ export function TermPanel({
   onCreated,
   onError,
 }: {
-  page: ReaderPage
+  language: ReaderPage['language']
+  where?: { bookId: number; page: number } // the book and page the word is read in: kept with a new word, with the sentence
   target: Target
   sentenceText: string
   storedTranslation?: string // the book's own translation of that sentence, when it has one
   playStart?: number
-  onPlay: (seconds: number) => void
+  onPlay?: (seconds: number) => void
   keysEnabled: boolean
   onStatus: (termId: number, status: number) => void
   onChanged: (termId: number) => void
@@ -65,9 +67,9 @@ export function TermPanel({
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const load = target.termId ? getTerm(target.termId) : lookupTerm(page.language.id, target.text)
+    const load = target.termId ? getTerm(target.termId) : lookupTerm(language.id, target.text)
     load.then(setTerm, (e) => onError(e.message))
-  }, [target.termId, target.text, page.language.id, onError])
+  }, [target.termId, target.text, language.id, onError])
 
   const persist = useCallback(
     async (t: Term, status: number) => {
@@ -80,6 +82,7 @@ export function TermPanel({
         romanization: t.romanization,
         tags: t.tags,
         parents: t.parents,
+        context: sentenceText ? { sentence: sentenceText, bookId: where?.bookId, page: where?.page } : undefined,
       })
       setTerm(result)
       setSaved(true)
@@ -89,7 +92,7 @@ export function TermPanel({
         onChanged(result.id!)
       }
     },
-    [onCreated, onStatus, onChanged],
+    [onCreated, onStatus, onChanged, sentenceText, where],
   )
 
   const changeStatus = useCallback(
@@ -166,7 +169,7 @@ export function TermPanel({
   return (
     <div className="term">
       <h2>
-        {term.displayText} {term.displayText.trim() && <SpeakButton text={term.displayText} languageId={page.language.id} />}
+        {term.displayText} {term.displayText.trim() && <SpeakButton text={term.displayText} languageId={language.id} />}
       </h2>
       {isNew && <p className="muted">New phrase. Pick a status or fill it in, then save.</p>}
       <div className="statuses">
@@ -184,7 +187,7 @@ export function TermPanel({
 
       {!isNew || term.text ? (
         <Definition
-          languageId={page.language.id}
+          languageId={language.id}
           text={term.displayText}
           onUse={(meaning) => edit({ translation: term.translation.trim() ? `${term.translation.trim()}; ${meaning}` : meaning })}
           onError={onError}
@@ -195,18 +198,18 @@ export function TermPanel({
         <SentenceCard
           key={sentenceText}
           kind="sentence"
-          languageId={page.language.id}
+          languageId={language.id}
           text={sentenceText}
           stored={storedTranslation}
           playStart={playStart}
           onPlay={onPlay}
-          onOpenInBrowser={page.language.sentenceDictionaries[0] ? () => openOutside(page.language.sentenceDictionaries[0], sentenceText) : undefined}
+          onOpenInBrowser={language.sentenceDictionaries[0] ? () => openOutside(language.sentenceDictionaries[0], sentenceText) : undefined}
         />
       )}
 
       <div className="dicts">
         <span className="muted">Open in browser:</span>
-        {page.language.dictionaries.map((d, i) => (
+        {language.dictionaries.map((d, i) => (
           <button key={i} className="secondary" title={`Open ${dictName(d)} in your browser`} onClick={() => openOutside(d, term.displayText)}>
             {dictName(d)} ↗
           </button>
@@ -217,7 +220,7 @@ export function TermPanel({
         Translation
         <textarea rows={3} value={term.translation} onChange={(e) => edit({ translation: e.target.value })} />
       </label>
-      {page.language.showRomanization && (
+      {language.showRomanization && (
         <label>
           Romanization
           <input value={term.romanization} onChange={(e) => edit({ romanization: e.target.value })} />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { changeBook, getPref, setPref, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, type Book } from './api'
+import { changeBook, getPref, setPref, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, getVocabularyCounts, type Book, type VocabularyCount } from './api'
 import { BookRow } from './BookRow'
+import { CefrBar } from './CefrBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
 
@@ -58,6 +59,7 @@ export function BookList() {
   const [error, setError] = useState('')
   const [firstRun, setFirstRun] = useState(false)
   const [backupWarning, setBackupWarning] = useState('')
+  const [levels, setLevels] = useState<Record<string, VocabularyCount>>({}) // the words known in each language, for its level bar
 
   const load = useCallback(
     () => getBooks(archived).then(setBooks, (e) => setError(e.message)),
@@ -77,6 +79,9 @@ export function BookList() {
   useEffect(() => {
     getLanguages().then((l) => l.length === 0 && setFirstRun(true), () => undefined)
   }, [])
+  useEffect(() => {
+    getVocabularyCounts().then((list) => setLevels(Object.fromEntries(list.map((c) => [c.name, c]))), () => undefined)
+  }, [books])
   useEffect(() => {
     getBackupsAfterStartup().then((b) => setBackupWarning(b.warning), () => undefined)
   }, [])
@@ -166,6 +171,7 @@ export function BookList() {
       {languages.map((lang) => (
         <section key={lang}>
           <h2>{lang}</h2>
+          {levels[lang] && <CefrBar known={levels[lang].known} />}
           <ul className="books">
             {shown
               .filter((b) => b.language === lang)

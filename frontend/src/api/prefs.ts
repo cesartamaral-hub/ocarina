@@ -20,3 +20,9 @@ export function setPref(key: string, value: unknown): void {
   cache = { ...cache, [key]: value }
   send('PUT', `${API}/prefs`, { [key]: value }).catch(() => undefined)
 }
+
+// Several at once, in one request (separate requests could overwrite each other on the server).
+export function setPrefs(values: Record<string, unknown>): void {
+  cache = { ...cache, ...values }
+  send('PUT', `${API}/prefs`, values).catch(() => undefined)
+}

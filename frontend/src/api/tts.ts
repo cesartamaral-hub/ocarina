@@ -43,6 +43,9 @@ export type Model = {
   check?: ModelCheck | null
   sizeBytes: number
   downloadJob: string | null
+  grades?: Record<string, string> // how well it does in a language, A to D (the catalog's own estimate)
+  speed?: number // 1 to 4, before it has been tried here
+  badge?: string
   benchmark?: { secondsPerSecondOfAudio?: number; secondsPerSentence?: number; machine: string }
 }
 
@@ -71,11 +74,14 @@ export const getActiveJobs = () => fetch(`${API}/jobs`).then((r) => json<Job[]>(
 
 export const cancelJob = (id: string) => fetch(`${API}/jobs/${id}/cancel`, { method: 'POST' }).then((r) => json<Job>(r))
 
+// A recording added to a material is synced with its text at once: the job, or why there is none.
+export type SyncStart = { state: 'started'; job: Job } | { state: 'model_missing'; error: string; model?: string } | { state: 'busy'; error: string } | null
+
 export const uploadAudio = (bookId: number, file: File) => {
   const form = new FormData()
   form.append('audio', file)
   return fetch(`${API}/books/${bookId}/audio/upload`, { method: 'POST', body: form }).then((r) =>
-    json<{ audio_filename: string }>(r),
+    json<{ audio_filename: string; versionId: number; sync?: SyncStart }>(r),
   )
 }
 

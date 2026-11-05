@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  cancelJob,
   canPickFolder,
   checkModel,
   deleteModel,
@@ -14,18 +13,23 @@ import {
   pickFolder,
   removeModelEntry,
   setPref,
+  setPrefs,
   type Job,
   type Model,
   type Voice,
   getStorage,
+  getLanguages,
+  getTranslateSettings,
+  putTranslateSettings,
+  type TranslateSettings,
   type Storage as StorageInfo,
 } from './api'
 import { AddModel } from './AddModel'
-import { CheckResult } from './CheckResult'
+import { ModelList, type ModelActions } from './ModelList'
+import { speechCodesUsing } from './modelRows'
 import { formatBytes } from './format'
 import { notify } from './notices'
-import { TransferProgress } from './TransferProgress'
-import { SPEECH_LANGUAGES } from './speechLanguages'
+import { SPEECH_LANGUAGES, codeOfLanguage } from './speechLanguages'
 import { Voices } from './Voices'
 import { Pronunciation } from './Pronunciation'
 
@@ -42,6 +46,12 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
   const [speed, setSpeed] = useState(0)
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const [voices, setVoices] = useState<Voice[]>([])
+  const [libraryCodes, setLibraryCodes] = useState<string[]>([])
+  const [translation, setTranslation] = useState<TranslateSettings | null>(null)
+  useEffect(() => {
+    getLanguages().then((list) => setLibraryCodes(Object.keys(SPEECH_LANGUAGES).filter((c) => list.some((l) => codeOfLanguage(l.name) === c))), () => undefined)
+    getTranslateSettings().then(setTranslation, () => undefined)
+  }, [])
   const loadVoices = useCallback(() => getVoices().then(setVoices, () => undefined), [])
   useEffect(() => {
     loadVoices()
@@ -156,67 +166,34 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
   if (!models) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>
   const busy = isActive(job)
 
-  const renderModel = (m: Model) => {
-          // Matched by model, not by the list's downloadJob: that field is stale right after you press Download.
-          const mine = job?.model_id === m.id ? job : null
-          const downloading = mine !== null && isActive(mine)
-          return (
-            <li key={m.id}>
-              <div className="row">
-                <div>
-                  <div className="name">{m.name}</div>
-                  <div className="muted">{m.description}</div>
-                  <div className="muted">
-                    {m.languages.join(', ')} · {m.license.toUpperCase()} · {formatBytes(m.sizeBytes)}
-                    {m.benchmark?.secondsPerSecondOfAudio != null && ` · about ${m.benchmark.secondsPerSecondOfAudio}s per second of audio`}
-                    {m.benchmark?.secondsPerSentence != null && ` · about ${m.benchmark.secondsPerSentence}s per sentence`}
-                  </div>
-                  {m.installed && <CheckResult model={m} />}
-                </div>
-                <div className="actions">
-                  {m.custom && (
-                    <button className="secondary" disabled={busy} onClick={() => forget(m)}>
-                      Remove from list
-                    </button>
-                  )}
-                  {m.installed ? (
-                    <>
-                      <span className="muted">Installed</span>
-                      <button className="secondary" disabled={busy} onClick={() => test(m)}>
-                        {m.check ? 'Test again' : 'Test'}
-                      </button>
-                      <button className="danger" disabled={busy} onClick={() => remove(m)}>
-                        Delete
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="secondary" disabled={busy} onClick={() => importFrom(m)}>
-                        Import from folder…
-                      </button>
-                      <button disabled={busy} onClick={() => download(m.id)}>
-                        Download
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-              {downloading && mine && (
-                <TransferProgress job={mine} speed={speed} onCancel={() => cancelJob(mine.id).then(setJob, () => undefined)} />
-              )}
-              {mine?.state === 'error' && (
-                <p className="error">
-                  {mine.error}{' '}
-                  <button className="secondary" onClick={() => download(m.id)}>
-                    Try again
-                  </button>{' '}
-                  <span className="muted">Files already downloaded are kept.</span>
-                </p>
-              )}
-              {mine?.state === 'cancelled' && <p className="muted">Cancelled. Files already downloaded are kept, so downloading again continues from there.</p>}
-            </li>
-          )
+  const codes = libraryCodes.length ? libraryCodes : Object.keys(SPEECH_LANGUAGES)
+  const chosenFor = (code: string) => chosen[`model.${code}`] ?? getPref<string>(`model.${code}`, '')
+  const everyone = (used: string[]): 'all' | string[] | null => (used.length === 0 ? null : used.length === codes.length ? 'all' : used)
+  const actions = (kind: NonNullable<Model['kind']>): ModelActions => {
+    const ofKind = models.filter((m) => (m.kind ?? 'speech') === kind)
+    const base = { busy, job, speed, codes, onDownload: download, onImport: importFrom, onTest: test, onDelete: remove, onForget: forget, onJob: setJob }
+    if (kind === 'speech') {
+      return {
+        ...base,
+        usedFor: (m) => everyone(speechCodesUsing(m, codes, models, chosenFor)),
+        onUse: (m) => {
+          const values = Object.fromEntries(codes.filter((c) => m.languages.includes(c)).map((c) => [`model.${c}`, m.id]))
+          setPrefs(values)
+          setChosen((cur) => ({ ...cur, ...values }))
+        },
+      }
+    }
+    if (kind === 'text') {
+      return {
+        ...base,
+        usedFor: (m) => (translation?.provider === 'local' && translation.localModel.id === m.id ? 'all' : null),
+        onUse: (m) => putTranslateSettings({ provider: 'local', localModel: m.id }).then(setTranslation, (e) => setError(e.message)),
+      }
+    }
+    const first = ofKind.find((m) => m.installed && !(m.check && !m.check.ok))
+    return { ...base, usedFor: (m) => (first?.id === m.id ? 'all' : null) } // one model does the whole job: nothing to switch
   }
+
   return (
     <>
       <h1>{part === 'models' ? 'Models' : 'Voices'}</h1>
@@ -235,29 +212,24 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
         <>
       <h2>Voice models{size(storage, 'speech')}</h2>
       <p className="muted">
-        Models are downloaded once and run on this Mac. Audio generation needs one installed.
+        They make the audio of your books and say words aloud, on this Mac. Audio generation needs one. The one with the tick is used for all your languages; each language can have its own under Voices.
       </p>
       {error && <p className="error">{error}</p>}
-      <ul className="models">{models.filter((m) => (m.kind ?? 'speech') === 'speech').map(renderModel)}</ul>
+      <ModelList models={models.filter((m) => (m.kind ?? 'speech') === 'speech')} a={actions('speech')} />
 
       <h2>Translation models{size(storage, 'text')}</h2>
       <p className="muted">
-        Translate sentences on this Mac, offline and without limits. Download one, then choose it under Translation, where you can also compare them
-        side by side. A model runs only while you translate, and is unloaded after a few minutes.
+        Translate sentences on this Mac, offline and without limits. The tick is the one used when Translation is set to your Mac; compare them side by side under Translation. A model is loaded only while you translate.
       </p>
-      <ul className="models">{models.filter((m) => m.kind === 'text').map(renderModel)}</ul>
+      <ModelList models={models.filter((m) => m.kind === 'text')} a={actions('text')} />
 
       <h2>Audio sync model{size(storage, 'aligner')}</h2>
-      <p className="muted">
-        Syncs a recording of your own with the text, so sentences light up as it plays. Used by “Sync with the text” on a book's page. It runs on this Mac.
-      </p>
-      <ul className="models">{models.filter((m) => m.kind === 'aligner').map(renderModel)}</ul>
+      <p className="muted">Syncs a recording of your own with the text, so sentences light up as it plays (“Sync with the text” on a book's audio page).</p>
+      <ModelList models={models.filter((m) => m.kind === 'aligner')} a={actions('aligner')} />
 
       <h2>Transcription model{size(storage, 'transcriber')}</h2>
-      <p className="muted">
-        Writes down what is said in a YouTube video that has no captions, when you add study material. It runs on this Mac, and only while a video is being transcribed.
-      </p>
-      <ul className="models">{models.filter((m) => m.kind === 'transcriber').map(renderModel)}</ul>
+      <p className="muted">Writes down what is said in a YouTube video, when you add study material, and gives automatic captions their punctuation. It runs only while a video is being transcribed.</p>
+      <ModelList models={models.filter((m) => m.kind === 'transcriber')} a={actions('transcriber')} />
 
       <AddModel onAdded={load} />
 

@@ -9,6 +9,7 @@ JSON API for reading statistics (words read, from the pages you finish).
 from flask import Blueprint, current_app, jsonify
 
 from lute.db import db
+from sqlalchemy import text as sql
 from lute.stats.service import get_chart_data, get_reading_streak, get_table_data
 from ocarina import book_index, language_stats
 
@@ -29,3 +30,16 @@ def stats():
             **language_stats.summary(db.session, current_app.env_config.useraudiopath),
         }
     )
+
+
+@bp.route("/stats/vocabulary", methods=["GET"])
+def vocabulary():
+    "Per language the words you know and the words you are learning (a light call, for the book list)."
+    terms = language_stats._terms(db.session)  # pylint: disable=protected-access
+    names = dict(db.session.execute(sql("select LgID, LgName from languages")).all())
+    out = []
+    for language_id, by_status in sorted(terms.items(), key=lambda kv: names.get(kv[0], "")):
+        if language_id in names:
+            summary = language_stats._term_summary(by_status)  # pylint: disable=protected-access
+            out.append({"id": language_id, "name": names[language_id], "known": summary["known"], "learning": summary["learning"]})
+    return jsonify(out)

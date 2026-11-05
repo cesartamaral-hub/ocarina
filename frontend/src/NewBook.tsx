@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { cancelJob, createBook, extractFromFile, extractFromUrl, getJob, getLanguages, getPref, setPref, type Extracted, type Job, type Language } from './api'
+import { cancelJob, createBook, extractFromFile, extractFromUrl, getJob, getLanguages, getPref, getTranslateSettings, setPref, type Extracted, type Job, type Language, type TranslateSettings } from './api'
+import { notify } from './notices'
+import { LONG_TEXT_WORDS, isLong, translateChoices, wordCount } from './newMaterial'
 
 const FILE_TYPES = '.txt,.epub,.pdf,.srt,.vtt'
 
@@ -26,6 +28,17 @@ export function NewBook() {
   const [job, setJob] = useState<Job | null>(null)
   const [needsModel, setNeedsModel] = useState(false)
   const cancelled = useRef(false)
+  const [translation, setTranslation] = useState<TranslateSettings | null>(null)
+  const [translateOn, setTranslateOn] = useState<boolean | null>(null) // null: not touched, so a short text is translated and a long one is not
+  const [method, setMethod] = useState('')
+  useEffect(() => {
+    getTranslateSettings().then(setTranslation, () => undefined)
+  }, [])
+  const { choices, fallback } = translation ? translateChoices(translation) : { choices: [], fallback: '' }
+  const chosen = choices.find((c) => c.key === (method || fallback)) ?? null
+  const long = isLong(text)
+  const translating = chosen !== null && (translateOn ?? !long)
+  const targetName = translation?.targets.find((t) => t.code === translation.target)?.name ?? 'English'
 
   useEffect(() => {
     getLanguages().then(
@@ -88,9 +101,23 @@ export function NewBook() {
     setError('')
     setBusy(true)
     try {
-      const { id } = await createBook({ title, languageId, text, sourceUri, audio, importAudio: audioToken, video: watch && video ? video : null })
+      const saved = await createBook({
+        title,
+        languageId,
+        text,
+        sourceUri,
+        audio,
+        importAudio: audioToken,
+        video: watch && video ? video : null,
+        translate: translating && chosen ? { provider: chosen.provider, model: chosen.model } : null,
+      })
       setPref('newBook.languageId', languageId)
-      window.location.hash = `#/book/${id}`
+      // What the save started, said once the material opens.
+      if (saved.sync?.state === 'started') notify('Syncing your audio with the text…', 5000)
+      else if (saved.sync?.state === 'model_missing') notify('Audio saved. Download the audio sync model under Settings → Models to sync it.', 8000)
+      if (saved.translation?.state === 'started') notify(`Translating into ${targetName}…`, 5000)
+      else if (saved.translation?.state === 'failed') notify(`Saved, but it was not translated: ${saved.translation.error}`, 8000)
+      window.location.assign(`#/book/${saved.id}`)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
@@ -191,6 +218,38 @@ export function NewBook() {
             <input type="checkbox" checked={watch} onChange={(e) => setWatch(e.target.checked)} />
             Play the video in the reader, with the text following it (needs internet)
           </label>
+        )}
+        {(audio || audioToken || (text.trim() && translation)) && (
+          <fieldset className="after-save">
+            <legend className="muted">After saving</legend>
+            {(audio || audioToken) && <p className="after-note">The recording is synced with the text automatically, so sentences light up as it plays.</p>}
+            {translation && text.trim() && (
+              <div className="after-translate">
+                <label className="keep-sound">
+                  <input type="checkbox" checked={translating} disabled={choices.length === 0} onChange={(e) => setTranslateOn(e.target.checked)} />
+                  Translate the whole text into {targetName}
+                </label>
+                {choices.length === 0 ? (
+                  <p className="muted after-note">
+                    No translation method is ready. <a href="#/settings/translation">Choose one under Translation</a>.
+                  </p>
+                ) : (
+                  <select value={chosen?.key ?? ''} disabled={!translating} aria-label="How to translate" onChange={(e) => setMethod(e.target.value)}>
+                    {choices.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="muted after-note">
+                  {long
+                    ? `This text is long (${wordCount(text).toLocaleString()} words), so it is not translated now. Translate pages one by one in the reader, or tick this to translate it all.`
+                    : `A short text (up to ${LONG_TEXT_WORDS.toLocaleString()} words) is translated when it is added. You can still change your mind in the reader.`}
+                </p>
+              </div>
+            )}
+          </fieldset>
         )}
         {error && (
           <p className="error">

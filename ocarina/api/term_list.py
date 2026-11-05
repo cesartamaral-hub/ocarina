@@ -26,7 +26,7 @@ from ocarina.api.terms import STATUSES
 
 bp = Blueprint("ocarina_term_list", __name__, url_prefix="/ocarina/api")
 
-PAGE_SIZES = (25, 50, 100, 200)
+MAX_PAGE = 500
 SORTS = {
     "text": "lower(replace(w.WoText, char(8203), ''))",
     "translation": "lower(ifnull(w.WoTranslation, ''))",
@@ -46,6 +46,7 @@ LEFT OUTER JOIN (
     INNER JOIN words ON WoID = WpParentWoID ORDER BY WoText
   ) GROUP BY WpWoID
 ) AS parents ON parents.WoID = w.WoID
+LEFT OUTER JOIN termcontexts tc ON tc.TcWoID = w.WoID
 LEFT OUTER JOIN (
   SELECT WtWoID AS WoID, GROUP_CONCAT(TgText, ';;') AS taglist FROM (
     SELECT WtWoID, TgText FROM wordtags wt INNER JOIN tags t ON t.TgID = wt.WtTgID ORDER BY TgText
@@ -67,18 +68,30 @@ def _like(value):
     return f"%{escaped.lower()}%"
 
 
-def _where():
-    "WHERE clause and bound values for the filters in the query string."
+def _statuses():
+    "The statuses asked for in `statuses` (like 1,2,3,99), or None when the parameter is not there."
+    raw = request.args.get("statuses")
+    if raw is None:
+        return None
+    return sorted({int(x) for x in raw.split(",") if x.strip().isdigit() and int(x) in STATUSES and int(x) > 0})  # 0 is a word with no status yet: not vocabulary
+
+
+def _where(with_status=True):
+    "WHERE clause and bound values for the filters in the query string (with_status=False leaves the status out, to count each)."
     wheres = [f"L.LgParserType IN ({supported_parser_type_criteria()})"]
     values = {}
     if _int("language", 0):
         wheres.append("L.LgID = :language")
         values["language"] = _int("language", 0)
-    in_range = "w.WoStatus >= :smin AND w.WoStatus <= :smax AND w.WoStatus != 98"
-    if request.args.get("includeIgnored") == "true":
-        in_range = f"(({in_range}) OR w.WoStatus = 98)"
-    wheres.append(in_range)
-    values["smin"], values["smax"] = _int("statusMin", 0), _int("statusMax", 99)
+    statuses = _statuses()
+    if with_status and statuses is not None:
+        wheres.append("w.WoStatus IN (" + ",".join(str(s) for s in statuses) + ")" if statuses else "0")
+    elif with_status:
+        in_range = "w.WoStatus >= :smin AND w.WoStatus <= :smax AND w.WoStatus != 98"
+        if request.args.get("includeIgnored") == "true":
+            in_range = f"(({in_range}) OR w.WoStatus = 98)"
+        wheres.append(in_range)
+        values["smin"], values["smax"] = _int("statusMin", 0), _int("statusMax", 99)
     if request.args.get("parentsOnly") == "true":
         wheres.append("parents.parentlist IS NULL")
     q = request.args.get("q", "").strip()
@@ -106,7 +119,8 @@ def _order():
 
 SELECT = (
     "SELECT w.WoID, w.WoText, parents.parentlist, w.WoTranslation, L.LgName, L.LgID, "
-    "ifnull(tags.taglist, ''), w.WoStatus, datetime(w.WoCreated, 'localtime') "
+    "ifnull(tags.taglist, ''), w.WoStatus, datetime(w.WoCreated, 'localtime'), "
+    "tc.TcSentence, tc.TcBkID, tc.TcPage, tc.TcFound "
 )
 
 
@@ -121,6 +135,7 @@ def _row(r):
         "tags": r[6].split(SEP) if r[6] else [],
         "status": r[7],
         "created": r[8],
+        "context": {"sentence": r[9], "bookId": r[10], "page": r[11], "found": bool(r[12])} if r[9] else None,
     }
 
 
@@ -128,15 +143,20 @@ def _row(r):
 def term_list():
     "One page of terms matching the filters, and how many match in all."
     where, values = _where()
-    size = _int("pageSize", 50)
-    size = size if size in PAGE_SIZES else 50
+    size = min(max(_int("pageSize", 50), 1), MAX_PAGE)
     page = max(1, _int("page", 1))
     total = db.session.execute(sql("SELECT count(*) " + BASE + where), values).scalar()
     rows = db.session.execute(
         sql(SELECT + BASE + where + _order() + " LIMIT :limit OFFSET :offset"),
         {**values, "limit": size, "offset": (page - 1) * size},
     )
-    return jsonify({"total": total, "page": page, "pageSize": size, "rows": [_row(r) for r in rows]})
+    body = {"total": total, "page": page, "pageSize": size, "rows": [_row(r) for r in rows]}
+    if request.args.get("counts") == "true":
+        # How many words each status has under the other filters, for the status chips.
+        where_all, values_all = _where(with_status=False)
+        counted = db.session.execute(sql("SELECT w.WoStatus, count(*) " + BASE + where_all + " GROUP BY w.WoStatus"), values_all)
+        body["counts"] = {str(status): n for status, n in counted}
+    return jsonify(body)
 
 
 @bp.route("/term-list/export", methods=["GET"])
