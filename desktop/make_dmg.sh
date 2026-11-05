@@ -12,9 +12,10 @@ cat > "$STAGE/Read me first.txt" <<'T'
 Ocarina
 
 1. Drag Ocarina into the Applications folder.
-2. The first time, do not double-click it. Right-click (or Control-click) Ocarina, choose Open, then Open again.
-   macOS asks because the app is not signed with an Apple ID; it is only needed once.
-   If you only see "Done" and "Move to Trash": open System Settings > Privacy & Security, scroll down, press "Open Anyway".
+2. The first time, macOS may say Ocarina is "damaged" or from an unidentified developer. It is not damaged: the app is not signed with an Apple ID.
+   Open Terminal (Applications > Utilities), paste this line and press Return, then open Ocarina normally:
+       xattr -cr /Applications/Ocarina.app
+   (Other way: right-click Ocarina > Open > Open, or System Settings > Privacy & Security > "Open Anyway".) Needed only once.
 3. Needs a Mac with Apple silicon (M1 or later) and macOS 13 or later.
 
 Models (voices, translation) are downloaded from inside the app, so the first start needs the internet.
