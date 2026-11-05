@@ -9,6 +9,7 @@ import { SPEECH_LANGUAGES } from './speechLanguages'
 
 export type ModelActions = {
   busy: boolean
+  offline?: boolean // Work offline is on: nothing can be downloaded
   job: Job | null
   speed: number
   codes: string[] // the languages shown as columns
@@ -78,8 +79,8 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
           className={`mr-mark${used === 'all' ? ' on' : ''}${partial ? ' some' : ''}`}
           aria-label={used === 'all' ? `${m.name} is in use` : m.installed ? `Use ${m.name}` : `Download ${m.name}`}
           aria-pressed={used === 'all'}
-          title={used === 'all' ? 'In use' : m.installed ? (failed ? 'It does not work here' : 'Use this one') : `Download (${formatBytes(m.sizeBytes)})`}
-          disabled={a.busy || downloading || (m.installed && (!a.onUse || failed || used === 'all'))}
+          title={!m.installed && a.offline ? 'Needs the internet (Work offline is on)' : used === 'all' ? 'In use' : m.installed ? (failed ? 'It does not work here' : 'Use this one') : `Download (${formatBytes(m.sizeBytes)})`}
+          disabled={a.busy || downloading || (m.installed ? !a.onUse || failed || used === 'all' : Boolean(a.offline))}
           onClick={() => (m.installed ? a.onUse?.(m) : a.onDownload(m.id))}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">

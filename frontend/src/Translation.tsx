@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { compareModels, getLanguages, getTranslateSettings, putTranslateSettings, testTranslation, type Comparison, type Language, type TranslateSettings, type Translation as Result } from './api'
+import { useOffline } from './offline'
 import { formatBytes } from './format'
 import { notify } from './notices'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 
 export function Translation() {
+  const offline = useOffline()
   const [s, setS] = useState<TranslateSettings | null>(null)
   const [email, setEmail] = useState('')
   const [key, setKey] = useState('')
@@ -76,14 +78,15 @@ export function Translation() {
       <fieldset className="choices">
         <legend>Service</legend>
         {s.providers.map((p) => {
-          const missing = p.id === 'local' && !s.localModel.installed
+          const missing = (p.id === 'local' && !s.localModel.installed) || (offline && p.id !== 'local')
           return (
             <label key={p.id} className={`choice${missing ? ' unavailable' : ''}`}>
               <input type="radio" name="provider" disabled={missing} checked={s.provider === p.id} onChange={() => save({ provider: p.id })} />
               <span>
                 <strong>{p.name}</strong>
                 <span className="muted"> {p.description}</span>
-                {missing && (
+                {offline && p.id !== 'local' && <span className="choice-note"> Needs the internet: Work offline is on.</span>}
+                {missing && !(offline && p.id !== 'local') && (
                   <span className="choice-note">
                     {' '}
                     Not downloaded yet ({formatBytes(s.localModel.sizeBytes)}). <a href="#/settings/models">Download it in Settings</a>.

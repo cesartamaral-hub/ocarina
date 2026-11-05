@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { cancelJob, createBook, extractFromFile, extractFromUrl, getJob, getLanguages, getPref, getTranslateSettings, setPref, type Extracted, type Job, type Language, type TranslateSettings } from './api'
 import { notify } from './notices'
+import { useOffline } from './offline'
 import { LONG_TEXT_WORDS, isLong, translateChoices, wordCount } from './newMaterial'
 
 const FILE_TYPES = '.txt,.epub,.pdf,.srt,.vtt'
@@ -11,6 +12,7 @@ const isJob = (x: Extracted | Job): x is Job => 'state' in x
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function NewBook() {
+  const offline = useOffline()
   const [languages, setLanguages] = useState<Language[]>([])
   const [languageId, setLanguageId] = useState(getPref<number>('newBook.languageId', 0))
   const [title, setTitle] = useState('')
@@ -149,10 +151,10 @@ export function NewBook() {
           <label>
             A web page or a YouTube video
             <span className="row-inline">
-              <input value={url} placeholder="https://" disabled={busy} onChange={(e) => setUrl(e.target.value)} />
+              <input value={url} placeholder={offline ? 'Needs the internet (Work offline is on)' : 'https://'} disabled={busy || offline} onChange={(e) => setUrl(e.target.value)} />
               <button
                 className="secondary"
-                disabled={busy || !url.trim()}
+                disabled={busy || offline || !url.trim()}
                 onClick={() => run(() => extractFromUrl(url.trim(), { languageId, keepAudio: keepAudio && isVideo(url) }))}
               >
                 Get text

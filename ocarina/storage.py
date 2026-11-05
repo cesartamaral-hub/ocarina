@@ -20,11 +20,11 @@ DATA_ITEMS = [
     ("pictures", "userimages", "Pictures", "Pictures you added to words.", False),
     ("library", "ocarina.db", "Library", "Your books, words and statuses.", False),
     ("backups", "backups", "Backups", "Copies of your library.", False),
-    ("sentence_audio", "tts_cache", "Voiced sentences", "Sentences already voiced, so making a book's audio again is quick. Cleared, they are voiced again when needed.", True),
-    ("translations", "translation_cache", "Saved translations", "Translations you have seen, so they work offline. Cleared, they are asked for again.", True),
-    ("dictionary", "dictionary_cache", "Saved definitions", "Definitions from Wiktionary. Cleared, they are fetched again.", True),
-    ("pronunciations", "pronounce_cache", "Heard words", "Words and phrases you heard spoken, so they play at once. Cleared, they are made again when needed.", True),
-    ("temp", "temp", "Temporary files", "Leftovers of previews and checks.", True),
+    ("sentence_audio", "cache/tts", "Voiced sentences", "Sentences already voiced, so making a book's audio again is quick. Cleared, they are voiced again when needed.", True),
+    ("translations", "cache/translation", "Saved translations", "Translations you have seen, so they work offline. Cleared, they are asked for again.", True),
+    ("dictionary", "cache/dictionary", "Saved definitions", "Definitions from Wiktionary. Cleared, they are fetched again.", True),
+    ("pronunciations", "cache/pronounce", "Heard words", "Words and phrases you heard spoken, so they play at once. Cleared, they are made again when needed.", True),
+    ("temp", "cache/temp", "Temporary files", "Leftovers of previews and checks.", True),
 ]
 
 

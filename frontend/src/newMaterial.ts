@@ -15,6 +15,7 @@ export function translateChoices(s: TranslateSettings): { choices: Choice[]; fal
   for (const m of s.localModels) if (m.installed) choices.push({ key: `local:${m.id}`, name: `${m.name.replace(/\s*\(.*\)\s*$/, '')} · on this Mac`, provider: 'local', model: m.id })
   for (const p of s.providers) {
     if (p.id === 'local') continue
+    if (s.offline) continue // the online services need the internet
     if (p.needsKey && !(p.id === 'deepl' && s.hasDeeplKey)) continue
     choices.push({ key: p.id, name: p.name, provider: p.id, model: null })
   }

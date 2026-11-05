@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useOffline } from './offline'
 import { getPref, setPref } from './api'
 import { keyLabel, keyOf } from './shortcutKeys'
 import type { Playable } from './media'
@@ -22,6 +23,7 @@ export function VideoBar({
   onTime?: (seconds: number) => void
   children?: ReactNode
 }) {
+  const offline = useOffline()
   const host = useRef<HTMLDivElement>(null)
   const [speed, setSpeed] = useState(() => clampSpeed(getPref<number>(`speed.${language}`, 1)))
   const speedNow = useRef(speed)
@@ -43,6 +45,7 @@ export function VideoBar({
 
   useEffect(() => {
     const run = { alive: true, stop: () => {} }
+    if (offline) return // the player comes from YouTube
     loadYouTube().then(
       (YT) => {
         if (!run.alive || !host.current) return
@@ -81,13 +84,15 @@ export function VideoBar({
       run.stop()
       audioRef.current = null
     }
-  }, [videoId, audioRef])
+  }, [videoId, audioRef, offline])
 
   return (
     <>
       <div className={`video-stage${large ? ' large' : ''}`}>
       <div className="video-frame">
-        {problem ? (
+        {offline ? (
+          <p className="video-problem">The video needs the internet (Work offline is on).</p>
+        ) : problem ? (
           <p className="video-problem">
             {problem} <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noreferrer">Open it on YouTube</a>
           </p>

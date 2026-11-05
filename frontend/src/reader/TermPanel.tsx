@@ -19,6 +19,7 @@ import { Definition } from './Definition'
 import { dictUrl } from './dictUrl'
 import { SentenceCard } from './SentenceCard'
 import { SpeakButton } from './SpeakButton'
+import { useOffline } from '../offline'
 import { STATUS_BUTTONS } from './statuses'
 
 function dictName(d: Dictionary): string {
@@ -60,6 +61,7 @@ export function TermPanel({
   onCreated: (term: Term) => void
   onError: (message: string) => void
 }) {
+  const offline = useOffline()
   const [term, setTerm] = useState<Term | null>(null)
   const [saved, setSaved] = useState(true)
   const [refs, setRefs] = useState<References | null>(null)
@@ -207,14 +209,16 @@ export function TermPanel({
         />
       )}
 
-      <div className="dicts">
-        <span className="muted">Open in browser:</span>
-        {language.dictionaries.map((d, i) => (
-          <button key={i} className="secondary" title={`Open ${dictName(d)} in your browser`} onClick={() => openOutside(d, term.displayText)}>
-            {dictName(d)} ↗
-          </button>
-        ))}
-      </div>
+      {!offline && (
+        <div className="dicts">
+          <span className="muted">Open in browser:</span>
+          {language.dictionaries.map((d, i) => (
+            <button key={i} className="secondary" title={`Open ${dictName(d)} in your browser`} onClick={() => openOutside(d, term.displayText)}>
+              {dictName(d)} ↗
+            </button>
+          ))}
+        </div>
+      )}
 
       <label>
         Translation

@@ -68,8 +68,8 @@ def test_groups_total_and_the_space_that_is_not_ocarinas(client, hub):
 
 def test_data_folders_are_measured_and_only_caches_can_be_cleared(app, client, hub):
     datapath = app.env_config.datapath
-    os.makedirs(os.path.join(datapath, "translation_cache", "ab"), exist_ok=True)
-    with open(os.path.join(datapath, "translation_cache", "ab", "x.json"), "wb") as f:
+    os.makedirs(os.path.join(datapath, "cache", "translation", "ab"), exist_ok=True)
+    with open(os.path.join(datapath, "cache", "translation", "ab", "x.json"), "wb") as f:
         f.write(b"y" * 300)
     data = client.get(URL).json
     items = {d["id"]: d for d in data["data"]}
@@ -80,7 +80,7 @@ def test_data_folders_are_measured_and_only_caches_can_be_cleared(app, client, h
 
 def test_clearing_a_cache_empties_it_and_says_how_much_was_freed(app, client, hub):
     datapath = app.env_config.datapath
-    folder = os.path.join(datapath, "tts_cache")
+    folder = os.path.join(datapath, "cache", "tts")
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "s.wav"), "wb") as f:
         f.write(b"z" * 400)

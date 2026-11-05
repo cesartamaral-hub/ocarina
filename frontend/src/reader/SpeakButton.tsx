@@ -1,3 +1,4 @@
+import { useOffline } from '../offline'
 import { PRONOUNCE_SOURCES, type PronounceSource } from '../api'
 import { Popover } from '../Popover'
 import { defaultSource, say, stopSaying, useSaying } from '../pronouncer'
@@ -14,6 +15,7 @@ const STOP = <rect x="4" y="4" width="8" height="8" rx="1.2" fill="currentColor"
 
 // Hear a word or some words: the speaker button says it with the chosen source, the arrow picks another source for this one time.
 export function SpeakButton({ text, languageId }: { text: string; languageId: number }) {
+  const offline = useOffline()
   const saying = useSaying()
   const { anchor, placement, toggle, close } = useAnchoredPopover(320, 'end')
   const here = saying?.text === text.replace(/\s+/g, ' ').trim()
@@ -34,7 +36,7 @@ export function SpeakButton({ text, languageId }: { text: string; languageId: nu
           <p className="muted method-head">Hear it, this one time, with</p>
           <ul>
             {PRONOUNCE_SOURCES.map((s: { id: PronounceSource; name: string; detail: string }) => {
-              const unusable = s.id === 'speaker' && words > 1
+              const unusable = (s.id === 'speaker' && words > 1) || (offline && (s.id === 'speaker' || s.id === 'google'))
               return (
                 <li key={s.id} role="none">
                   <button

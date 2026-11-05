@@ -8,6 +8,8 @@ import { GROUPS, SECTIONS, sectionHash, type SectionId } from './settingsRoutes'
 import { Shortcuts } from './Shortcuts'
 import { Storage } from './Storage'
 import { Tags } from './Tags'
+import { Dictionaries } from './Dictionaries'
+import { General } from './General'
 import { Translation } from './Translation'
 
 function Content({ section, rest }: { section: SectionId; rest: string }) {
@@ -16,10 +18,14 @@ function Content({ section, rest }: { section: SectionId; rest: string }) {
       return <Appearance />
     case 'shortcuts':
       return <Shortcuts />
+    case 'general':
+      return <General />
     case 'languages':
       return rest === '' ? <LanguageList /> : <LanguageEditor key={rest} languageId={rest === 'new' ? null : Number(rest)} />
     case 'tags':
       return <Tags />
+    case 'dictionaries':
+      return <Dictionaries />
     case 'models':
       return <Settings part="models" />
     case 'voices':
@@ -43,7 +49,7 @@ export function SettingsShell({ section, rest }: { section: SectionId; rest: str
       <nav className="settings-nav" aria-label="Settings sections">
         {GROUPS.map((group) => (
           <div key={group} className="settings-group">
-            <h2>{group}</h2>
+            {group && <h2>{group}</h2>}
             <ul>
               {SECTIONS.filter((s) => s.group === group).map((s) => (
                 <li key={s.id}>

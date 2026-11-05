@@ -3,6 +3,7 @@ import { API, json, send } from './client'
 export type LocalModel = { id: string; name: string; description: string; installed: boolean; sizeBytes: number }
 
 export type TranslateSettings = {
+  offline?: boolean // Work offline is on: only the models on this Mac are used
   provider: string
   target: string
   email: string

@@ -31,7 +31,7 @@ def _say(args):
             text = f.read()
     else:
         text = args.text
-    cache = SentenceCache(os.path.join(APP_DIR, "tts_cache"))
+    cache = SentenceCache(os.path.join(APP_DIR, "cache", "tts"))
     sup = Supervisor(model["engine"], repo=model["repositories"][0]["id"])
 
     def progress(i, n, sentence, _path, cached, secs):

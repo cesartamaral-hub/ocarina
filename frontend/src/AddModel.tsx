@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useOffline } from './offline'
 import { addCustomModel, getEngines, lookupModel, type HubLookup } from './api'
 import { notify } from './notices'
 import { SPEECH_LANGUAGES } from './speechLanguages'
@@ -7,6 +8,7 @@ const size = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.r
 
 // Adds a model from Hugging Face to the list. It still has to be downloaded afterwards.
 export function AddModel({ onAdded }: { onAdded: () => void }) {
+  const offline = useOffline()
   const [engines, setEngines] = useState<{ id: string; name: string }[]>([])
   const [repo, setRepo] = useState('')
   const [name, setName] = useState('')
@@ -71,7 +73,7 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
           Repository (owner/name)
           <span className="row-inline">
             <input value={repo} placeholder="e.g. nativ-community/Audio8-TTS-Realistic-0.6b-8bit" onChange={(e) => (setRepo(e.target.value), setFound(null))} />
-            <button className="secondary" disabled={busy || !repo.trim()} onClick={look}>
+            <button className="secondary" disabled={busy || offline || !repo.trim()} onClick={look} title={offline ? 'Needs the internet (Work offline is on)' : undefined}>
               Look up
             </button>
           </span>

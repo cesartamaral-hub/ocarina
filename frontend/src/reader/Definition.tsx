@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getDefinition, openExternal, type Definition as DefinitionData, type DefinitionEntry } from '../api'
+import { useOffline } from '../offline'
+import { getDefinition, openExternal, type Definition as DefinitionData, type DefinitionEntry, type DictionarySource } from '../api'
 
 const renderEntries = (entries: DefinitionEntry[], onUse: (meaning: string) => void, limit = 6) =>
   entries.map((entry, i) => (
@@ -21,7 +22,10 @@ const renderEntries = (entries: DefinitionEntry[], onUse: (meaning: string) => v
 
 type State = { text: string; data: DefinitionData | null; error: string; offline: boolean }
 
-// What the word means, from Wiktionary (cached on this Mac). "Use" copies a meaning into the translation.
+const sourceLine = (source: DictionarySource | undefined) =>
+  source ? `${source.name}${source.license ? ` · ${source.license}` : ''}${source.offline ? ' · on this Mac' : ''}` : 'Wiktionary'
+
+// What the word means, from the dictionaries on this Mac (Settings → Dictionaries), and Wiktionary when none has it. "Use" copies a meaning into the translation.
 export function Definition({
   languageId,
   text,
@@ -35,15 +39,17 @@ export function Definition({
 }) {
   const [state, setState] = useState<State>({ text: '', data: null, error: '', offline: false })
   const [tries, setTries] = useState(0)
+  const offline = useOffline()
+  const [online, setOnline] = useState('') // the word for which Wiktionary was also asked
 
   useEffect(() => {
     const stale = new AbortController() // an answer for a word you already moved away from is ignored
-    getDefinition(languageId, text).then(
+    getDefinition(languageId, text, false, online === text).then(
       (data) => !stale.signal.aborted && setState({ text, data, error: '', offline: false }),
       (e) => !stale.signal.aborted && setState({ text, data: null, error: e.message, offline: e.code === 'offline' }),
     )
     return () => stale.abort()
-  }, [languageId, text, tries])
+  }, [languageId, text, tries, online])
 
   const loading = state.text !== text
   const { data } = state
@@ -73,20 +79,46 @@ export function Definition({
           {data.lemmas && data.lemmas.length > 0 && <div className="def-lemma-title this-form">This form</div>}
           {renderEntries(data.entries, onUse)}
           <p className="muted def-source">
-            Wiktionary{data.stale ? ' · saved copy' : ''} ·{' '}
-            <a
-              href={data.url}
-              onClick={(e) => {
-                e.preventDefault()
-                if (data.url) openExternal(data.url).catch((err) => onError(err.message))
-              }}
-            >
-              Full entry ↗
-            </a>
+            {sourceLine(data.source)}
+            {data.stale ? ' · saved copy' : ''}
+            {data.url && (
+              <>
+                {' · '}
+                <a
+                  href={data.url}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (data.url) openExternal(data.url).catch((err) => onError(err.message))
+                  }}
+                >
+                  Full entry ↗
+                </a>
+              </>
+            )}
           </p>
+          {data.others?.map((other) => (
+            <details key={other.source.id} className="def-other">
+              <summary>Also in {other.source.name}</summary>
+              {other.lemmas.map((lemma) => (
+                <div key={lemma.word} className="def-lemma">
+                  <div className="def-lemma-title">
+                    Base form: <strong>{lemma.word}</strong>
+                  </div>
+                  {renderEntries(lemma.entries, onUse, 3)}
+                </div>
+              ))}
+              {renderEntries(other.entries, onUse, 4)}
+              <p className="muted def-source">{sourceLine(other.source)}</p>
+            </details>
+          ))}
+          {!offline && data.source?.offline && !data.others?.some((o) => o.source.id === 'wiktionary') && online !== text && (
+            <button className="link-button def-online" onClick={() => setOnline(text)}>
+              Also look it up on Wiktionary
+            </button>
+          )}
         </>
       ) : (
-        <p className="muted">No entry for “{text}” in Wiktionary. Try a dictionary below, or look up the words one by one.</p>
+        <p className="muted">{offline ? `No entry for “${text}” in the dictionaries on this Mac. You can add more under Settings → Dictionaries, or turn Work offline off to ask Wiktionary.` : `No entry for “${text}” in your dictionaries or Wiktionary. Try a dictionary below, or look up the words one by one.`}</p>
       )}
     </section>
   )

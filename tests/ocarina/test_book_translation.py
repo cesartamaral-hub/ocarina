@@ -7,7 +7,7 @@ import pytest
 
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import translate
+from ocarina import book_translation, translate
 from tests.ocarina.helpers import make_dutch_book, wait_for_job
 
 BOOKS = "/ocarina/api/books"
@@ -181,3 +181,20 @@ def test_a_model_for_a_language_must_be_known(client):
     bad_model = client.put("/ocarina/api/translate/settings", json={"localModelFor": {"language": "nl", "model": "nope"}})
     bad_language = client.put("/ocarina/api/translate/settings", json={"localModelFor": {"language": "xx", "model": "qwen3-4b-instruct-mlx"}})
     assert bad_model.status_code == 400 and bad_language.status_code == 400
+
+
+def test_end_of_turn_marks_are_not_part_of_a_translation(app, client, tmp_path):
+    "A model that was not stopped by its end-of-turn mark wrote it over and over; what was saved then is cleaned, and so is what is read."
+    assert translate.strip_marks("After school.<end_of_turn>\n<end_of_turn>\n<end_of_turn>") == "After school."
+    assert translate.strip_marks("Plain.") == "Plain."
+    assert translate.strip_marks("<end_of_turn>") == ""
+    path = translate._cache_path(str(tmp_path), "local:x", "pl", "en", "Zdanie")  # pylint: disable=protected-access
+    translate._write(path, "Sentence.<end_of_turn>\n<end_of_turn>")  # pylint: disable=protected-access
+    assert translate._read(path) == "Sentence."  # pylint: disable=protected-access
+    book_id = _book(app, "Oud")
+    with app.app_context():
+        book = BookRepository(db.session).find(book_id)
+        sentences = book_translation.sentences_of(book)
+        book_translation.save(book_id, sentences[0]["page"], sentences[0]["index"], "en", "Old.<end_of_turn>\n<end_of_turn>", sentences[0]["text"], "local")
+        assert book_translation.clean_stored() == 1
+    assert _get(client, book_id)["sentences"][0]["translation"] == "Old."

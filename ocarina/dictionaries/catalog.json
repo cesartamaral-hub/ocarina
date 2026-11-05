@@ -1,0 +1,450 @@
+{
+ "schema": 2,
+ "languages": {
+  "af": {
+   "name": "Afrikaans",
+   "wiktionary": {
+    "kaikki": "Afrikaans",
+    "bytes": 13828948,
+    "download": 1662204
+   }
+  },
+  "ar": {
+   "name": "Arabic",
+   "wiktionary": {
+    "kaikki": "Arabic",
+    "bytes": 868082330,
+    "download": 72370936
+   }
+  },
+  "bg": {
+   "name": "Bulgarian",
+   "wiktionary": {
+    "kaikki": "Bulgarian",
+    "bytes": 191986394,
+    "download": 20916834
+   },
+   "wikdict": {
+    "download": 5136384
+   }
+  },
+  "ca": {
+   "name": "Catalan",
+   "wiktionary": {
+    "kaikki": "Catalan",
+    "bytes": 247179824,
+    "download": 23673149
+   },
+   "wikdict": {
+    "download": 5189632
+   }
+  },
+  "cs": {
+   "name": "Czech",
+   "wiktionary": {
+    "kaikki": "Czech",
+    "bytes": 246074770,
+    "download": 24290587
+   },
+   "wikdict": {
+    "download": 5857280
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/cs/cs-extract.jsonl",
+    "bytes": 270900000,
+    "download": 39633204
+   }
+  },
+  "cy": {
+   "name": "Welsh",
+   "wiktionary": {
+    "kaikki": "Welsh",
+    "bytes": 62903229,
+    "download": 7383052
+   }
+  },
+  "da": {
+   "name": "Danish",
+   "wiktionary": {
+    "kaikki": "Danish",
+    "bytes": 98996678,
+    "download": 11685254
+   },
+   "wikdict": {
+    "download": 2756608
+   }
+  },
+  "de": {
+   "name": "German",
+   "wiktionary": {
+    "kaikki": "German",
+    "bytes": 1095258648,
+    "download": 99294210
+   },
+   "wikdict": {
+    "download": 26505216
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/de/de-extract.jsonl",
+    "bytes": 2900000000,
+    "download": 310139416
+   }
+  },
+  "el": {
+   "name": "Greek",
+   "wiktionary": {
+    "kaikki": "Greek",
+    "bytes": 221294549,
+    "download": 25208708
+   },
+   "wikdict": {
+    "download": 9871360
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/el/el-extract.jsonl",
+    "bytes": 1500000000,
+    "download": 115806717
+   }
+  },
+  "es": {
+   "name": "Spanish",
+   "wiktionary": {
+    "kaikki": "Spanish",
+    "bytes": 1119672965,
+    "download": 102536460
+   },
+   "wikdict": {
+    "download": 11063296
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/es/es-extract.jsonl",
+    "bytes": 1100000000,
+    "download": 103226090
+   }
+  },
+  "et": {
+   "name": "Estonian",
+   "wiktionary": {
+    "kaikki": "Estonian",
+    "bytes": 56323247,
+    "download": 5467349
+   }
+  },
+  "eu": {
+   "name": "Basque",
+   "wiktionary": {
+    "kaikki": "Basque",
+    "bytes": 61560997,
+    "download": 4951877
+   }
+  },
+  "fi": {
+   "name": "Finnish",
+   "wiktionary": {
+    "kaikki": "Finnish",
+    "bytes": 4656985044,
+    "download": 273083325
+   },
+   "wikdict": {
+    "download": 16867328
+   }
+  },
+  "fr": {
+   "name": "French",
+   "wiktionary": {
+    "kaikki": "French",
+    "bytes": 592920809,
+    "download": 59206544
+   },
+   "wikdict": {
+    "download": 23113728
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/fr/fr-extract.jsonl",
+    "bytes": 6400000000,
+    "download": 736596796
+   }
+  },
+  "ga": {
+   "name": "Irish",
+   "wiktionary": {
+    "kaikki": "Irish",
+    "bytes": 112227977,
+    "download": 12223289
+   },
+   "wikdict": {
+    "download": 2035712
+   }
+  },
+  "he": {
+   "name": "Hebrew",
+   "wiktionary": {
+    "kaikki": "Hebrew",
+    "bytes": 60179927,
+    "download": 8786413
+   }
+  },
+  "hi": {
+   "name": "Hindi",
+   "wiktionary": {
+    "kaikki": "Hindi",
+    "bytes": 168373020,
+    "download": 18286006
+   }
+  },
+  "hu": {
+   "name": "Hungarian",
+   "wiktionary": {
+    "kaikki": "Hungarian",
+    "bytes": 590467907,
+    "download": 54589180
+   }
+  },
+  "id": {
+   "name": "Indonesian",
+   "wiktionary": {
+    "kaikki": "Indonesian",
+    "bytes": 70005729,
+    "download": 10749713
+   },
+   "wikdict": {
+    "download": 1527808
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/id/id-extract.jsonl",
+    "bytes": 29800000,
+    "download": 2940954
+   }
+  },
+  "is": {
+   "name": "Icelandic",
+   "wiktionary": {
+    "kaikki": "Icelandic",
+    "bytes": 72484459,
+    "download": 7880157
+   }
+  },
+  "it": {
+   "name": "Italian",
+   "wiktionary": {
+    "kaikki": "Italian",
+    "bytes": 779439733,
+    "download": 76647674
+   },
+   "wikdict": {
+    "download": 8146944
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/it/it-extract.jsonl",
+    "bytes": 540400000,
+    "download": 43849715
+   }
+  },
+  "ja": {
+   "name": "Japanese",
+   "wiktionary": {
+    "kaikki": "Japanese",
+    "bytes": 387569265,
+    "download": 48618944
+   },
+   "wikdict": {
+    "download": 5505024
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/ja/ja-extract.jsonl",
+    "bytes": 426500000,
+    "download": 64975000
+   }
+  },
+  "ko": {
+   "name": "Korean",
+   "wiktionary": {
+    "kaikki": "Korean",
+    "bytes": 207649961,
+    "download": 21576381
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/ko/ko-extract.jsonl",
+    "bytes": 188300000,
+    "download": 26869664
+   }
+  },
+  "lt": {
+   "name": "Lithuanian",
+   "wiktionary": {
+    "kaikki": "Lithuanian",
+    "bytes": 83581783,
+    "download": 9071062
+   },
+   "wikdict": {
+    "download": 1466368
+   }
+  },
+  "lv": {
+   "name": "Latvian",
+   "wiktionary": {
+    "kaikki": "Latvian",
+    "bytes": 189349434,
+    "download": 16715341
+   }
+  },
+  "nl": {
+   "name": "Dutch",
+   "wiktionary": {
+    "kaikki": "Dutch",
+    "bytes": 257235436,
+    "download": 30804351
+   },
+   "wikdict": {
+    "download": 9998336
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/nl/nl-extract.jsonl",
+    "bytes": 1200000000,
+    "download": 134749667
+   }
+  },
+  "pl": {
+   "name": "Polish",
+   "wiktionary": {
+    "kaikki": "Polish",
+    "bytes": 897507064,
+    "download": 89394855
+   },
+   "wikdict": {
+    "download": 16723968
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/pl/pl-extract.jsonl",
+    "bytes": 1022500000,
+    "download": 137850838
+   }
+  },
+  "pt": {
+   "name": "Portuguese",
+   "wiktionary": {
+    "kaikki": "Portuguese",
+    "bytes": 610118098,
+    "download": 60132567
+   },
+   "wikdict": {
+    "download": 6397952
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/pt/pt-extract.jsonl",
+    "bytes": 341600000,
+    "download": 37273123
+   }
+  },
+  "ro": {
+   "name": "Romanian",
+   "wiktionary": {
+    "kaikki": "Romanian",
+    "bytes": 434336969,
+    "download": 39931394
+   }
+  },
+  "ru": {
+   "name": "Russian",
+   "wiktionary": {
+    "kaikki": "Russian",
+    "bytes": 948499874,
+    "download": 90794686
+   },
+   "wikdict": {
+    "download": 17776640
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/ru/ru-extract.jsonl",
+    "bytes": 2500000000,
+    "download": 308932274
+   }
+  },
+  "sk": {
+   "name": "Slovak",
+   "wiktionary": {
+    "kaikki": "Slovak",
+    "bytes": 57679634,
+    "download": 5953941
+   }
+  },
+  "sq": {
+   "name": "Albanian",
+   "wiktionary": {
+    "kaikki": "Albanian",
+    "bytes": 68378012,
+    "download": 7965553
+   }
+  },
+  "sv": {
+   "name": "Swedish",
+   "wiktionary": {
+    "kaikki": "Swedish",
+    "bytes": 359966907,
+    "download": 34178064
+   },
+   "wikdict": {
+    "download": 9887744
+   }
+  },
+  "th": {
+   "name": "Thai",
+   "wiktionary": {
+    "kaikki": "Thai",
+    "bytes": 51094749,
+    "download": 8645753
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/th/th-extract.jsonl",
+    "bytes": 1600000000,
+    "download": 75595415
+   }
+  },
+  "tr": {
+   "name": "Turkish",
+   "wiktionary": {
+    "kaikki": "Turkish",
+    "bytes": 462889173,
+    "download": 38129580
+   },
+   "wikdict": {
+    "download": 4112384
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/tr/tr-extract.jsonl",
+    "bytes": 707700000,
+    "download": 45899849
+   }
+  },
+  "uk": {
+   "name": "Ukrainian",
+   "wiktionary": {
+    "kaikki": "Ukrainian",
+    "bytes": 322795063,
+    "download": 36040429
+   }
+  },
+  "vi": {
+   "name": "Vietnamese",
+   "wiktionary": {
+    "kaikki": "Vietnamese",
+    "bytes": 83424329,
+    "download": 12799713
+   },
+   "edition": {
+    "url": "https://kaikki.org/dictionary/downloads/vi/vi-extract.jsonl",
+    "bytes": 273100000,
+    "download": 34424532
+   }
+  }
+ },
+ "bundled": [
+  "nl",
+  "pl",
+  "fr",
+  "es",
+  "de",
+  "it",
+  "pt"
+ ]
+}

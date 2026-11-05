@@ -13,7 +13,7 @@ JSON API for languages and their settings (dictionaries, parser, word characters
                                                    "books": true to also add their sample stories})
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text as sql
 from sqlalchemy.exc import IntegrityError
 
@@ -21,6 +21,7 @@ from lute.db import db
 from lute.language.service import Service as LanguageService
 from lute.models.language import Language, LanguageDictionary
 from lute.parse.registry import supported_parsers
+from ocarina.dictionaries import setup as dictionary_setup
 
 bp = Blueprint("ocarina_languages", __name__, url_prefix="/ocarina/api")
 
@@ -164,6 +165,10 @@ def add_predefined():
             db.session.commit()
             language_id = language.id
         added.append({"id": language_id, "name": name})
+        try:
+            dictionary_setup.ensure_default(current_app.env_config.datapath, name)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
     return jsonify({"added": added, "skipped": skipped}), 201 if added else 400
 
 
@@ -176,10 +181,21 @@ def get_language(language_id):
     return jsonify(_language_settings(language))
 
 
+def _small_dictionary(response):
+    "A new language gets the small dictionary of its own (a download, in the background; nothing is said if it cannot be had)."
+    try:
+        name = (response.get_json() or {}).get("name")
+        dictionary_setup.ensure_default(current_app.env_config.datapath, name)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+
+
 @bp.route("/languages", methods=["POST"])
 def create_language():
     "Create a language."
     response, status = _save(Language(), request.get_json(silent=True) or {})
+    if status == 200:
+        _small_dictionary(response)
     return response, 201 if status == 200 else status
 
 

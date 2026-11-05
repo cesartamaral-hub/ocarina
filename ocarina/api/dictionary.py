@@ -1,11 +1,13 @@
 """
 JSON API for word definitions (Wiktionary, cached; see ocarina/dictionary.py).
 
-    GET /ocarina/api/dictionary/define?languageId=<id>&text=<word>[&cacheOnly=true]
+    GET /ocarina/api/dictionary/define?languageId=<id>&text=<word>[&cacheOnly=true][&online=true]
 
 Answers {found, word, entries: [{partOfSpeech, definitions: [{text, examples, lemma?}]}], lemmas: [{word, entries}],
 url, cached, stale}. lemmas holds the base forms that inflected-form definitions point to, with their meanings.
-With cacheOnly and nothing cached, {found: false, cacheMiss: true}. 502 with {error, code: "offline"} when
+`source` says which dictionary answered ({id, name, license, offline}); `others` are the other dictionaries that know the word, each
+{source, entries, lemmas}. The dictionaries on this Mac come first; Wiktionary over the internet is asked when none knows the word, or
+with online=true (then it comes in `others`). With cacheOnly and nothing cached, {found: false, cacheMiss: true}. 502 with {error, code: "offline"} when
 Wiktionary can't be reached and the word was never looked up before.
 """
 
@@ -33,6 +35,7 @@ def define():
             language.name,
             request.args.get("text", ""),
             cache_only=request.args.get("cacheOnly") == "true",
+            online=request.args.get("online") == "true",
         )
     except dictionary.DictionaryError as e:
         return jsonify({"error": str(e), "code": "offline" if e.offline else "bad_input"}), 502 if e.offline else 400

@@ -13,7 +13,7 @@ import re
 
 import requests
 
-from ocarina import dictionary, keystore
+from ocarina import dictionary, keystore, offline, paths
 from ocarina.localllm import local_model
 from ocarina.tts import models as model_files
 
@@ -67,15 +67,26 @@ def code_for(language_name):
 def _cache_path(datapath, provider, source, target, text):
     "Where a translation is kept. provider is the service, or local:<model> for a model on this Mac (see cache_provider)."
     key = hashlib.sha256("\n".join([provider, source, target, text]).encode("utf-8")).hexdigest()
-    return os.path.join(datapath, "translation_cache", key[:2], key + ".json")
+    return os.path.join(paths.cache(datapath, "translation"), key[:2], key + ".json")
 
 
 def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)["translation"]
+            return strip_marks(json.load(f)["translation"]) or None
     except (OSError, ValueError, KeyError):
         return None
+
+
+# The marks a model writes at the end of its turn; they are not part of a translation (some models, not stopped by them, wrote them over and over).
+END_MARKS = ("<end_of_turn>", "<start_of_turn>", "<|im_end|>", "<|endoftext|>", "<eos>")
+
+
+def strip_marks(text):
+    "A translation up to the first end-of-turn mark."
+    for mark in END_MARKS:
+        text = text.split(mark, 1)[0]
+    return text.strip()
 
 
 def _write(path, translation):
@@ -155,7 +166,7 @@ def _local(text, source_name, source, target, engine, model_id=None):  # pylint:
         answer = local_model.complete(model, LOCAL_PROMPT.format(target=TARGETS[target]), f"{source_name} sentence:\n{text}", engine=engine, **extra)
     except Exception as e:  # pylint: disable=broad-exception-caught
         raise TranslateError(f"The translation model failed ({type(e).__name__}).", "failed") from e
-    answer = answer.strip().strip("\"“”").strip()
+    answer = strip_marks(answer).strip("\"“”").strip()
     if not answer:
         raise TranslateError("The translation model gave no answer.", "failed")
     return answer
@@ -176,6 +187,8 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
     if not text:
         raise TranslateError("There is nothing to translate.", "bad_input")
     provider, target = settings["provider"], settings["target"]
+    if provider != "local" and offline.is_on():
+        raise TranslateError(f"{PROVIDERS[provider]['name']} needs the internet, and Work offline is on. Choose a model on this Mac, or turn it off in Settings → General.", "offline_mode")
     if len(text) > MAX_CHARS[provider]:
         raise TranslateError(f"This is too long for {PROVIDERS[provider]['name']} ({MAX_CHARS[provider]} characters at most).", "too_long")
     source = code_for(language_name)

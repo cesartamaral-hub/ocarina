@@ -14,9 +14,11 @@ JSON API for the voice models.
 
 from flask import Blueprint, current_app, jsonify, request
 
-from ocarina import model_check
+from ocarina import model_check, offline
 from ocarina.api import jobs
 from ocarina.tts import models as model_files
+
+_OFFLINE_REPLY = {"error": "Work offline is on, so nothing can be downloaded. Turn it off in Settings → General, or import the files from a folder.", "code": "offline_mode"}
 
 bp = Blueprint("ocarina_tts_models", __name__, url_prefix="/ocarina/api")
 
@@ -76,6 +78,8 @@ def download_model(model_id):
         return jsonify({"error": "Unknown model"}), 404
     if model_files.is_installed(model):
         return jsonify({"error": "Model is already installed"}), 409
+    if offline.is_on():
+        return jsonify(_OFFLINE_REPLY), 409
     if jobs.active(kind="download", model_id=model_id):
         return jsonify({"error": "This model is already being installed"}), 409
     datapath = current_app.env_config.datapath
@@ -131,6 +135,8 @@ def engines():
 @bp.route("/tts/models/lookup", methods=["POST"])
 def lookup_model():
     "What a Hugging Face repository holds: revision, license and size."
+    if offline.is_on():
+        return jsonify(_OFFLINE_REPLY), 409
     try:
         found = model_files.describe(model_files.lookup_hub_repo((request.get_json(silent=True) or {}).get("repo", "").strip()))
     except model_files.HubError as e:
@@ -141,6 +147,8 @@ def lookup_model():
 @bp.route("/tts/models/custom", methods=["POST"])
 def add_custom_model():
     "Add a Hugging Face model to the list (it still has to be downloaded)."
+    if offline.is_on():
+        return jsonify(_OFFLINE_REPLY), 409
     body = request.get_json(silent=True) or {}
     try:
         entry = model_files.add_custom_model(

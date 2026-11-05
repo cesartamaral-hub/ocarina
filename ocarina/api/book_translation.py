@@ -12,7 +12,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import book_translation, keystore, translate
+from ocarina import book_translation, keystore, offline, translate
 from ocarina.api import jobs
 from ocarina.api import translate as translate_api
 from ocarina.tts import models as model_files
@@ -45,14 +45,14 @@ def _methods(settings):
         )
     has_key = keystore.get(current_app.env_config.datapath, "deepl") is not None
     for key in ("mymemory", "deepl"):
-        ready = key != "deepl" or has_key
+        ready = (key != "deepl" or has_key) and not offline.is_on()
         methods.append(
             {
                 "provider": key,
                 "model": None,
                 "name": translate.PROVIDERS[key]["name"],
                 "available": ready,
-                "reason": None if ready else "Needs your API key (Translation settings)",
+                "reason": None if ready else ("Work offline is on" if offline.is_on() else "Needs your API key (Translation settings)"),
                 "isDefault": settings["provider"] == key,
             }
         )
@@ -111,7 +111,8 @@ def _method_for_this_run(settings, body):
     method = next((m for m in _methods(changed) if m["provider"] == provider and (provider != "local" or m["model"] == model)), None)
     if method is None or not method["available"]:
         reason = (method or {}).get("reason") or "That method cannot be used now."
-        return None, (jsonify({"error": reason, "code": "no_model" if provider == "local" else "no_key"}), 409)
+        code = "no_model" if provider == "local" else ("offline_mode" if offline.is_on() else "no_key")
+        return None, (jsonify({"error": reason, "code": code}), 409)
     return changed, None
 
 

@@ -239,6 +239,16 @@ class MlxChatterboxEngine:
         return len(wav) / self.sample_rate
 
 
+END_OF_TURN = ("<end_of_turn>", "<|im_end|>", "<|endoftext|>", "<eos>")
+
+
+def clean_answer(answer):
+    "What a model wrote up to where its turn ended: the end-of-turn marks, and anything after them, are not part of the answer."
+    for mark in END_OF_TURN + ("<start_of_turn>",):
+        answer = answer.split(mark, 1)[0]
+    return answer.strip()
+
+
 class MlxLmEngine:
     "A small language model via mlx-lm, used to translate sentences on this Mac (no speech)."
 
@@ -249,6 +259,11 @@ class MlxLmEngine:
         from mlx_lm import load
 
         self.model, self.tokenizer = load(repo or MLX_LM_REPO)
+        # Some models (TranslateGemma) do not list the end of a turn among the tokens that stop them, and go on writing it until the limit.
+        vocab = self.tokenizer.get_vocab()
+        for token in END_OF_TURN:
+            if token in vocab:
+                self.tokenizer.add_eos_token(token)
 
     def complete(self, system, user, max_tokens=300, style=None, source=None, target=None, text=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         """
@@ -270,7 +285,8 @@ class MlxLmEngine:
             if style == "translategemma":
                 raise
             prompt = self._prompt([{"role": "user", "content": f"{system}\n\n{user}"}])
-        return generate(self.model, self.tokenizer, prompt=prompt, max_tokens=max_tokens, sampler=make_sampler(temp=0.0)).strip()
+        answer = generate(self.model, self.tokenizer, prompt=prompt, max_tokens=max_tokens, sampler=make_sampler(temp=0.0))
+        return clean_answer(answer)
 
     def _prompt(self, messages):
         return self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False, enable_thinking=False)

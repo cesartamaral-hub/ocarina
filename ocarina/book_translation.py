@@ -119,3 +119,19 @@ def translate_book(book, datapath, settings, lang, scope, page, label, check, on
         done += 1
         on_progress(i + 1, len(todo))
     return done
+
+
+def clean_stored():
+    "Translations saved with end-of-turn marks at their end (an old fault of one model) lose them; returns how many were cleaned."
+    cleaned = 0
+    for mark in translate.END_MARKS:
+        found = db.session.execute(sql("select BtBkID, BtPage, BtIndex, BtLang, BtText from booktranslations where instr(BtText, :m) > 0"), {"m": mark}).all()
+        for book, page, index, lang, text in found:
+            db.session.execute(
+                sql("update booktranslations set BtText = :t where BtBkID = :b and BtPage = :p and BtIndex = :i and BtLang = :l"),
+                {"t": translate.strip_marks(text), "b": book, "p": page, "i": index, "l": lang},
+            )
+            cleaned += 1
+    if cleaned:
+        db.session.commit()
+    return cleaned

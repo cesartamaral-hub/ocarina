@@ -188,6 +188,9 @@ def download(model, on_progress=None, check=None):
     files are fetched by a process of its own, which is stopped the moment check() raises: in this process the downloads in flight
     would have to finish first, which can take minutes for a large file. What was downloaded stays, and the next download continues it.
     """
+    from ocarina import offline  # pylint: disable=import-outside-toplevel
+
+    offline.require_online("Downloading a model")
     if check is None:
         return download_here(model, on_progress)
     cb = on_progress or (lambda done, total: None)

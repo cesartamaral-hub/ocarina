@@ -3,6 +3,7 @@ import { getTranslateSettings, translateSentence, type Translation } from '../ap
 import { notify } from '../notices'
 import { cardLabel, sendsTo, serviceName, targetName } from './cardWording'
 import { SpeakButton } from './SpeakButton'
+import { useOffline } from '../offline'
 
 const PLAY = <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
 const COPY = (
@@ -45,7 +46,7 @@ export function SentenceCard({
   languageId,
   playStart,
   onPlay,
-  onOpenInBrowser,
+  onOpenInBrowser: openInBrowser,
   stored,
 }: {
   kind: 'sentence' | 'text'
@@ -56,6 +57,7 @@ export function SentenceCard({
   onOpenInBrowser?: () => void
   stored?: string // the book's own translation of exactly this text
 }) {
+  const onOpenInBrowser = useOffline() ? undefined : openInBrowser // a web page needs the internet
   const [result, setResult] = useState<Translation | null>(null)
   const [error, setError] = useState<{ message: string; code?: string } | null>(null)
   const [busy, setBusy] = useState(false)

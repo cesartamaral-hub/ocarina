@@ -19,12 +19,12 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.language import Language
-from ocarina import keystore, prefs, translate
+from ocarina import keystore, offline, prefs, translate
 from ocarina.tts import models as model_files
 
 bp = Blueprint("ocarina_translate", __name__, url_prefix="/ocarina/api")
 
-STATUS = {"no_model": 400, "bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "quota": 429, "offline": 502, "failed": 502}
+STATUS = {"no_model": 400, "bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "offline_mode": 409, "quota": 429, "offline": 502, "failed": 502}
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -45,6 +45,8 @@ def _settings():
     by_language = saved.get("translate.localModelByLanguage")
     ids = {m["id"] for m in model_files.text_models()}
     by_language = {k: v for k, v in by_language.items() if v in ids} if isinstance(by_language, dict) else {}  # a model that is gone is forgotten
+    if offline.is_on():
+        provider = "local"  # only a model on this Mac can translate while Work offline is on
     return {
         "provider": provider,
         "localModel": local,
@@ -57,6 +59,7 @@ def _settings():
 def _settings_json():
     return {
         **_settings(),
+        "offline": offline.is_on(),
         "hasDeeplKey": keystore.get(_datapath(), "deepl") is not None,
         "deeplKeyHint": keystore.hint(_datapath(), "deepl"),
         "providers": [{"id": k, **v} for k, v in translate.PROVIDERS.items()],

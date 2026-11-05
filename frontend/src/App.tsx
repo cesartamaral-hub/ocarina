@@ -96,7 +96,6 @@ export default function App() {
         <JobChip />
         <nav>
           <a href="#/vocabulary">Vocabulary</a>
-          <a href="#/settings/languages">Languages</a>
           <a href="#/stats">Reading</a>
           <a href="#/settings">Settings</a>
         </nav>

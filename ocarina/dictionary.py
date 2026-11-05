@@ -3,7 +3,7 @@ Word definitions from Wiktionary (its public REST API), cached on disk.
 
 Lute's dictionaries were web pages shown in a frame, and most sites refuse that. This asks Wiktionary for
 data instead: part of speech, definitions and examples, in English, for the language of the book.
-Every answer is cached in <data folder>/dictionary_cache, so a word you looked up once is instant and
+Every answer is cached in <data folder>/cache/dictionary, so a word you looked up once is instant and
 works without internet; with no connection, an old cached answer is still used.
 """
 
@@ -16,6 +16,8 @@ import time
 from urllib.parse import quote
 
 import requests
+
+from ocarina import paths
 
 API = "https://en.wiktionary.org/api/rest_v1/page/definition/"
 WIKI = "https://en.wiktionary.org/wiki/"
@@ -83,7 +85,7 @@ def parse(payload, section):
 
 def _cache_path(datapath, section, word):
     key = hashlib.sha256(f"{section}\n{word}".encode("utf-8")).hexdigest()
-    return os.path.join(datapath, "dictionary_cache", key[:2], key + ".json")
+    return os.path.join(paths.cache(datapath, "dictionary"), key[:2], key + ".json")
 
 
 def _read_cache(path):
@@ -149,9 +151,9 @@ def _lemmas(entries, section):
     return found
 
 
-def define(datapath, language_name, word, cache_only=False):
+def define_online(datapath, language_name, word, cache_only=False):
     """
-    Definitions of a word in the given language: {found, word, entries, lemmas, url, cached, stale}.
+    Definitions of a word from Wiktionary (kept on this Mac): {found, word, entries, lemmas, url, cached, stale}.
     cache_only never uses the network (None when the word is not cached). Raises DictionaryError when
     Wiktionary can't be reached and nothing was cached.
     """
@@ -190,3 +192,57 @@ def define(datapath, language_name, word, cache_only=False):
     }
     _write_cache(path, result)
     return {**result, "cached": False, "stale": False}
+
+
+WIKTIONARY = {"id": "wiktionary", "name": "Wiktionary", "license": "CC BY-SA", "offline": False}
+
+
+def _source(pack):
+    return {"id": pack["id"], "name": pack["name"], "license": pack["license"], "offline": True}
+
+
+def _clean(word):
+    word = re.sub(r"\s+", " ", (word or "").replace("\u200b", "")).strip()
+    if not word or len(word) > MAX_WORD:
+        raise DictionaryError("Give a word or phrase of up to %d characters." % MAX_WORD)
+    return word
+
+
+def define(datapath, language_name, word, cache_only=False, online=False):
+    """
+    What the dictionaries say about a word: {found, word, entries, lemmas, url, cached, stale, source, others}. The dictionaries on this Mac
+    (packs, see ocarina/dictionaries) are asked first, in the user's order: the first that knows the word is the answer and the others
+    that know it come in `others`, each with its own source. Only when none does (or with online=True) Wiktionary is asked over the
+    internet; that answer is kept on this Mac, and works offline from then on. cache_only never uses the network.
+    """
+    from ocarina import offline, translate  # pylint: disable=import-outside-toplevel,cyclic-import
+    from ocarina.dictionaries import lookup  # pylint: disable=import-outside-toplevel
+
+    word = _clean(word)
+    if offline.is_on():  # only what is on this Mac: the dictionaries, and what was looked up on Wiktionary before
+        cache_only, online = True, False
+    code = translate.code_for(language_name)
+    local = lookup.lookup(datapath, code, word) if code else []
+    if not local:
+        result = define_online(datapath, language_name, word, cache_only)
+        return {**result, "source": WIKTIONARY, "others": []} if result is not None else None
+    first = local[0]
+    others = [{"source": _source(r["pack"]), "entries": r["entries"], "lemmas": r["lemmas"]} for r in local[1:]]
+    if online and not cache_only:
+        try:
+            wiki = define_online(datapath, language_name, word)
+        except DictionaryError:
+            wiki = None
+        if wiki and wiki.get("found"):
+            others.append({"source": WIKTIONARY, "entries": wiki["entries"], "lemmas": wiki["lemmas"], "url": wiki["url"], "stale": wiki.get("stale", False)})
+    return {
+        "found": True,
+        "word": word,
+        "entries": first["entries"],
+        "lemmas": first["lemmas"],
+        "url": None,
+        "cached": False,
+        "stale": False,
+        "source": _source(first["pack"]),
+        "others": others,
+    }

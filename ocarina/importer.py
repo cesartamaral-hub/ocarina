@@ -23,6 +23,8 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from ocarina import offline
+
 log = logging.getLogger("ocarina.importer")
 
 TIMEOUT = 15  # seconds, for the page
@@ -143,6 +145,7 @@ def import_url(url, language=None, progress=None, keep_audio=False, check=None, 
     recognition for a video without captions.
     """
     url = check_url(url)
+    offline.require_online("Adding from a web address" if not is_youtube(url) else "Adding from a YouTube video")
     if is_youtube(url):
         from ocarina import youtube  # pylint: disable=import-outside-toplevel
 

@@ -25,6 +25,7 @@ import {
   type Storage as StorageInfo,
 } from './api'
 import { AddModel } from './AddModel'
+import { useOffline } from './offline'
 import { ModelList, type ModelActions } from './ModelList'
 import { speechCodesUsing, speechModelFor } from './modelRows'
 import { formatBytes } from './format'
@@ -40,6 +41,7 @@ const size = (storage: StorageInfo | null, kind: StorageInfo['groups'][number]['
 }
 
 export function Settings({ part }: { part: 'models' | 'voices' }) {
+  const offline = useOffline()
   const [models, setModels] = useState<Model[] | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
@@ -171,7 +173,7 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
   const everyone = (used: string[]): 'all' | string[] | null => (used.length === 0 ? null : used.length === codes.length ? 'all' : used)
   const actions = (kind: NonNullable<Model['kind']>): ModelActions => {
     const ofKind = models.filter((m) => (m.kind ?? 'speech') === kind)
-    const base = { busy, job, speed, codes, onDownload: download, onImport: importFrom, onTest: test, onDelete: remove, onForget: forget, onJob: setJob }
+    const base = { busy, offline, job, speed, codes, onDownload: download, onImport: importFrom, onTest: test, onDelete: remove, onForget: forget, onJob: setJob }
     if (kind === 'speech') {
       return {
         ...base,

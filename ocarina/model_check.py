@@ -10,6 +10,7 @@ import json
 import os
 import time
 
+from ocarina import paths
 from ocarina.audio_sync import aligner_engine
 from ocarina.localllm import LocalModel
 from ocarina.tts import models as model_files
@@ -68,7 +69,7 @@ def _try_speech(datapath, model, engine):
     voice_id = voices.default_voice_id(language)
     voice = voices.path_of(datapath, voice_id)
     ref_text = voices.transcript_of(datapath, voice_id)
-    out = os.path.join(datapath, "temp", f"check_{model['id']}.wav")
+    out = os.path.join(paths.cache(datapath, "temp"), f"check_{model['id']}.wav")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     supervisor = Supervisor(engine or model["engine"], repo=model["repositories"][0]["id"], timeout=1800)
     try:
@@ -103,7 +104,7 @@ def _try_aligner(datapath, model, engine):
     import numpy as np  # pylint: disable=import-outside-toplevel
     import soundfile as sf  # pylint: disable=import-outside-toplevel
 
-    path = os.path.join(datapath, "temp", f"check_{model['id']}.wav")
+    path = os.path.join(paths.cache(datapath, "temp"), f"check_{model['id']}.wav")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     sf.write(path, (0.1 * np.sin(np.arange(24000) / 8)).astype("float32"), 16000)
     supervisor = Supervisor(aligner_engine(engine or model["engine"]), repo=model["repositories"][0]["id"], timeout=1800)
@@ -124,7 +125,7 @@ def _try_transcriber(datapath, model, engine):
     import numpy as np  # pylint: disable=import-outside-toplevel
     import soundfile as sf  # pylint: disable=import-outside-toplevel
 
-    path = os.path.join(datapath, "temp", f"check_{model['id']}.wav")
+    path = os.path.join(paths.cache(datapath, "temp"), f"check_{model['id']}.wav")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     sf.write(path, (0.1 * np.sin(np.arange(24000) / 8)).astype("float32"), 16000)
     supervisor = Supervisor(engine or model["engine"], repo=model["repositories"][0]["id"], timeout=1800)

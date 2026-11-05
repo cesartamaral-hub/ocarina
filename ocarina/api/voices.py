@@ -15,7 +15,7 @@ import uuid
 
 from flask import Blueprint, current_app, jsonify, request, send_file
 
-from ocarina import prefs
+from ocarina import paths, prefs
 from ocarina.api import jobs
 from ocarina.tts import models as model_files
 from ocarina.tts import voices
@@ -31,7 +31,7 @@ MAX_PREVIEW_TEXT = 300
 
 
 def _previews_dir(cfg):
-    return os.path.join(cfg.datapath, "temp", "previews")
+    return os.path.join(paths.cache(cfg.datapath, "temp"), "previews")
 
 
 def _prune_previews(folder):
@@ -48,7 +48,7 @@ def _run_preview(app, job, check, model, language, voice_path, text, ref_text): 
         raise RuntimeError(f"{model['name']} is not installed.")
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
     supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
-    cache = SentenceCache(os.path.join(cfg.datapath, "tts_cache"))
+    cache = SentenceCache(paths.cache(cfg.datapath, "tts"))
     try:
         (made,) = synthesize_text_sentences(supervisor, cache, model["id"], [text], language, voice_path, ref_text=ref_text)
     finally:

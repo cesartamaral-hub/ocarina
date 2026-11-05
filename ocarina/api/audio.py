@@ -15,7 +15,7 @@ from flask import Blueprint, current_app, jsonify, request
 from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, model_check, prefs
+from ocarina import audio_versions, model_check, paths, prefs
 from ocarina.api import audio_versions as audio_versions_api
 from ocarina.api import jobs
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
@@ -47,7 +47,7 @@ def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None, voice
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
     supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
-    cache = SentenceCache(os.path.join(cfg.datapath, "tts_cache"))
+    cache = SentenceCache(paths.cache(cfg.datapath, "tts"))
 
     def progress(done, total):
         check()

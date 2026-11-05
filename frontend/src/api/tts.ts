@@ -2,7 +2,7 @@ import { API, json, send } from './client'
 
 export type Job = {
   id: string
-  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync' | 'translate' | 'import'
+  kind: 'audio' | 'download' | 'preview' | 'check' | 'sync' | 'translate' | 'import' | 'dictionary'
   state: 'queued' | 'running' | 'done' | 'error' | 'cancelled'
   done: number
   total: number
@@ -12,6 +12,7 @@ export type Job = {
   detail?: string // the original error text, when the error above is a plain-language explanation
   book_id?: number
   model_id?: string
+  pack_id?: string // dictionary jobs: the dictionary being downloaded
   preview?: string
   error?: string
   message?: string // import jobs: what is happening now

@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { AlignPicker } from './AlignPicker'
-import { getPref, setPref } from './api'
 import { appearance, saveAppearance, type Theme } from './appearanceSettings'
-import { HOVER_DELAYS, HOVER_PREFS } from './reader/useHoverCard'
 import { RadioCards, type CardOption } from './RadioCards'
 import { useTypography } from './useTypography'
 import { FONTS, LIMITS, PRESETS, WEIGHTS, matchingPreset, spacingLabel, stepSize, widthLabel, type FontKey, type Typography } from './typography'
@@ -77,8 +75,6 @@ function Preview() {
 export function Appearance() {
   const [theme, setTheme] = useState<Theme>(() => appearance().theme)
   const [t, change] = useTypography()
-  const [hoverOn, setHoverOn] = useState(() => getPref<boolean>(HOVER_PREFS.enabled, true))
-  const [hoverDelay, setHoverDelay] = useState(() => getPref<number>(HOVER_PREFS.delay, 350))
   const chooseTheme = (next: Theme) => {
     saveAppearance({ theme: next })
     setTheme(next)
@@ -166,39 +162,6 @@ export function Appearance() {
                 Back to the standard text
               </button>
             </div>
-          </section>
-
-          <section className="ap-card">
-            <h2>Hovering over words</h2>
-            <label className="ap-check">
-              <input
-                type="checkbox"
-                checked={hoverOn}
-                onChange={(e) => {
-                  setHoverOn(e.target.checked)
-                  setPref(HOVER_PREFS.enabled, e.target.checked)
-                }}
-              />
-              Show a word's meaning when the pointer rests on it
-            </label>
-            <label className="ap-field">
-              <span>Wait first</span>
-              <select
-                value={hoverDelay}
-                disabled={!hoverOn}
-                onChange={(e) => {
-                  setHoverDelay(Number(e.target.value))
-                  setPref(HOVER_PREFS.delay, Number(e.target.value))
-                }}
-              >
-                {HOVER_DELAYS.map((d) => (
-                  <option key={d.ms} value={d.ms}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="muted ap-note">Your own translation first; if there is none, the first meaning from Wiktionary (needs a connection).</p>
           </section>
         </div>
 

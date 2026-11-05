@@ -24,7 +24,7 @@ from lute.book.service import BookImportException, FileTextExtraction, Service
 from lute.db import db
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, importer, transcribe, video, youtube
+from ocarina import audio_versions, importer, offline, paths, transcribe, video, youtube
 from ocarina.api import audio_versions as audio_versions_api
 from ocarina.api import book_translation as book_translation_api
 from ocarina.api import jobs
@@ -64,7 +64,7 @@ def _imported(got, audio_token=None):
 
 
 def _temp_dir(app):
-    path = os.path.join(app.env_config.datapath, "temp")
+    path = paths.cache(app.env_config.datapath, "temp")
     os.makedirs(path, exist_ok=True)
     return path
 
@@ -72,6 +72,7 @@ def _temp_dir(app):
 def _extract_url(url, code, keep_audio):
     "A web page now; a video with captions now; a video to transcribe (or to keep the sound of) as a job."
     url = importer.check_url(url)
+    offline.require_online("Adding from a web address")
     if not importer.is_youtube(url):
         return jsonify(_imported(importer.from_web(url)))
     app = current_app._get_current_object()  # pylint: disable=protected-access
@@ -126,6 +127,8 @@ def extract():
         if not url.startswith(("http://", "https://")) and not url.startswith(("www.", "youtu")):
             return _error("Choose a file, or give a web address starting with http:// or https://")
         return _extract_url(url, _language_code(body.get("languageId")), bool(body.get("keepAudio")))
+    except offline.OfflineMode as e:
+        return _error(str(e), 409, code="offline_mode")
     except importer.ImportFailed as e:
         return _error(str(e))
     except BookImportException as e:
@@ -167,7 +170,7 @@ def create_book():
     if token:
         if not re.fullmatch(r"[0-9a-f]{32}\.[A-Za-z0-9]{2,5}", token):
             return _error("That sound is not available any more.")
-        kept = os.path.join(current_app.env_config.datapath, "temp", token)
+        kept = os.path.join(paths.cache(current_app.env_config.datapath, "temp"), token)
         if not os.path.exists(kept):
             return _error("That sound is not available any more. Get the text again.")
     if kept:

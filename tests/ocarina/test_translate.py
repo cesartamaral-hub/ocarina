@@ -35,7 +35,7 @@ def net(app, monkeypatch):
     datapath = app.env_config.datapath
 
     def clean():
-        shutil.rmtree(os.path.join(datapath, "translation_cache"), ignore_errors=True)
+        shutil.rmtree(os.path.join(datapath, "cache", "translation"), ignore_errors=True)
         for name in (prefs.path_for(datapath), keystore.path_for(datapath)):
             if os.path.exists(name):
                 os.remove(name)

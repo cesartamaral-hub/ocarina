@@ -47,7 +47,7 @@ class Reply:
 @pytest.fixture(autouse=True)
 def net(app, monkeypatch):
     "A fake Wiktionary that records which words were asked, and a clean cache before and after each test."
-    cache = os.path.join(app.env_config.datapath, "dictionary_cache")
+    cache = os.path.join(app.env_config.datapath, "cache", "dictionary")
     shutil.rmtree(cache, ignore_errors=True)
     state = {"asked": [], "answers": {"huis": Reply(200, HUIS)}, "down": False}
 

@@ -1,11 +1,13 @@
 // The settings sections, and where each lives: #/settings/<section>. The languages section has pages of its own below it.
-export type SectionId = 'appearance' | 'shortcuts' | 'languages' | 'tags' | 'models' | 'voices' | 'translation' | 'backups' | 'storage'
+export type SectionId = 'general' | 'appearance' | 'shortcuts' | 'languages' | 'tags' | 'dictionaries' | 'models' | 'voices' | 'translation' | 'backups' | 'storage'
 
 export const SECTIONS: { id: SectionId; label: string; group: string }[] = [
+  { id: 'general', label: 'General', group: '' },
   { id: 'appearance', label: 'Appearance', group: 'Reading' },
   { id: 'shortcuts', label: 'Keyboard shortcuts', group: 'Reading' },
   { id: 'languages', label: 'Languages', group: 'Languages' },
   { id: 'tags', label: 'Tags', group: 'Languages' },
+  { id: 'dictionaries', label: 'Dictionaries', group: 'Languages' },
   { id: 'models', label: 'Models', group: 'Audio and translation' },
   { id: 'voices', label: 'Voices', group: 'Audio and translation' },
   { id: 'translation', label: 'Translation', group: 'Audio and translation' },
@@ -14,7 +16,7 @@ export const SECTIONS: { id: SectionId; label: string; group: string }[] = [
 ]
 
 export const GROUPS = [...new Set(SECTIONS.map((s) => s.group))]
-export const DEFAULT_SECTION: SectionId = 'appearance'
+export const DEFAULT_SECTION: SectionId = 'general'
 export const sectionHash = (id: SectionId): string => `#/settings/${id}`
 const isSection = (value: string): value is SectionId => SECTIONS.some((s) => s.id === value)
 

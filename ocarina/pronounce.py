@@ -12,7 +12,7 @@ Sources, in the order the user prefers them (the setting "pronounce.source", "vo
     system   the voice of this Mac (instant, offline)
 
 A source that cannot be used (no model, no recording, no internet) gives way to the system voice, with a note saying so. Results
-are kept in <data folder>/pronounce_cache, so a word heard once plays at once, offline.
+are kept in <data folder>/cache/pronounce, so a word heard once plays at once, offline.
 """
 
 import hashlib
@@ -24,7 +24,7 @@ import threading
 
 import requests
 
-from ocarina import tools
+from ocarina import offline, paths, tools
 from ocarina.tts import models as model_files
 from ocarina.tts import voices
 from ocarina.tts.service import voice_digest
@@ -45,7 +45,7 @@ class Unavailable(Exception):
 
 
 def cache_dir(datapath):
-    return os.path.join(datapath, "pronounce_cache")
+    return paths.cache(datapath, "pronounce")
 
 
 def cache_path(datapath, key, ext="wav"):
@@ -178,6 +178,8 @@ def speaker_file(word, code):
 
 
 def _from_speaker(cfg, text, code):
+    if offline.is_on():
+        raise Unavailable("Work offline is on.")
     if len(text.split()) != 1:
         raise Unavailable("Recordings of people exist for single words only.")
     out = cache_path(cfg.datapath, f"speaker\n{code}\n{text.lower()}")
@@ -207,6 +209,8 @@ def _from_speaker(cfg, text, code):
 
 
 def _from_google(cfg, text, code):
+    if offline.is_on():
+        raise Unavailable("Work offline is on.")
     if len(text) > GOOGLE_MAX:
         raise Unavailable("Google's voice takes about 190 characters at most.")
     out = cache_path(cfg.datapath, f"google\n{code}\n{text}", "mp3")
@@ -278,6 +282,8 @@ def say(cfg, app_config, text, code, source, saved, busy=False):  # pylint: disa
     if len(text) > MAX_TEXT:
         text = text[:MAX_TEXT].rsplit(" ", 1)[0] or text[:MAX_TEXT]
     source = source if source in SOURCES else "voice"
+    if offline.is_on() and source in ("speaker", "google"):
+        source = "voice"  # these two need the internet: the voice chosen for the language answers instead
     try:
         if source == "voice":
             return _from_voice(cfg, app_config, text, code, saved, busy), "voice", None
