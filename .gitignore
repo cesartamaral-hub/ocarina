@@ -151,3 +151,4 @@ cython_debug/
 
 # Dictionaries made from WikDict by scripts/build_wikdict.py (downloaded when the app is built)
 ocarina/dictionaries/builtin/*.sqlite
+desktop/vendor/

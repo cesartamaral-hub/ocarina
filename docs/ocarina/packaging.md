@@ -16,3 +16,9 @@
   the window by double-click from Finder, first run without the model cached (Settings downloads it).
 
 - The translation model needs `mlx-lm` in both venvs (`pip install mlx-lm`), and `mlx_lm` is listed in `desktop/setup.py`. The packaged worker loads it from the same HF cache as the voices (about 2.5 GB of memory while loaded, 7 MB more in the bundle).
+
+## Disk image, ffmpeg and first start
+
+- `scripts/build_ffmpeg.sh` builds a small LGPL-only static ffmpeg from the official source into `desktop/vendor/` (not in git). `desktop/build.sh` copies it to `Ocarina.app/Contents/Resources/bin`; `ocarina/tools.py` and `path_with_tools` look there first, so the model workers and yt-dlp use it too. Without it the app falls back to Homebrew's ffmpeg.
+- `desktop/make_dmg.sh` makes `dist/Ocarina.dmg` (the app, an Applications shortcut, a "Read me first" note). The app is ad-hoc signed only, so the first start on another Mac needs right-click, Open.
+- First start: `Welcome.tsx` asks for the languages, then offers the Recommended models (voice, translation, audio sync, transcription) with their sizes, downloaded one after another.

@@ -49,3 +49,15 @@ def test_hugging_face_is_pointed_at_the_models_folder(tmp_path):
     finally:
         constants.HF_HUB_CACHE = before
         paths._datapath = None  # pylint: disable=protected-access
+
+
+def test_the_ffmpeg_inside_the_app_is_found_first(tmp_path, monkeypatch):
+    from ocarina import tools  # pylint: disable=import-outside-toplevel
+
+    (tmp_path / "bin").mkdir()
+    own = tmp_path / "bin" / "ffmpeg"
+    own.write_text("#!/bin/sh\n")
+    own.chmod(0o755)
+    monkeypatch.setenv("RESOURCEPATH", str(tmp_path))
+    assert tools.ffmpeg() == str(own)
+    assert tools.bundled_dir() in __import__("ocarina.tts.supervisor", fromlist=["x"]).path_with_tools("/usr/bin").split(":")

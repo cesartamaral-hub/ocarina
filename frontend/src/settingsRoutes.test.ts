@@ -38,7 +38,7 @@ describe('legacyRedirect', () => {
 describe('the sections', () => {
   it('are each in a group, once', () => {
     expect(new Set(SECTIONS.map((s) => s.id)).size).toBe(SECTIONS.length)
-    expect(GROUPS).toEqual(['', 'Reading', 'Languages', 'Audio and translation', 'Library'])
+    expect(GROUPS).toEqual(['', 'Reading', 'Languages', 'Audio and translation', 'Library', 'About'])
     expect(sectionHash('models')).toBe('#/settings/models')
   })
 })

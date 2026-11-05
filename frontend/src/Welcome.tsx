@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { addPredefinedLanguages, getLanguageTemplate, getModels, type Model } from './api'
+import { addPredefinedLanguages, downloadModel, getLanguageTemplate, getModels, type Model } from './api'
+import { formatBytes } from './format'
+import { useOffline } from './offline'
 
-// First run: choose the languages you study, then be pointed at a voice model for listening.
+// First run: choose the languages you study, then the starter models to download (voice, translation, audio sync).
 export function Welcome({ onFinish }: { onFinish: () => void }) {
-  const [step, setStep] = useState<'languages' | 'voice'>('languages')
+  const [step, setStep] = useState<'languages' | 'models'>('languages')
   const [available, setAvailable] = useState<string[]>([])
   const [chosen, setChosen] = useState<string[]>([])
   const [filter, setFilter] = useState('')
@@ -11,6 +13,8 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   const [models, setModels] = useState<Model[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [picked, setPicked] = useState<string[] | null>(null) // the starter models ticked (all of them until you change it)
+  const offline = useOffline()
 
   useEffect(() => {
     getLanguageTemplate().then((t) => setAvailable(t.predefined), (e) => setError(e.message))
@@ -24,7 +28,7 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
     setBusy(true)
     try {
       await addPredefinedLanguages(chosen, withBooks)
-      setStep('voice')
+      setStep('models')
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -33,32 +37,62 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   }
 
   const shown = available.filter((n) => n.toLowerCase().includes(filter.trim().toLowerCase()))
-  const hasVoice = models.some((m) => m.kind !== 'text' && m.installed)
+  const starters = models.filter((m) => m.badge === 'Recommended' && !m.installed)
+  const ticked = picked ?? starters.map((m) => m.id)
+  const total = starters.filter((m) => ticked.includes(m.id)).reduce((n, m) => n + m.sizeBytes, 0)
 
-  if (step === 'voice') {
+  async function getModelsNow() {
+    setError('')
+    setBusy(true)
+    try {
+      for (const id of ticked) await downloadModel(id) // they download one after another; the chip at the top shows how far
+      onFinish()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (step === 'models') {
     return (
       <section className="welcome">
-        <h1>Listening</h1>
-        {hasVoice ? (
-          <p>A voice model is installed, so you can make audio for any book with one click.</p>
-        ) : (
-          <>
-            <p>
-              Ocarina can read your books aloud with a voice model that runs on this Mac. It is a one-time download of a few gigabytes. Reading works
-              without it.
-            </p>
-            <p>
-              <a className="button" href="#/settings/models">
-                Choose a voice model
-              </a>
-            </p>
-          </>
-        )}
+        <h1>Get ready</h1>
         <p>
+          Dictionaries for your languages are on this Mac already. For listening, translating sentences and syncing audio to text, Ocarina uses models that run on this
+          Mac. Each is a one-time download; after that everything works without the internet.
+        </p>
+        {starters.length === 0 ? (
+          <p>The recommended models are installed.</p>
+        ) : (
+          <ul className="starter-models">
+            {starters.map((m) => (
+              <li key={m.id}>
+                <label className="inline">
+                  <input
+                    type="checkbox"
+                    checked={ticked.includes(m.id)}
+                    onChange={() => setPicked(ticked.includes(m.id) ? ticked.filter((x) => x !== m.id) : [...ticked, m.id])}
+                  />{' '}
+                  {m.name} <span className="muted">· {formatBytes(m.sizeBytes)}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        {offline && <p className="muted">Work offline is on, so nothing can be downloaded now (Settings → General).</p>}
+        {error && <p className="error">{error}</p>}
+        <p>
+          {starters.length > 0 && (
+            <button disabled={busy || offline || ticked.length === 0} onClick={getModelsNow}>
+              {ticked.length === 0 ? 'Choose a model' : `Download ${formatBytes(total)} and start reading`}
+            </button>
+          )}{' '}
           <button className="secondary" onClick={onFinish}>
-            {hasVoice ? 'Start reading' : 'Later, start reading'}
+            {starters.length > 0 ? 'Later, start reading' : 'Start reading'}
           </button>
         </p>
+        <p className="muted">You can add or change models any time under Settings → Models. Reading works without them.</p>
       </section>
     )
   }

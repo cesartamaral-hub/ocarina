@@ -19,4 +19,13 @@ LIB=dist/Ocarina.app/Contents/Resources/lib/python3.12
 rm -rf "$LIB/mlx/include" "$LIB/mlx/lib/cmake"
 find "$LIB" -type d \( -name tests -o -name test \) -prune -exec rm -rf {} +
 find "$LIB" -name "*.pyi" -delete
+
+# ffmpeg: our own small LGPL build (scripts/build_ffmpeg.sh makes it once). Without it the app uses Homebrew's, when there is one.
+RES=dist/Ocarina.app/Contents/Resources
+if [ -x vendor/ffmpeg ]; then
+  mkdir -p "$RES/bin" && cp vendor/ffmpeg "$RES/bin/ffmpeg" && cp vendor/ffmpeg-LICENSE.txt "$RES/ffmpeg-LICENSE.txt"
+else
+  echo "Note: desktop/vendor/ffmpeg is missing, so this app will not carry ffmpeg (run scripts/build_ffmpeg.sh)." >&2
+fi
+codesign --force --deep --sign - dist/Ocarina.app  # ad hoc: not an Apple ID signature, but keeps the bundle consistent
 du -sh dist/Ocarina.app

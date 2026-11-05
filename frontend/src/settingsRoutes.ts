@@ -1,5 +1,5 @@
 // The settings sections, and where each lives: #/settings/<section>. The languages section has pages of its own below it.
-export type SectionId = 'general' | 'appearance' | 'shortcuts' | 'languages' | 'tags' | 'dictionaries' | 'models' | 'voices' | 'translation' | 'backups' | 'storage'
+export type SectionId = 'general' | 'appearance' | 'shortcuts' | 'languages' | 'tags' | 'dictionaries' | 'models' | 'voices' | 'translation' | 'backups' | 'storage' | 'about'
 
 export const SECTIONS: { id: SectionId; label: string; group: string }[] = [
   { id: 'general', label: 'General', group: '' },
@@ -13,6 +13,7 @@ export const SECTIONS: { id: SectionId; label: string; group: string }[] = [
   { id: 'translation', label: 'Translation', group: 'Audio and translation' },
   { id: 'backups', label: 'Backups', group: 'Library' },
   { id: 'storage', label: 'Storage', group: 'Library' },
+  { id: 'about', label: 'About and licences', group: 'About' },
 ]
 
 export const GROUPS = [...new Set(SECTIONS.map((s) => s.group))]

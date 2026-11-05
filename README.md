@@ -30,3 +30,7 @@ If you'd like to contribute code to Lute (hooray!), check out the [Contribution 
 # License
 
 Lute uses the MIT license: [LICENSE](./LICENSE.txt)
+
+# Ocarina
+
+This fork, **Ocarina**, is a personal macOS language-study app built on Lute v3 (Copyright (c) 2023 Jeff Zohrab, MIT). Credits for the dictionaries (Wiktionary, CC BY-SA 4.0), models and libraries it uses are in [NOTICE.md](./NOTICE.md) and under Settings → About and licences.

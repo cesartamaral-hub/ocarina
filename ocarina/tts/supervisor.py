@@ -10,14 +10,17 @@ import subprocess
 import sys
 import threading
 
+from ocarina import tools
+
 
 TOOL_DIRS = ("/opt/homebrew/bin", "/usr/local/bin")  # where Homebrew puts ffmpeg; an app opened from the Dock does not have them on its PATH
 
 
 def path_with_tools(path=None):
-    "PATH with the folders of Homebrew's tools added at the end."
+    "PATH with the app's own tools first (ffmpeg) and the folders of Homebrew's tools added at the end."
     parts = [p for p in (path if path is not None else os.environ.get("PATH", "")).split(os.pathsep) if p]
-    return os.pathsep.join(parts + [d for d in TOOL_DIRS if d not in parts])
+    own = [d for d in (tools.bundled_dir(),) if d and d not in parts]
+    return os.pathsep.join(own + parts + [d for d in TOOL_DIRS if d not in parts])
 
 
 def worker_command_and_env(module="ocarina.tts.worker", offline=True):

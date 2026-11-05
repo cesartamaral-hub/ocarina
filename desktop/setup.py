@@ -31,6 +31,7 @@ setup(
             ],
             "includes": ["sqlite3", "yaml"],
             "excludes": ["mlx"],  # copied by hand in build.sh, see there
+            "resources": ["../LICENSE.txt", "../NOTICE.md"],
             "iconfile": "../assets/Ocarina.icns",
             "plist": {
                 "CFBundleName": "Ocarina",

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ACTIONS, assignKey, keyLabel, keyOf, resetKeys } from './shortcutKeys'
 import { useEscape } from './escape'
+import { setPref } from './api'
+import { KEY_TARGETS, KEY_TARGET_PREF, keyTarget } from './reader/keyTarget'
 
 export function Shortcuts() {
   const [listening, setListening] = useState<string | null>(null)
   const [, setVersion] = useState(0)
   const [error, setError] = useState('')
+  const [target, setTarget] = useState(keyTarget)
 
   useEscape(listening !== null, () => setListening(null))
 
@@ -30,6 +33,22 @@ export function Shortcuts() {
     <>
       <h1>Keyboard shortcuts</h1>
       <p className="muted">Click a key, then press the one you want instead. Esc cancels. These work in the reader.</p>
+      <label className="key-target">
+        The status keys and the speak key act on
+        <select
+          value={target}
+          onChange={(e) => {
+            setTarget(e.target.value as typeof target)
+            setPref(KEY_TARGET_PREF, e.target.value)
+          }}
+        >
+          {KEY_TARGETS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <table className="dicts shortcuts">
         <tbody>
           {ACTIONS.map((a) => (

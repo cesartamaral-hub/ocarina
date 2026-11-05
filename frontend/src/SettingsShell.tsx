@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { setPref } from './api'
 import { Appearance } from './Appearance'
+import { About } from './About'
 import { Backups } from './Backups'
 import { LanguageEditor, LanguageList } from './Languages'
 import { Settings } from './Settings'
@@ -36,6 +37,8 @@ function Content({ section, rest }: { section: SectionId; rest: string }) {
       return <Backups />
     case 'storage':
       return <Storage />
+    case 'about':
+      return <About />
   }
 }
 

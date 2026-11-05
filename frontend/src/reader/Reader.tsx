@@ -45,6 +45,7 @@ import { STATUS_BUTTONS, statusName } from './statuses'
 import { TermPanel, type Target } from './TermPanel'
 import { useAudioFollow } from './useAudioFollow'
 import { useHoverCard } from './useHoverCard'
+import { keyTarget, whoGetsTheKey } from './keyTarget'
 
 export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: number }) {
   const [page, setPage] = useState<ReaderPage | null>(null)
@@ -331,6 +332,40 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     return () => window.removeEventListener('keydown', onKey)
   }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, toggleFocus, chooseMode, chosenMode, pageTr, tpToggle, selected])
 
+  // A status key or the speak key goes to the word under the pointer (Settings → Keyboard shortcuts says in which order with the selected word).
+  // This listener runs first and keeps the key from the others when it has acted.
+  const hovered = useRef<{ text: string } | null>(null)
+  useEffect(() => {
+    hovered.current = null
+  }, [pageNumber])
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey || multi.size > 0 || editing !== null || !page) return
+      const status = statusForKey(e)
+      const speak = actionFor(e)?.id === 'speak'
+      if (status === undefined && !speak) return
+      const word = hovered.current
+      if (!word || whoGetsTheKey(keyTarget(), true, selected !== null) !== 'pointer') return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      if (status === undefined) {
+        if (!e.repeat) say(word.text, page.language.id)
+        return
+      }
+      bulkStatusByText(page.language.id, [word.text], status).then(
+        () => {
+          hoverCard.forgetAll()
+          setReloadKey((k) => k + 1)
+          notify(`${word.text} set to ${statusName(status)}`)
+        },
+        (err) => setError((err as Error).message),
+      )
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [page, selected, multi, editing, hoverCard])
+
   // The status keys apply to all ctrl-clicked words when there are any.
   const applyMulti = useCallback(
     async (status: number) => {
@@ -513,8 +548,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                                 }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
                                   ((dragSpan ?? selected?.span) && it.index >= (dragSpan ?? selected!.span!)[0] && it.index <= (dragSpan ?? selected!.span!)[1]) ? ' in-span' : ''
                                 }`}
-                                onMouseEnter={(e) => hoverCard.start(it, e.currentTarget, page.language.id)}
-                                onMouseLeave={hoverCard.end}
+                                onMouseEnter={(e) => {
+                                  hovered.current = { text: it.text }
+                                  hoverCard.start(it, e.currentTarget, page.language.id)
+                                }}
+                                onMouseLeave={() => {
+                                  hovered.current = null
+                                  hoverCard.end()
+                                }}
                               >
                                 {it.display}
                               </span>
