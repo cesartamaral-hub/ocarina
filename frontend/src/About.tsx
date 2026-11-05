@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getModels, type Model } from './api'
+import { getModels, getUpdate, type Model } from './api'
 
 const LINKS: [string, string, string][] = [
   ['Lute v3', 'https://github.com/LuteOrg/lute-v3', 'MIT, Copyright (c) 2023 Jeff Zohrab: the reader, parser, terms and database this app is forked from.'],
@@ -14,12 +14,15 @@ const LINKS: [string, string, string][] = [
 // Credits and licences: what Ocarina is made from, where its dictionaries come from, and the licence of each model.
 export function About() {
   const [models, setModels] = useState<Model[]>([])
+  const [version, setVersion] = useState('')
   useEffect(() => {
     getModels().then(setModels, () => undefined)
+    getUpdate().then((s) => setVersion(s.current), () => undefined)
   }, [])
   return (
     <>
       <h1>About Ocarina</h1>
+      <p className="muted">{version && `Version ${version}`}</p>
       <section className="ap-card general-card">
         <h2>Made from</h2>
         <p className="muted">

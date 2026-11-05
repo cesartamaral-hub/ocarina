@@ -640,7 +640,7 @@ body:has(.reader) { overflow: hidden; }
 
 /* Focus mode: only the text, its display modes and the player. */
 .focus-mode { --header-h: 0px; }
-.focus-mode .top { display: none; }
+.focus-mode .top, .focus-mode .update-banner { display: none; }
 .reader.focus, .reader.focus.collapsed { grid-template-columns: minmax(0, 1fr); }
 .reader.focus .reader-left { display: none; }
 .reader.focus .reader-main { grid-column: 1; }
@@ -945,3 +945,6 @@ button.mr-grade:hover { border-color: var(--muted); }
 .ready-table thead th { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .ready-ok { color: var(--accent); font-weight: 700; }
 .ready-missing { color: var(--error); }
+
+.update-banner { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px 24px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.update-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

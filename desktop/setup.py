@@ -1,4 +1,10 @@
+import os
+import sys
+
 from setuptools import setup
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from ocarina.version import VERSION  # noqa: E402
 
 setup(
     app=["ocarina_app.py"],
@@ -35,6 +41,8 @@ setup(
             "iconfile": "../assets/Ocarina.icns",
             "plist": {
                 "CFBundleName": "Ocarina",
+                "CFBundleShortVersionString": VERSION,
+                "CFBundleVersion": VERSION,
                 "CFBundleIdentifier": "app.ocarina.Ocarina",
                 "NSHighResolutionCapable": True,
                 "LSMinimumSystemVersion": "14.0",

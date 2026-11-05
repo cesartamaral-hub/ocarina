@@ -5,6 +5,7 @@ import { onEscapeKey } from './escape'
 import { mayFollow } from './leaveGuard'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
+import { UpdateBanner } from './UpdateBanner'
 import { BookList } from './BookList'
 import { AudioPage } from './AudioPage'
 import { BookRedirect } from './BookRedirect'
@@ -100,6 +101,7 @@ export default function App() {
           <a href="#/settings">Settings</a>
         </nav>
       </header>
+      <UpdateBanner />
       <main className={reading ? 'w-full' : medium ? 'w-medium' : undefined}>
         {!ready ? null : settings ? (
           <SettingsShell section={settings.section} rest={settings.rest} />

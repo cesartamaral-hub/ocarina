@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getOffline, type Readiness } from './api'
 import { HoverSettings } from './HoverSettings'
+import { UpdateSettings } from './UpdateSettings'
 import { setOffline, useOffline } from './offline'
 
 const Mark = ({ ok, names }: { ok: boolean; names: string[] }) =>
@@ -73,6 +74,7 @@ export function General() {
       </section>
 
       <HoverSettings />
+      <UpdateSettings />
     </>
   )
 }

@@ -26,3 +26,10 @@
 ## Running on other Macs (macOS 14 and later)
 
 A Python built on a new macOS only runs on that macOS (the pyenv Python of the first builds had a minimum of macOS 27 and crashed with "Symbol missing" on other Macs). `.venv-build2` is made from the python.org installer's Python 3.12.10 (minimum macOS 11, its own OpenSSL): download `python-3.12.10-macos11.pkg`, `pkgutil --expand-full` it (no install), copy `Python_Framework.pkg/Payload` to a folder, point every `/Library/Frameworks/Python.framework/Versions/3.12` reference in its binaries to that folder with `install_name_tool -change` and re-sign them ad hoc, then `python3.12 -m venv .venv-build2`, `pip install -r` the pinned packages, `pip install -e .`. `build.sh` also installs the macOS 14 builds of mlx and mlx-metal. The app sets `LSMinimumSystemVersion` 14.0 (MLX does not run on older macOS). Check a build with `vtool -show-build` over its `.so` and `.dylib` files: nothing may say `minos` above 14.0.
+
+## Updates and releases
+
+- `ocarina/version.py` holds the version; `desktop/setup.py` puts it in the app. `scripts/release.sh X.Y.Z` bumps it, runs the checks, builds the app and the DMG, writes `Ocarina.dmg.sha256`, commits, tags, and after a yes pushes and runs `gh release create` with both files.
+- On each start the app asks GitHub for the latest release (`ocarina/updater.py`, `/ocarina/api/update`; off with Settings → General → Updates, and never while Work offline is on). A newer release that has `Ocarina.dmg` and a checksum shows a banner: Update now, Remind me tomorrow, Skip this version.
+- Update now downloads the DMG inside the app (so macOS does not mark it as downloaded and no `xattr` step is needed), checks the SHA-256, unpacks the new app next to the installed one (`Ocarina.app.new`), checks its signature, and starts a helper that waits for the app to quit, swaps the two, opens the new one, and puts the old one back if the new one is not running 20 seconds later. The data folder is not touched.
+- It only works for an app in a folder the user can write to (Applications). Drafts and pre-releases are ignored.
