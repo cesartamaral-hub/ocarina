@@ -22,5 +22,5 @@ Models (voices, translation) are downloaded from inside the app, so the first st
 Credits and licences: Settings > About and licences, or NOTICE.md inside the app.
 T
 rm -f dist/Ocarina.dmg
-hdiutil create -volname "Ocarina" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 dist/Ocarina.dmg >/dev/null
+hdiutil create -volname "Ocarina" -srcfolder "$STAGE" -fs APFS -format ULMO dist/Ocarina.dmg >/dev/null
 du -sh dist/Ocarina.dmg
