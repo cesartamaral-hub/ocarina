@@ -456,8 +456,7 @@ body:has(.reader) { overflow: hidden; }
 .pal-light { --bg: #fbfaf8; --fg: #1f1d1a; --panel: #f1eee8; --line: #ded9d0; --accent: #2f6f5e; --s0: #cfe3ff; --s1: #f6b8ad; --s2: #f7d2a6; --s3: #f6e8a2; --s4: #d5e9ac; --s5: #c3e6cd; }
 .pal-dark { --bg: #1a1917; --fg: #ece8e0; --panel: #24221f; --line: #3a3733; --accent: #6cc3a8; --s0: #2a4262; --s1: #7c3b33; --s2: #7b5c2e; --s3: #6f6528; --s4: #4d6a2b; --s5: #306b46; }
 .ap-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
-.ap-controls { column-width: 440px; column-gap: 20px; }
-.ap-controls > * { break-inside: avoid; margin: 0 0 20px; }
+.ap-controls { display: grid; gap: 18px; }
 .ap-card, .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px 18px; background: var(--panel); }
 .ap-card h2, .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
 .ap-card h3 { margin: 18px 0 8px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
@@ -700,7 +699,7 @@ body:has(.reader) { overflow: hidden; }
 .settings-nav a { display: block; padding: 7px 10px; border-radius: 8px; color: var(--fg); text-decoration: none; }
 .settings-nav a:hover { background: var(--panel); }
 .settings-nav a[aria-current='page'] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-weight: 600; }
-.settings-content { min-width: 0; max-width: 1180px; padding: 24px var(--main-pad) 64px; container-type: inline-size; }
+.settings-content { min-width: 0; width: 100%; max-width: 1040px; margin: 0 auto; padding: 24px var(--main-pad) 64px; container-type: inline-size; }
 .settings-content > h1:first-child, .settings-content > .title-row:first-child h1 { margin-top: 0; }
 @media (max-width: 820px) {
   .settings-shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
