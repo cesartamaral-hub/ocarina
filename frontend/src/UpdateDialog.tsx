@@ -11,6 +11,7 @@ export function UpdateDialog() {
   const { status, dismissed, forced } = useUpdate()
   const [error, setError] = useState('')
   const [restarting, setRestarting] = useState(false)
+  const [unpacking, setUnpacking] = useState(false) // the click has been sent; unpacking takes a while
   const dialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -83,6 +84,12 @@ export function UpdateDialog() {
           {error && <p className="error ud-msg">{error}</p>}
           {download.state === 'error' && <p className="error ud-msg">{download.error}</p>}
           {!status.canInstall && <p className="muted ud-msg">This copy cannot update itself: download the new version from the release page.</p>}
+          {unpacking && (
+            <div className="ud-progress">
+              <progress aria-label="Unpacking the update" />
+              <span className="muted">Unpacking the update… this takes a few seconds, then Ocarina restarts.</span>
+            </div>
+          )}
           {downloading && (
             <div className="ud-progress">
               <progress value={download.done} max={download.total || 1} aria-label="Downloading the update" />
@@ -91,23 +98,29 @@ export function UpdateDialog() {
           )}
           <footer className="ud-foot">
             <span className="ud-later">
-              <button className="quiet" disabled={downloading} onClick={() => run(() => skipUpdate(latest.version).then(dismissUpdate))}>
+              <button className="quiet" disabled={downloading || unpacking} onClick={() => run(() => skipUpdate(latest.version).then(dismissUpdate))}>
                 Skip this version
               </button>
-              <button className="secondary" disabled={downloading} onClick={() => run(() => updateLater().then(dismissUpdate))}>
+              <button className="secondary" disabled={downloading || unpacking} onClick={() => run(() => updateLater().then(dismissUpdate))}>
                 Remind me later
               </button>
             </span>
             {ready ? (
               <button
-                onClick={() =>
-                  run(async () => {
-                    await installUpdate()
-                    setRestarting(true)
-                  })
-                }
+                disabled={unpacking}
+                onClick={() => {
+                  setUnpacking(true)
+                  setError('')
+                  installUpdate().then(
+                    () => setRestarting(true),
+                    (e: Error) => {
+                      setUnpacking(false)
+                      setError(e.message)
+                    },
+                  )
+                }}
               >
-                Restart to update
+                {unpacking ? 'Unpacking…' : 'Restart to update'}
               </button>
             ) : status.canInstall ? (
               <button disabled={downloading} onClick={() => run(() => downloadUpdate().then(() => getUpdate().then(setUpdateStatus)))}>

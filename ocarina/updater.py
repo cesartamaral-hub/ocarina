@@ -39,6 +39,7 @@ PREF_SNOOZE = "update.snooze"  # epoch seconds: no reminder before then
 _cache = {"at": 0.0, "release": None}
 _download = {"state": "idle", "done": 0, "total": 0, "error": "", "path": "", "version": ""}
 _lock = threading.Lock()
+_installing = False  # the new app is being unpacked; two unpacks into the same folder would break each other
 
 
 class UpdateError(Exception):
@@ -228,9 +229,16 @@ def install(datapath, quit_app):
     info = state()
     if info["state"] != "done" or not os.path.exists(info["path"]):
         raise UpdateError("Download the update first.")
+    global _installing  # pylint: disable=global-statement
+    with _lock:
+        if _installing:
+            raise UpdateError("The update is already being unpacked. Ocarina restarts when it is ready.")
+        _installing = True
     try:
         staged = _stage(info["path"], target)
     except (subprocess.SubprocessError, OSError) as e:
+        with _lock:
+            _installing = False
         raise UpdateError("The update could not be unpacked, so nothing was changed.") from e
     script = os.path.join(paths.cache(datapath, "update"), "apply.sh")
     with open(script, "w", encoding="utf-8") as f:

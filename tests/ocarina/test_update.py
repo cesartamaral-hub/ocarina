@@ -7,7 +7,7 @@ import hashlib
 import pytest
 import requests
 
-from ocarina import offline, updater
+from ocarina import offline, prefs, updater
 from ocarina.version import VERSION
 
 URL = "/ocarina/api/update"
@@ -53,7 +53,9 @@ class Reply:
 
 
 @pytest.fixture(autouse=True)
-def fresh():
+def fresh(app):
+    updater._installing = False  # pylint: disable=protected-access
+    prefs.update(prefs.path_for(app.env_config.datapath), {updater.PREF_SKIP: "", updater.PREF_SNOOZE: 0})  # the file outlives a test run
     updater._cache.update(at=0.0, release=None)  # pylint: disable=protected-access
     updater._download.update(state="idle", done=0, total=0, error="", path="", version="")  # pylint: disable=protected-access
     yield
@@ -156,3 +158,34 @@ def test_the_download_is_checked_against_its_checksum(app, client, github, tmp_p
 def test_it_will_not_replace_a_developers_copy(client):
     r = client.post(URL + "/install")
     assert r.status_code == 409 and "installed Ocarina app" in r.json["error"]
+
+
+def test_a_second_install_while_one_unpacks_is_refused(client, monkeypatch, tmp_path):
+    "Clicking Restart again must not start another unpack into the same folder."
+    import threading
+
+    app_dir = tmp_path / "Ocarina.app"
+    (app_dir / "Contents" / "Resources").mkdir(parents=True)
+    dmg = tmp_path / "x.dmg"
+    dmg.write_bytes(b"x")
+    monkeypatch.setenv("RESOURCEPATH", str(app_dir / "Contents" / "Resources"))
+    monkeypatch.setitem(updater._download, "state", "done")  # pylint: disable=protected-access
+    monkeypatch.setitem(updater._download, "path", str(dmg))  # pylint: disable=protected-access
+    started, release = threading.Event(), threading.Event()
+
+    def slow_stage(_dmg, _target):
+        started.set()
+        release.wait(5)
+        raise OSError("stop here")
+
+    monkeypatch.setattr(updater, "_stage", slow_stage)
+    first = {}
+    t = threading.Thread(target=lambda: first.update(r=client.post(URL + "/install")))
+    t.start()
+    assert started.wait(5)
+    second = client.post(URL + "/install")
+    release.set()
+    t.join()
+    assert second.status_code == 409 and "already being unpacked" in second.json["error"]
+    assert "could not be unpacked" in first["r"].json["error"]
+    assert client.post(URL + "/install").json["error"].startswith("The update could not")  # the flag is released after a failure

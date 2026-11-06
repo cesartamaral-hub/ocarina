@@ -51,5 +51,3 @@ export const getLanguageSupport = (names?: string[]) =>
   fetch(`${API}/languages/support${names ? `?names=${encodeURIComponent(names.join(','))}` : ''}`).then((r) => json<LanguageSupport[]>(r))
 
 // A library from before Portuguese came in two kinds has a language named just "Portuguese": which one is it?
-export const getLegacyPortuguese = () => fetch(`${API}/languages/legacy-portuguese`).then((r) => json<{ id: number; name: string } | null>(r))
-export const choosePortuguese = (id: number, kind: 'european' | 'brazilian') => send<{ id: number; name: string }>('POST', `${API}/languages/${id}/portuguese`, { kind })

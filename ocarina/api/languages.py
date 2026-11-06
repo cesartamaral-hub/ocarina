@@ -9,8 +9,6 @@ JSON API for languages and their settings (dictionaries, parser, word characters
     GET    /ocarina/api/languages/template         defaults for a new language, or a predefined one
                                                    (?name=Dutch); predefined names are listed too
     GET    /ocarina/api/languages/support          what Ocarina can do for each language (?names=Italian,Dutch for others)
-    GET    /ocarina/api/languages/legacy-portuguese  the language named plain "Portuguese", if there is one
-    POST   /ocarina/api/languages/<id>/portuguese  {kind: european | brazilian}: rename it to European or Brazilian Portuguese
     GET    /ocarina/api/languages/parsers          parser types that can be chosen
     POST   /ocarina/api/languages/predefined       add predefined languages by name ({"names": [...],
                                                    "books": true to also add their sample stories})
@@ -133,33 +131,6 @@ def support():
     names = asked or [r[0] for r in db.session.execute(sql("select LgName from languages order by LgName"))]
     datapath = current_app.env_config.datapath
     return jsonify([language_support.support(n, datapath) for n in names])
-
-
-PORTUGUESE = {"european": "European Portuguese", "brazilian": "Brazilian Portuguese"}
-
-
-@bp.route("/languages/legacy-portuguese", methods=["GET"])
-def legacy_portuguese():
-    "The library's language named plain 'Portuguese' (from before the two kinds), or null: the app asks which one it is."
-    row = db.session.execute(sql("select LgID from languages where LgName = 'Portuguese'")).first()
-    return jsonify({"id": row[0], "name": "Portuguese"} if row else None)
-
-
-@bp.route("/languages/<int:language_id>/portuguese", methods=["POST"])
-def choose_portuguese(language_id):
-    "Rename the plain 'Portuguese' language to European or Brazilian Portuguese (its books, terms and settings stay as they are)."
-    kind = (request.get_json(silent=True) or {}).get("kind")
-    if kind not in PORTUGUESE:
-        return jsonify({"error": "Choose european or brazilian"}), 400
-    row = db.session.execute(sql("select LgName from languages where LgID = :i"), {"i": language_id}).first()
-    if row is None or row[0] != "Portuguese":
-        return jsonify({"error": "That language is not the plain Portuguese"}), 404
-    taken = db.session.execute(sql("select 1 from languages where LgName = :n"), {"n": PORTUGUESE[kind]}).first()
-    if taken:
-        return jsonify({"error": f"You already have {PORTUGUESE[kind]}"}), 409
-    db.session.execute(sql("update languages set LgName = :n where LgID = :i"), {"n": PORTUGUESE[kind], "i": language_id})
-    db.session.commit()
-    return jsonify({"id": language_id, "name": PORTUGUESE[kind]})
 
 
 @bp.route("/languages/parsers", methods=["GET"])

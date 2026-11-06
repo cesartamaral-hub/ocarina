@@ -141,13 +141,7 @@ def test_a_portuguese_language_is_added_with_its_own_story(app, client):
     assert "Portuguese" not in _names(client)
 
 
-def test_plain_portuguese_cannot_be_added_but_an_old_one_can_be_renamed(client):
+def test_plain_portuguese_cannot_be_added_but_an_old_one_keeps_working(client):
     assert client.post("/ocarina/api/languages/predefined", json={"names": ["Portuguese"]}).json["skipped"] == ["Portuguese"]
-    assert client.get("/ocarina/api/languages/legacy-portuguese").json is None
     assert client.post(URL, json={**SETTINGS, "name": "Portuguese"}).status_code in (200, 201)  # a library from before the two kinds
-    found = client.get("/ocarina/api/languages/legacy-portuguese").json
-    assert found["name"] == "Portuguese"
-    assert client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "x"}).status_code == 400
-    r = client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "brazilian"})
-    assert r.json["name"] == "Brazilian Portuguese" and client.get("/ocarina/api/languages/legacy-portuguese").json is None
-    assert client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "brazilian"}).status_code == 404  # no longer the plain one
+    assert "Portuguese" in [lang["name"] for lang in client.get(URL).json]  # still in the library, though no longer offered
