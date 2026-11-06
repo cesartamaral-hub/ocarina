@@ -6,6 +6,7 @@ import { TransferProgress } from './TransferProgress'
 import { CheckResult } from './CheckResult'
 import { cancelJob, getJob, isActive, type Job, type Model } from './api'
 import { SPEECH_LANGUAGES } from './speechLanguages'
+import { purposeOf } from './modelPurpose'
 
 export type ModelActions = {
   busy: boolean
@@ -94,7 +95,9 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
             {partial && <span className="muted mr-note">used for {(used as string[]).map((c) => c.toUpperCase()).join(', ')}</span>}
             {m.custom && <span className="mr-badge plain">added by you</span>}
           </div>
+          <div className="mr-purpose">For {purposeOf(m).charAt(0).toLowerCase() + purposeOf(m).slice(1)}</div>
           <div className="muted mr-desc">{m.description}</div>
+          {m.downloadError && !downloading && <div className="error mr-error">The download failed: {m.downloadError} Use the download button to try again.</div>}
         </div>
         <div className="mr-grades">
           {a.codes.map((code) => {
@@ -177,7 +180,7 @@ export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
   const more = models.filter((m) => !m.installed)
   const head = (
     <div className="mr-head" aria-hidden="true">
-      <span className="mr-head-title">{have.length > 0 ? 'On this Mac' : 'Available'}</span>
+      <span className="mr-head-title">{have.length > 0 ? 'Installed' : 'Available'}</span>
       <span className="mr-grades">
         {a.codes.map((c) => (
           <span key={c}>{c.toUpperCase()}</span>

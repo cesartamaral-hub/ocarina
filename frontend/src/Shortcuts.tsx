@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ACTIONS, assignKey, keyLabel, keyOf, resetKeys } from './shortcutKeys'
 import { useEscape } from './escape'
 import { setPref } from './api'
+import { SettingRow, SettingsGroup } from './SettingsKit'
 import { KEY_TARGETS, KEY_TARGET_PREF, keyTarget } from './reader/keyTarget'
 
 export function Shortcuts() {
@@ -32,51 +33,48 @@ export function Shortcuts() {
   return (
     <>
       <h1>Keyboard shortcuts</h1>
-      <p className="muted">Click a key, then press the one you want instead. Esc cancels. These work in the reader.</p>
-      <label className="key-target">
-        The status keys and the speak key act on
-        <select
-          value={target}
-          onChange={(e) => {
-            setTarget(e.target.value as typeof target)
-            setPref(KEY_TARGET_PREF, e.target.value)
-          }}
-        >
-          {KEY_TARGETS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <table className="dicts shortcuts">
-        <tbody>
-          {ACTIONS.map((a) => (
-            <tr key={a.id}>
-              <td>{a.label}</td>
-              <td>
-                <button className="secondary key" onClick={() => (setError(''), setListening(listening === a.id ? null : a.id))}>
-                  {listening === a.id ? 'Press a key…' : <kbd>{keyLabel(keyOf(a.id))}</kbd>}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
       {error && <p className="error">{error}</p>}
-      <p>
-        <button
-          className="secondary"
-          onClick={() => {
-            resetKeys()
-            setListening(null)
-            setError('')
-            setVersion((v) => v + 1)
-          }}
-        >
-          Back to the standard keys
-        </button>
-      </p>
+      <SettingsGroup title="Status and speak keys">
+        <SettingRow label="Act on" info="Which word the status keys and the speak key use when there is both a word under the pointer and a selected word.">
+          <select
+            aria-label="The status keys and the speak key act on"
+            value={target}
+            onChange={(e) => {
+              setTarget(e.target.value as typeof target)
+              setPref(KEY_TARGET_PREF, e.target.value)
+            }}
+          >
+            {KEY_TARGETS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+      </SettingsGroup>
+      <SettingsGroup title="Keys in the reader">
+        <p className="set-note muted">Click a key, then press the one you want instead. Esc cancels.</p>
+        {ACTIONS.map((a) => (
+          <SettingRow key={a.id} label={a.label}>
+            <button className="secondary key" onClick={() => (setError(''), setListening(listening === a.id ? null : a.id))}>
+              {listening === a.id ? 'Press a key…' : <kbd>{keyLabel(keyOf(a.id))}</kbd>}
+            </button>
+          </SettingRow>
+        ))}
+        <SettingRow label="Standard keys">
+          <button
+            className="secondary"
+            onClick={() => {
+              resetKeys()
+              setListening(null)
+              setError('')
+              setVersion((v) => v + 1)
+            }}
+          >
+            Back to the standard keys
+          </button>
+        </SettingRow>
+      </SettingsGroup>
     </>
   )
 }

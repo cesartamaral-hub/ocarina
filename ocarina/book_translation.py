@@ -85,7 +85,7 @@ def clear(book_id, lang=None):
 def provider_label(settings, models):
     "How the service is named when a translation is saved and shown."
     if settings["provider"] == "local":
-        return next((m["name"] for m in models if m["id"] == settings.get("localModel")), "On this Mac")
+        return next((m["name"] for m in models if m["id"] == settings.get("localModel")), "Local model")
     return translate.PROVIDERS[settings["provider"]]["name"]
 
 

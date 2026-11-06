@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { addVoice, deleteVoice, getJob, isActive, previewUrl, previewVoice, type Job, type Voice } from './api'
 import { notify } from './notices'
 import { SPEECH_LANGUAGES } from './speechLanguages'
+import { SettingRow, SettingsGroup } from './SettingsKit'
 
 export function Voices({ voices, onChange }: { voices: Voice[]; onChange: () => void }) {
   const [language, setLanguage] = useState('nl')
@@ -57,71 +58,57 @@ export function Voices({ voices, onChange }: { voices: Voice[]; onChange: () => 
 
   return (
     <>
-      <h2>Voices</h2>
-      <p className="muted">
-        Chatterbox imitates a short clip of a voice. Add your own: 10 to 20 seconds of clean speech, no music or noise. The clip sets how the voice
-        sounds, not how fast it speaks. Audio8 only imitates a clip when you also give the exact words spoken in it; without them it uses its own voice.
-      </p>
-      <label className="inline">
-        Preview language
-        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-          {Object.entries(SPEECH_LANGUAGES).map(([code, label]) => (
-            <option key={code} value={code}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <ul className="models">
+      <SettingsGroup title="Voice samples">
+        <SettingRow
+          label="Preview language"
+          info="Chatterbox imitates a short clip of a voice. The clip sets how the voice sounds, not how fast it speaks. Audio8 only imitates a clip when you also give the exact words spoken in it; without them it uses its own voice."
+        >
+          <select aria-label="Preview language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+            {Object.entries(SPEECH_LANGUAGES).map(([code, label]) => (
+              <option key={code} value={code}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
         {voices.map((v) => {
           const waiting = job?.voice === v.id && isActive(job.job)
+          const detail = `${v.builtin ? 'Comes with Ocarina' : 'Your clip'} · ${v.seconds} s${!v.builtin ? (v.transcript ? ' · words given' : ' · no words given (Chatterbox only)') : ''}`
           return (
-            <li key={v.id}>
-              <div className="row">
-                <div>
-                  <div className="name">{v.name}</div>
-                  <div className="muted">
-                    {v.builtin ? 'Comes with Ocarina' : 'Your clip'} · {v.seconds} s
-                    {!v.builtin && (v.transcript ? ' · words given' : ' · no words given (Chatterbox only)')}
-                  </div>
-                </div>
-                <div className="actions">
-                  <button className="secondary" disabled={waiting} onClick={() => preview(v.id)}>
-                    {waiting ? (job?.job.state === 'queued' ? 'Waiting…' : 'Speaking…') : '▶ Preview'}
-                  </button>
-                  {!v.builtin && (
-                    <button className="danger" onClick={() => remove(v)}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            </li>
+            <SettingRow key={v.id} label={v.name} info={detail}>
+              <button className="secondary" disabled={waiting} onClick={() => preview(v.id)}>
+                {waiting ? (job?.job.state === 'queued' ? 'Waiting…' : 'Speaking…') : '▶ Preview'}
+              </button>
+              {!v.builtin && (
+                <button className="danger" onClick={() => remove(v)}>
+                  Remove
+                </button>
+              )}
+            </SettingRow>
           )
         })}
-      </ul>
-      <div className="form voice-form">
-        <label>
-          Name (optional)
-          <input value={name} placeholder="e.g. Marsel" onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Words spoken in the clip (optional, needed for Audio8)
-          <textarea rows={2} value={transcript} onChange={(e) => setTranscript(e.target.value)} />
-        </label>
-        <label>
-          Add a voice (wav, mp3, flac or ogg)
+      </SettingsGroup>
+
+      <SettingsGroup title="Add a voice sample">
+        <SettingRow label="Name" info="Optional.">
+          <input className="set-input" aria-label="Voice name" value={name} placeholder="e.g. Marsel" onChange={(e) => setName(e.target.value)} />
+        </SettingRow>
+        <SettingRow label="Words spoken in the clip" info="Optional, but needed for Audio8 to imitate the clip.">
+          <textarea className="set-input" aria-label="Words spoken in the clip" rows={2} value={transcript} onChange={(e) => setTranscript(e.target.value)} />
+        </SettingRow>
+        <SettingRow label="Voice clip" info="10 to 20 seconds of clean speech, no music or noise. wav, mp3, flac or ogg.">
           <input
             type="file"
             accept=".wav,.mp3,.flac,.ogg,audio/*"
+            aria-label="Add a voice"
             onChange={(e) => {
               const f = e.target.files?.[0]
               e.target.value = ''
               if (f) upload(f)
             }}
           />
-        </label>
-      </div>
+        </SettingRow>
+      </SettingsGroup>
       {error && <p className="error">{error}</p>}
     </>
   )

@@ -44,9 +44,11 @@ export type Model = {
   check?: ModelCheck | null
   sizeBytes: number
   downloadJob: string | null
+  downloadError?: string | null // why the last download failed (until the model is installed or a new download starts)
   grades?: Record<string, string> // how well it does in a language, A to D (the catalog's own estimate)
   speed?: number // 1 to 4, before it has been tried here
   badge?: string
+  starter?: boolean // part of the set Welcome ticks for you; the other recommended models are only for one feature
   benchmark?: { secondsPerSecondOfAudio?: number; secondsPerSentence?: number; machine: string }
 }
 

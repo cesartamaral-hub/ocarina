@@ -1,6 +1,6 @@
 import { wordCount } from './editing'
 
-const SERVICES: Record<string, string> = { local: 'On this Mac', mymemory: 'MyMemory', deepl: 'DeepL' }
+const SERVICES: Record<string, string> = { local: 'Local model', mymemory: 'MyMemory', deepl: 'DeepL' }
 export const serviceName = (provider: string): string => SERVICES[provider] ?? provider
 
 // Where a sentence goes when it is translated: the privacy line under the Translate button.

@@ -3,7 +3,7 @@ import { cardLabel, isWholeSentence, sendsTo, serviceName, targetName } from './
 
 describe('wording', () => {
   it('names the services and says where the text goes', () => {
-    expect(serviceName('local')).toBe('On this Mac')
+    expect(serviceName('local')).toBe('Local model')
     expect(serviceName('mymemory')).toBe('MyMemory')
     expect(sendsTo('local')).toBe('Stays on this Mac')
     expect(sendsTo('deepl')).toBe('Sent to DeepL')

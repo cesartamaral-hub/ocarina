@@ -4,6 +4,7 @@ import { BookRow } from './BookRow'
 import { CefrBar } from './CefrBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
+import { SetupCard } from './SetupCard'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
   const [title, setTitle] = useState(book.title)
@@ -166,6 +167,7 @@ export function BookList() {
           </label>
         )}
       </div>
+      {!archived && <SetupCard />}
       {error && <p className="error">{error}</p>}
       {shown.length === 0 && <p className="muted">{archived ? 'No archived books.' : 'No books yet. Add one to start reading.'}</p>}
       {languages.map((lang) => (

@@ -23,7 +23,7 @@ LOCAL_MODEL = "qwen3-4b-instruct-mlx"
 MAX_CHARS = {"mymemory": 500, "deepl": 2000, "local": 1000}
 PROVIDERS = {
     "local": {
-        "name": "On this Mac",
+        "name": "Local model",
         "needsKey": False,
         "description": "Offline, private and without limits, with a 2.3 GB model you download once. Good for ordinary sentences; it can invent words for rare vocabulary.",
     },

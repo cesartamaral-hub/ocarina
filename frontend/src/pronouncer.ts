@@ -25,7 +25,7 @@ export const pauseThisWhileSaying = (ref: RefObject<Playable | null> | null) => 
   media = ref
 }
 
-export const defaultSource = (): PronounceSource => getPref<PronounceSource>('pronounce.source', 'voice')
+export const defaultSource = (): PronounceSource => getPref<PronounceSource>('pronounce.source', 'auto')
 
 function finish() {
   audio = null

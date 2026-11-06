@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getUpdate, setUpdateCheck, unskipUpdate, type UpdateStatus } from './api'
+import { SettingRow, SettingsGroup, Toggle } from './SettingsKit'
 
 // Settings → General: whether Ocarina looks for a newer version when it starts, and a button to look now.
 export function UpdateSettings() {
@@ -22,33 +23,26 @@ export function UpdateSettings() {
   }
 
   return (
-    <section className="ap-card general-card">
-      <h2>Updates</h2>
-      <label className="ap-check">
-        <input
-          type="checkbox"
-          checked={status.enabled}
-          onChange={(e) => setUpdateCheck(e.target.checked).then(() => getUpdate().then(setStatus))}
-        />
-        <span>Look for a newer Ocarina when it starts</span>
-      </label>
-      <p className="muted">
-        This is Ocarina {status.current}. Looking asks GitHub for the latest release and sends nothing about you. It is off while Work offline is on.
-      </p>
-      <p>
+    <SettingsGroup title="Updates">
+      <SettingRow
+        label="Check for updates at start"
+        info="Asks GitHub for the latest release when Ocarina starts, and sends nothing about you. It is off while Work offline is on."
+      >
+        <Toggle label="Check for updates at start" checked={status.enabled} onChange={(on) => setUpdateCheck(on).then(() => getUpdate().then(setStatus))} />
+      </SettingRow>
+      <SettingRow label={`Ocarina ${status.current}`}>
+        <span className="muted">{message}</span>
         <button className="secondary" disabled={status.offline} onClick={checkNow}>
           Check now
-        </button>{' '}
-        <span className="muted">{message}</span>
-      </p>
+        </button>
+      </SettingRow>
       {status.skipped && (
-        <p className="muted">
-          You skipped {status.skipped}.{' '}
+        <SettingRow label={`You skipped ${status.skipped}`}>
           <button className="link-button" onClick={() => unskipUpdate().then(() => getUpdate().then(setStatus))}>
             Tell me about it again
           </button>
-        </p>
+        </SettingRow>
       )}
-    </section>
+    </SettingsGroup>
   )
 }

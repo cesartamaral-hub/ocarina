@@ -110,6 +110,13 @@ def active(**match):
         return [_describe(j) for j in jobs if all(j.get(k) == v for k, v in match.items())]
 
 
+def last_finished(**match):
+    "The most recent job that has finished (done, error or cancelled) and whose fields equal match, or None."
+    with _cond:
+        done = [j for j in _jobs.values() if j["state"] not in ACTIVE and all(j.get(k) == v for k, v in match.items())]
+        return _describe(done[-1]) if done else None
+
+
 def cancel(job_id):
     "Cancel a job; returns the job, or None if it is unknown or already finished."
     with _cond:

@@ -7,6 +7,7 @@ import os
 import pytest
 import requests
 
+from lute.db import db
 from ocarina import pronounce
 from tests.conftest import _get_test_language
 
@@ -114,3 +115,116 @@ def test_bad_requests(app, client):
     assert client.post(SAY, json={"text": "x", "languageId": 99999}).status_code == 400
     assert client.get("/ocarina/api/pronounce/audio/../../etc/passwd").status_code == 404
     assert client.get("/ocarina/api/pronounce/audio/" + "0" * 64 + ".wav").status_code == 404
+
+
+LISTING = """\
+Alice (Italian (Italy)) it_IT    # Ciao! Mi chiamo Alice.
+Alice (Italian (Italy)) it_IT    # Ciao! Mi chiamo Alice.
+Eddy (Italian (Italy)) it_IT    # Ciao! Mi chiamo Eddy.
+Federica (Premium) it_IT    # Ciao! Mi chiamo Federica.
+Luca (Enhanced) it_IT    # Ciao! Mi chiamo Luca.
+Amélie              fr_CA    # Bonjour! Je m'appelle Amélie.
+Zosia               pl_PL    # Dzień dobry!
+"""
+
+
+@pytest.fixture
+def mac_listing(monkeypatch):
+    class Done:
+        stdout = LISTING
+
+    monkeypatch.setattr(pronounce.tools, "find", lambda name: "/usr/bin/say")
+    monkeypatch.setattr(pronounce.subprocess, "run", lambda *a, **k: Done())
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access
+    yield
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access
+
+
+def test_mac_voices_are_found_by_language_and_ranked(mac_listing):  # pylint: disable=unused-argument
+    names = [v["name"] for v in pronounce.mac_voices("it")]
+    assert names == ["Federica (Premium)", "Luca (Enhanced)", "Alice (Italian (Italy))", "Eddy (Italian (Italy))"]  # no duplicate, novelty last
+    assert pronounce.mac_voice("it") == "Federica (Premium)"
+    assert pronounce.mac_voice("fr") == "Amélie" and pronounce.mac_voice("pl") == "Zosia"
+    assert pronounce.mac_voice("de") is None
+
+
+def test_the_voice_you_chose_wins_when_it_is_installed(mac_listing):  # pylint: disable=unused-argument
+    assert pronounce.mac_voice("it", "Alice (Italian (Italy))") == "Alice (Italian (Italy))"
+    assert pronounce.mac_voice("it", "Gone (Italian (Italy))") == "Federica (Premium)"
+
+
+def test_a_language_without_voice_models_still_gets_the_mac_voice(app, client, monkeypatch):
+    "Italian: no AI model covers it, so the answer comes from the Mac and says why."
+    monkeypatch.setattr("ocarina.tts.models.speech_models", lambda: [])
+    with app.app_context():
+        italian = _get_test_language("Dutch")
+        italian.name = "Italian"
+        db.session.add(italian)
+        db.session.commit()
+        language_id = italian.id
+    r = client.post(SAY, json={"text": "ciao", "languageId": language_id})
+    assert r.status_code == 200 and r.json["source"] == "system" and "do not cover" in r.json["note"]
+
+
+def test_the_system_voices_are_listed_per_language(app, client, mac_listing):  # pylint: disable=unused-argument
+    dutch_id(app)
+    rows = client.get(SAY + "/system-voices").json
+    dutch = next(r for r in rows if r["language"] == "Dutch")
+    assert dutch["code"] == "nl" and dutch["voices"] == [] and dutch["chosen"] is None
+
+
+def test_automatic_uses_the_first_source_that_works(app, client, monkeypatch):
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    r = client.post(SAY, json={"text": "fiets", "languageId": dutch_id(app), "source": "auto"})
+    assert r.json["source"] == "voice" and r.json["note"] is None
+    monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)
+    app.config["OCARINA_TTS_ENGINE"] = None
+    r = client.post(SAY, json={"text": "fiets", "languageId": dutch_id(app), "source": "auto"})
+    assert r.json["source"] == "system" and r.json["note"] is None  # no model: the Mac speaks, nothing to apologise for
+
+
+def test_automatic_goes_on_to_a_recording_and_never_to_google(app, client, monkeypatch):
+    monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)
+
+    def no_mac(cfg, text, code):
+        raise pronounce.Unavailable(pronounce.NO_MAC_VOICE)
+
+    monkeypatch.setattr(pronounce, "_from_system", no_mac)
+    monkeypatch.setattr(pronounce, "_from_speaker", lambda cfg, text, code: pronounce.cache_path(cfg.datapath, "speaker\nx"))
+    monkeypatch.setattr(pronounce, "_from_google", lambda *a: pytest.fail("Google must be chosen, not automatic"))
+    path = pronounce.cache_path(client.application.env_config.datapath, "speaker\nx")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "wb").write(b"RIFF")
+    r = client.post(SAY, json={"text": "fiets", "languageId": dutch_id(app), "source": "auto"})
+    assert r.json["source"] == "speaker"
+    monkeypatch.setattr(pronounce, "_from_speaker", lambda cfg, text, code: (_ for _ in ()).throw(pronounce.Unavailable("Wiktionary has no recording of this word.")))
+    r = client.post(SAY, json={"text": "fiets", "languageId": dutch_id(app), "source": "auto"})
+    assert r.status_code == 503 and "Manage Voices" in r.json["error"] and "Settings → Models" in r.json["error"]
+
+
+def test_a_mac_voice_can_be_previewed_and_unknown_ones_are_refused(app, client, mac_listing, monkeypatch):  # pylint: disable=unused-argument
+    made = []
+
+    def speak(cfg, voice, text):
+        made.append((voice, text))
+        out = pronounce.cache_path(cfg.datapath, f"system\n{voice}\n{text}")
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        open(out, "wb").write(b"RIFF")
+        return out
+
+    monkeypatch.setattr(pronounce, "_speak_with", speak)
+    r = client.post(SAY + "/system-voices/preview", json={"name": "Luca (Enhanced)"})
+    assert r.status_code == 200 and made == [("Luca (Enhanced)", "Ciao! Mi chiamo Luca.")]
+    assert client.post(SAY + "/system-voices/preview", json={"name": "Nobody"}).status_code == 404
+
+
+def test_system_settings_opens_at_spoken_content(client, monkeypatch):
+    calls = []
+
+    class Done:
+        returncode = 0
+
+    monkeypatch.setattr(pronounce.tools, "find", lambda name: "/usr/bin/open")
+    monkeypatch.setattr(pronounce.subprocess, "run", lambda cmd, **k: (calls.append(cmd), Done())[1])
+    assert client.post(SAY.replace("pronounce", "pronounce/open-voice-settings")).json == {"ok": True}
+    assert calls == [["/usr/bin/open", pronounce.VOICE_SETTINGS_URL]]

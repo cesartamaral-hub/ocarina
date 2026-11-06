@@ -64,11 +64,18 @@ def models():
                 "check": model_check.result_for(datapath, m),
                 "installed": model_files.is_installed(m),
                 "sizeBytes": model_files.total_bytes(m),
+                "downloadError": _download_error(m["id"], model_files.is_installed(m)),
                 "downloadJob": next((j["id"] for j in active if j["model_id"] == m["id"]), None),
             }
             for m in model_files.load_catalog()
         ]
     )
+
+
+def _download_error(model_id, installed):
+    "Why the last download of this model failed, while it is still not installed; None otherwise."
+    last = None if installed else jobs.last_finished(kind="download", model_id=model_id)
+    return last.get("error") if last and last["state"] == "error" else None
 
 
 def _queued_bytes():

@@ -113,7 +113,7 @@ export function Dictionaries() {
       </p>
       {error && <p className="error">{error}</p>}
 
-      <h2>On this Mac</h2>
+      <h2>Installed dictionaries</h2>
       <div className="model-list dict-list">
         <ul>
           {data.packs.map((p) => {

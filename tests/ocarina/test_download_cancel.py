@@ -102,3 +102,35 @@ def test_the_space_check_counts_the_margin():
     assert models.short_of_space(model, 1000 + models.SPACE_MARGIN) == 0
     assert models.short_of_space(model, 1000 + models.SPACE_MARGIN - 1) == 1
     assert models.short_of_space(model, 1000 + models.SPACE_MARGIN, queued=500) == 500
+
+
+def test_only_the_voice_and_translation_models_are_starters(client):
+    listed = client.get("/ocarina/api/tts/models").json
+    assert {(m["kind"], m["id"]) for m in listed if m.get("starter")} == {
+        ("speech", "chatterbox-multilingual-v3-mlx"),
+        ("text", "qwen3-4b-instruct-mlx"),
+    }
+    optional = {m["kind"] for m in listed if m.get("badge") == "Recommended" and not m.get("starter")}
+    assert optional == {"aligner", "transcriber"}
+
+
+def test_a_failed_download_is_reported_until_the_next_try(client, monkeypatch):
+    import time  # pylint: disable=import-outside-toplevel
+
+    model = models.load_catalog()[0]
+    monkeypatch.setattr(models, "is_installed", lambda m: False)
+    monkeypatch.setattr(models, "free_bytes", lambda path: 10**15)
+
+    def broken(*_args, **_kwargs):
+        raise OSError("Network is unreachable")
+
+    monkeypatch.setattr(models, "download", broken)
+    job = client.post(f"/ocarina/api/tts/models/{model['id']}/download").json
+    for _ in range(100):
+        if client.get(f"/ocarina/api/jobs/{job['id']}").json["state"] not in ("queued", "running"):
+            break
+        time.sleep(0.05)
+    listed = {m["id"]: m for m in client.get("/ocarina/api/tts/models").json}
+    assert listed[model["id"]]["downloadError"]
+    others = [m for i, m in listed.items() if i != model["id"]]
+    assert all(m["downloadError"] is None for m in others)

@@ -1,3 +1,5 @@
+import { SettingRow, SettingsGroup } from './SettingsKit'
+import { SystemVoices } from './SystemVoices'
 import { useCallback, useEffect, useState } from 'react'
 import {
   canPickFolder,
@@ -252,33 +254,29 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
       {part === 'voices' && (
         <>
       <Pronunciation />
+      <SystemVoices />
 
-      <h2>Voice per language</h2>
-      <p className="muted">Which voice speaks the audio of books in each language. The model that makes it is chosen under <a href="#/settings/models">Models</a>.</p>
-      <ul className="models">
+      <SettingsGroup title="Voice per language">
         {Object.entries(SPEECH_LANGUAGES).map(([code, name]) => {
           const model = speechModelFor(code, models, chosenFor(code))
           const voice = chosen[`voice.${code}`] ?? getPref<string>(`voice.${code}`, '')
           return (
-            <li key={code}>
-              <div className="row">
-                <div className="name">{name}</div>
-                <span className="muted">
-                  {model ? model.name.replace(/\s*\(.*\)\s*$/, '') : 'No voice model yet'} · <a href="#/settings/models">change</a>
-                </span>
-                <select value={voice} onChange={(e) => choose(`voice.${code}`, e.target.value)} aria-label={`Voice for ${name}`}>
-                  <option value="">Automatic</option>
-                  {voices.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </li>
+            <SettingRow key={code} label={name} info="Which voice speaks the audio of books in this language. The model that makes it is chosen under Models.">
+              <span className="muted">
+                {model ? model.name.replace(/\s*\(.*\)\s*$/, '') : 'No voice model yet'} · <a href="#/settings/models">change</a>
+              </span>
+              <select value={voice} onChange={(e) => choose(`voice.${code}`, e.target.value)} aria-label={`Voice for ${name}`}>
+                <option value="">Automatic</option>
+                {voices.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </SettingRow>
           )
         })}
-      </ul>
+      </SettingsGroup>
       <Voices voices={voices} onChange={loadVoices} />
         </>
       )}

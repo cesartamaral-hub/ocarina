@@ -47,6 +47,7 @@
         "fr": "B+"
       },
       "speed": 3,
+      "starter": true,
       "badge": "Recommended"
     },
     {
@@ -136,6 +137,7 @@
         "fr": "B+"
       },
       "speed": 3,
+      "starter": true,
       "badge": "Recommended"
     },
     {
