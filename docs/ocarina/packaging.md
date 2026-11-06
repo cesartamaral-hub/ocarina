@@ -4,7 +4,7 @@
   random free port in a thread, and opens a pywebview window on `/ocarina/app/`.
   `OCARINA_APP_DIR` overrides the data folder (for testing against a copy).
 - py2app 0.28 cannot package uv's standalone Python (`zlib` has no `__file__`): build with the
-  pyenv Python 3.12 (`.venv-build`, created with `--enable-shared`).
+  python.org Python 3.12 (`.venv-build2`; see "Running on other Macs" below).
 - `mlx` is a namespace package (no `__init__.py`): `setup.py` excludes it and `build.sh` copies it
   into `Contents/Resources/lib/python3.12/` by hand.
 - The TTS worker cannot go through the app launcher (it starts Python in ASCII mode and

@@ -15,11 +15,11 @@ Start here, then read only what the task needs:
 source .venv/bin/activate && pytest tests/ocarina -q       # Ocarina tests, ~2 s
 pytest  # everything; all pass (Japanese tests need `brew install mecab mecab-ipadic`)
 cd frontend && npx tsc -b && npm run lint && npm test && npm run build   # build goes to ocarina/web/dist (git-ignored); npm test runs the Vitest unit tests for pure logic (src/*.test.ts)
-cd desktop && ./build.sh      # builds desktop/dist/Ocarina.app (minutes); needs ../.venv-build
+cd desktop && ./build.sh      # builds desktop/dist/Ocarina.app (minutes); needs ../.venv-build2
 python -m ocarina.tts say --lang nl --out /tmp/x.wav "Hallo wereld."   # TTS from the command line
 ```
 Two venvs: `.venv` (uv, Python 3.12: dev and tests; `pytest<9` is pinned because pytest-bdd breaks on 9)
-and `.venv-build` (pyenv Python 3.12: only py2app can package that one). Tests need the git-ignored
+and `.venv-build2` (python.org Python 3.12, which runs on old macOS: only py2app can package that one). Tests need the git-ignored
 `lute/config/config.yml` with `ENV: dev`, `DATAPATH: <repo>/data`, `DBNAME: test_lute.db`.
 
 ## Layout

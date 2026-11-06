@@ -33,7 +33,7 @@ Background: `docs/ocarina/benchmarks.md` (TTS), `docs/ocarina/packaging.md` (py2
 **Other**
 - Listen and compare Chatterbox and Audio8 on your own books; decide the default.
 - Check by hand: the folder dialog ("Import from folder"), a Finder double-click, the Dock icon.
-- Later: speech-to-text for pronunciation practice (Handy-style). Housekeeping: remove Lute's `tasks.py`.
+- Later: speech-to-text for pronunciation practice (Handy-style). Housekeeping: Lute's `tasks.py`, `devstart.py`, the `invoke` dependency and `.github` (its CI and issue templates) were removed on 2026-11-06.
 
 ## Reader and books: agreed plan (2026-11-04, not started)
 
