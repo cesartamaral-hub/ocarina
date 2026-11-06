@@ -33,7 +33,7 @@ const settings = (extra: Partial<TranslateSettings> = {}): TranslateSettings =>
   }) as TranslateSettings
 
 describe('translateChoices', () => {
-  it('offers only the models on this Mac while offline', () => {
+  it('offers only the local models while offline', () => {
     const { choices } = translateChoices(settings({ offline: true, hasDeeplKey: true }))
     expect(choices.every((c) => c.provider === 'local')).toBe(true)
   })
@@ -41,7 +41,7 @@ describe('translateChoices', () => {
   it('lists the models that are downloaded and the services that can be used', () => {
     const { choices, fallback } = translateChoices(settings())
     expect(choices.map((c) => c.key)).toEqual(['local:q4', 'mymemory'])
-    expect(choices[0].name).toBe('Qwen3 4B · on this Mac')
+    expect(choices[0].name).toBe('Qwen3 4B · local')
     expect(fallback).toBe('local:q4')
   })
   it('offers DeepL once it has a key', () => {

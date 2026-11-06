@@ -164,9 +164,9 @@ export function Dictionaries() {
       <p className="muted">
         For each language of your library. The small WikDict ones are quick and have the English words for each meaning. The full Wiktionary has what they leave out: example sentences, and the
         inflected forms, so a form you meet in a text leads to its base word. The ones <em>in the language itself</em> (Dutch words explained in Dutch, and so on) are for when English meanings are not
-        enough. A dictionary is downloaded compressed and made on this Mac as it arrives, which takes about a minute.
+        enough. A dictionary is downloaded compressed and made locally as it arrives, which takes about a minute.
       </p>
-      {todo.length === 0 && <p className="muted">Everything there is for your languages is on this Mac.</p>}
+      {todo.length === 0 && <p className="muted">Everything there is for your languages is installed.</p>}
       {[...new Set(todo.map((a) => a.languageName))].map((lang) => (
         <div key={lang}>
           <h3 className="dict-language">{lang}</h3>

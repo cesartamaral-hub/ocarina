@@ -9,10 +9,10 @@ export const isLong = (text: string): boolean => wordCount(text) > LONG_TEXT_WOR
 
 export type Choice = { key: string; name: string; provider: string; model: string | null }
 
-// The ways the text can be translated now: each model on this Mac, and the online services that can be used (DeepL needs its key).
+// The ways the text can be translated now: each local model, and the online services that can be used (DeepL needs its key).
 export function translateChoices(s: TranslateSettings): { choices: Choice[]; fallback: string } {
   const choices: Choice[] = []
-  for (const m of s.localModels) if (m.installed) choices.push({ key: `local:${m.id}`, name: `${m.name.replace(/\s*\(.*\)\s*$/, '')} · on this Mac`, provider: 'local', model: m.id })
+  for (const m of s.localModels) if (m.installed) choices.push({ key: `local:${m.id}`, name: `${m.name.replace(/\s*\(.*\)\s*$/, '')} · local`, provider: 'local', model: m.id })
   for (const p of s.providers) {
     if (p.id === 'local') continue
     if (s.offline) continue // the online services need the internet

@@ -97,7 +97,7 @@
       "id": "qwen3-4b-instruct-mlx",
       "name": "Qwen3 4B (translation, MLX)",
       "kind": "text",
-      "description": "Translates sentences on this Mac, offline and without limits. Good for ordinary sentences; it can invent words for rare vocabulary, so use DeepL when it matters.",
+      "description": "Translates sentences locally, offline and without limits. Good for ordinary sentences; it can invent words for rare vocabulary, so use DeepL when it matters.",
       "engine": "mlx-lm",
       "repositories": [
         {
@@ -304,7 +304,7 @@
       "id": "whisper-large-v3-turbo-mlx",
       "name": "Whisper Large v3 Turbo (transcription, MLX)",
       "kind": "transcriber",
-      "description": "Writes down what is said in a video or a recording, on this Mac, for videos without captions. Fast and accurate on many languages, including Dutch, Polish and French.",
+      "description": "Writes down what is said in a video or a recording, locally, for videos without captions. Fast and accurate on many languages, including Dutch, Polish and French.",
       "engine": "mlx-whisper",
       "repositories": [
         {

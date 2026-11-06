@@ -97,7 +97,7 @@ export function TranslationPanel({
       </p>
       {over && !running && (
         <p className="tp-warn">
-          {d.providerName} allows about {n(d.dailyLimit!)} characters a day, and this material needs about {n(d.remainingChars)}. A model on this Mac, or DeepL, has no such limit.
+          {d.providerName} allows about {n(d.dailyLimit!)} characters a day, and this material needs about {n(d.remainingChars)}. A local model, or DeepL, has no such limit.
         </p>
       )}
 

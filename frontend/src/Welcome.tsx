@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { addPredefinedLanguages, downloadModel, getDiskSpace, getLanguageTemplate, getModels, type DiskSpace, type Model } from './api'
+import { addPredefinedLanguages, downloadModel, getDiskSpace, getLanguageSupport, getLanguageTemplate, getModels, type DiskSpace, type LanguageSupport, type Model } from './api'
+import { LanguagePicker } from './LanguagePicker'
 import { formatBytes } from './format'
 import { useOffline } from './offline'
 import { purposeOf } from './modelPurpose'
@@ -9,7 +10,7 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState<'languages' | 'models'>('languages')
   const [available, setAvailable] = useState<string[]>([])
   const [chosen, setChosen] = useState<string[]>([])
-  const [filter, setFilter] = useState('')
+  const [support, setSupport] = useState<Record<string, LanguageSupport>>({})
   const [withBooks, setWithBooks] = useState(true)
   const [models, setModels] = useState<Model[]>([])
   const [error, setError] = useState('')
@@ -19,12 +20,16 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   const offline = useOffline()
 
   useEffect(() => {
-    getLanguageTemplate().then((t) => setAvailable(t.predefined), (e) => setError(e.message))
+    getLanguageTemplate().then(
+      (t) => {
+        setAvailable(t.predefined)
+        getLanguageSupport(t.predefined).then((rows) => setSupport(Object.fromEntries(rows.map((r) => [r.language, r]))), () => undefined)
+      },
+      (e) => setError(e.message),
+    )
     getModels().then(setModels, () => undefined)
     getDiskSpace().then(setSpace, () => undefined)
   }, [])
-
-  const toggle = (name: string) => setChosen((cur) => (cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name]))
 
   async function add() {
     setError('')
@@ -39,7 +44,6 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
     }
   }
 
-  const shown = available.filter((n) => n.toLowerCase().includes(filter.trim().toLowerCase()))
   const recommended = models.filter((m) => m.badge === 'Recommended')
   const starters = recommended.filter((m) => !m.installed) // what can still be downloaded here
   const ticked = picked ?? starters.filter((m) => m.starter).map((m) => m.id) // the optional ones start unticked
@@ -69,8 +73,8 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
       <section className="welcome">
         <h1>Get ready</h1>
         <p>
-          Dictionaries for your languages are on this Mac already. For listening, translating sentences and syncing audio to text, Ocarina uses models that run on this
-          Mac. Each is a one-time download; after that everything works without the internet. Downloads continue in the background: reading works at once, and listening, translation and sync turn on as each model finishes.
+          Dictionaries for your languages are already installed. For listening, translating sentences and syncing audio to text, Ocarina uses models that run
+          locally. Each is a one-time download; after that everything works without the internet. Downloads continue in the background: reading works at once, and listening, translation and sync turn on as each model finishes.
         </p>
         {groups.map((g) => (
           <div key={g.title}>
@@ -127,19 +131,7 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
     <section className="welcome">
       <h1>Welcome to Ocarina</h1>
       <p>Which languages do you study? You can add more later under Languages.</p>
-      <label>
-        Find a language
-        <input value={filter} placeholder="Type to filter" onChange={(e) => setFilter(e.target.value)} />
-      </label>
-      <ul className="language-choices">
-        {shown.map((name) => (
-          <li key={name}>
-            <label className="inline">
-              <input type="checkbox" checked={chosen.includes(name)} onChange={() => toggle(name)} /> {name}
-            </label>
-          </li>
-        ))}
-      </ul>
+      <LanguagePicker available={available} chosen={chosen} support={support} onChange={setChosen} />
       <label className="inline">
         <input type="checkbox" checked={withBooks} onChange={(e) => setWithBooks(e.target.checked)} /> Also add the sample stories
       </label>

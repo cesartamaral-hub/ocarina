@@ -169,7 +169,7 @@ export function NewBook() {
               Keep the video's sound as the audio of this material
             </label>
             <p className="muted source-hint">
-              The captions of the video are used. Without captions, Ocarina transcribes the sound on this Mac (needs the transcription model, under{' '}
+              The captions of the video are used. Without captions, Ocarina transcribes the sound locally (needs the transcription model, under{' '}
               <a href="#/settings/models">Models</a>).
             </p>
           </>

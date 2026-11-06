@@ -76,7 +76,7 @@ export function Translation() {
 
       <SettingsGroup title="Service">
         <p className="set-note muted">
-          When you press “Translate sentence” in the reader, that sentence is sent to the service you choose here. Nothing is sent unless you press it, and translations you have seen are saved on this Mac.
+          When you press “Translate sentence” in the reader, that sentence is sent to the service you choose here. Nothing is sent unless you press it, and translations you have seen are saved locally.
         </p>
         {s.providers.map((p) => {
           const needsNet = offline && p.id !== 'local'
@@ -107,7 +107,7 @@ export function Translation() {
         </SettingRow>
 
         {s.provider === 'local' && (
-          <SettingRow label="Local model" info="The translation model that runs on this Mac. Chosen per language under Models.">
+          <SettingRow label="Local model" info="The translation model that runs locally. Chosen per language under Models.">
             <span className="muted">
               {short(s.localModel.name)}
               {Object.entries(s.localModelByLanguage ?? {}).map(([code, id]) => (

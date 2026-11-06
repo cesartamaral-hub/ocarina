@@ -24,7 +24,7 @@ from lute.book.service import BookImportException, FileTextExtraction, Service
 from lute.db import db
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, importer, offline, paths, transcribe, video, youtube
+from ocarina import audio_versions, importer, offline, paths, transcribe, translate, video, youtube
 from ocarina.api import audio_versions as audio_versions_api
 from ocarina.api import book_translation as book_translation_api
 from ocarina.api import jobs
@@ -45,10 +45,12 @@ def _error(message, status=400, **extra):
 def _language_code(language_id):
     "The two-letter code of a language, for the video's captions; None when it is unknown (the video's own language is used)."
     language = db.session.get(Language, language_id) if isinstance(language_id, int) else None
-    try:
-        return tts_lang(language) if language else None
-    except ValueError:
+    if language is None:
         return None
+    try:
+        return tts_lang(language)
+    except ValueError:
+        return translate.code_for(language.name)  # a language no voice model covers still has its captions
 
 
 def _imported(got, audio_token=None):
@@ -86,7 +88,7 @@ def _extract_url(url, code, keep_audio):
         return (
             jsonify(
                 {
-                    "error": "This video has no captions in this language. Download the transcription model in Settings to transcribe it on this Mac.",
+                    "error": "This video has no captions in this language. Download the transcription model in Settings to transcribe it locally.",
                     "code": "model_not_installed",
                     "model": model["id"] if model else None,
                 }

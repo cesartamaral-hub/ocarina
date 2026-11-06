@@ -121,7 +121,13 @@ def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-position
 
 
 def tts_lang(language):
-    "Two-letter TTS code for a Lute language, by its name or parser settings."
+    """
+    Two-letter TTS code of a Lute language: Dutch, Polish and French by name, and any other language that a speech model
+    in the catalog lists. ValueError when no model can voice it.
+    """
+    from ocarina import translate  # pylint: disable=import-outside-toplevel
+    from ocarina.tts import models  # pylint: disable=import-outside-toplevel
+
     names = {
         "dutch": "nl",
         "polish": "pl",
@@ -130,7 +136,7 @@ def tts_lang(language):
         "français": "fr",
         "nederlands": "nl",
     }
-    code = names.get(language.name.strip().lower())
-    if code is None:
+    code = names.get(language.name.strip().lower()) or translate.code_for(language.name)
+    if code is None or not any(code in m.get("languages", []) for m in models.speech_models()):
         raise ValueError(f"No TTS language code for '{language.name}'.")
     return code

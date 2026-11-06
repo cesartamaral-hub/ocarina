@@ -26,7 +26,7 @@ export function OfflineSetting() {
     <SettingsGroup title="Connection">
       <SettingRow
         label="Work offline"
-        info="Use only the dictionaries and models on this Mac, so Ocarina keeps working without a connection. Web and YouTube imports, online translation and online pronunciation are paused; files, pasted text and your own recordings work as always."
+        info="Use only local dictionaries and models, so Ocarina keeps working without a connection. Web and YouTube imports, online translation and online pronunciation are paused; files, pasted text and your own recordings work as always."
       >
         <Toggle label="Work offline" checked={offline} onChange={setOffline} />
       </SettingRow>

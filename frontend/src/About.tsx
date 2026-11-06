@@ -7,7 +7,7 @@ const LINKS: [string, string, string][] = [
   ['Wiktionary', 'https://en.wiktionary.org', 'CC BY-SA 4.0, by the Wiktionary contributors: the entries of every dictionary pack.'],
   ['Wiktextract and kaikki.org', 'https://kaikki.org', 'Tatu Ylonen: the extracted data behind the full Wiktionary packs.'],
   ['WikDict', 'https://www.wikdict.com', 'Karl Bartel: the small packs that come with the app (CC BY-SA 4.0).'],
-  ['MLX, mlx-lm, mlx-audio', 'https://github.com/ml-explore/mlx', 'Apple and contributors (MIT): run the models on this Mac.'],
+  ['MLX, mlx-lm, mlx-audio', 'https://github.com/ml-explore/mlx', 'Apple and contributors (MIT): run the models locally.'],
   ['Hugging Face', 'https://huggingface.co', 'Apache 2.0: download and loading of the models.'],
   ['React, Flask, SQLAlchemy and others', 'https://github.com', 'MIT, BSD and Apache 2.0: the full list is in NOTICE.md.'],
 ]

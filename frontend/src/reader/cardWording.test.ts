@@ -5,7 +5,7 @@ describe('wording', () => {
   it('names the services and says where the text goes', () => {
     expect(serviceName('local')).toBe('Local model')
     expect(serviceName('mymemory')).toBe('MyMemory')
-    expect(sendsTo('local')).toBe('Stays on this Mac')
+    expect(sendsTo('local')).toBe('Processed locally')
     expect(sendsTo('deepl')).toBe('Sent to DeepL')
   })
   it('names the target languages', () => {

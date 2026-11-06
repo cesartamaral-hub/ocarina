@@ -213,7 +213,7 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
       {error && part === 'voices' && <p className="error">{error}</p>}
       {part === 'models' && storage && storage.modelsBytes > 0 && (
         <p className="storage-summary">
-          Models on this Mac use <strong>{formatBytes(storage.modelsBytes)}</strong>
+          Local models use <strong>{formatBytes(storage.modelsBytes)}</strong>
           <span className="muted">
             {' '}
             · {storage.groups.filter((g) => g.bytes > 0).map((g) => `${g.label.replace(' models', '').replace(' model', '')} ${formatBytes(g.bytes)}`).join(' · ')}
@@ -225,7 +225,7 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
         <>
       <h2>Voice models{size(storage, 'speech')}</h2>
       <p className="muted">
-        They make the audio of your books and say words aloud, on this Mac. Audio generation needs one. The tick means it is used for all your languages.
+        They make the audio of your books and say words aloud, locally. Audio generation needs one. The tick means it is used for all your languages.
       </p>
       <p className="muted mr-hint">Click a language's grade to use the model for that language only. Voices and how words are said are under <a href="#/settings/voices">Voices</a>.</p>
       {error && <p className="error">{error}</p>}
@@ -233,7 +233,7 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
 
       <h2>Translation models{size(storage, 'text')}</h2>
       <p className="muted">
-        Translate sentences on this Mac, offline and without limits. The tick is the one used when Translation is set to your Mac. A model is loaded only while you translate.
+        Translate sentences locally, offline and without limits. The tick is the one used when Translation is set to the local model. A model is loaded only while you translate.
       </p>
       <p className="muted mr-hint">Click a language's grade to use the model for that language only. The service, your key and the language to translate into are under <a href="#/settings/translation">Translation</a>.</p>
       <ModelList models={models.filter((m) => m.kind === 'text')} a={actions('text')} />

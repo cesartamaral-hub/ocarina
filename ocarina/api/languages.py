@@ -8,6 +8,7 @@ JSON API for languages and their settings (dictionaries, parser, word characters
     DELETE /ocarina/api/languages/<id>?force=true  delete it with all its books and terms
     GET    /ocarina/api/languages/template         defaults for a new language, or a predefined one
                                                    (?name=Dutch); predefined names are listed too
+    GET    /ocarina/api/languages/support          what Ocarina can do for each language (?names=Italian,Dutch for others)
     GET    /ocarina/api/languages/parsers          parser types that can be chosen
     POST   /ocarina/api/languages/predefined       add predefined languages by name ({"names": [...],
                                                    "books": true to also add their sample stories})
@@ -21,6 +22,7 @@ from lute.db import db
 from lute.language.service import Service as LanguageService
 from lute.models.language import Language, LanguageDictionary
 from lute.parse.registry import supported_parsers
+from ocarina import language_support
 from ocarina.dictionaries import setup as dictionary_setup
 
 bp = Blueprint("ocarina_languages", __name__, url_prefix="/ocarina/api")
@@ -119,6 +121,15 @@ def languages():
         )
     )
     return jsonify([{"id": r[0], "name": r[1], "books": r[2], "terms": r[3]} for r in rows])
+
+
+@bp.route("/languages/support", methods=["GET"])
+def support():
+    "What Ocarina can do for each language in the library, or for the names given (?names=Italian,Dutch)."
+    asked = [n.strip() for n in request.args.get("names", "").split(",") if n.strip()]
+    names = asked or [r[0] for r in db.session.execute(sql("select LgName from languages order by LgName"))]
+    datapath = current_app.env_config.datapath
+    return jsonify([language_support.support(n, datapath) for n in names])
 
 
 @bp.route("/languages/parsers", methods=["GET"])

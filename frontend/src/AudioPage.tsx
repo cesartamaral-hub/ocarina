@@ -87,6 +87,7 @@ export function AudioPage({ bookId }: { bookId: number }) {
   const [current, setCurrent] = useState(-1)
   const [options, setOptions] = useState<AudioOptions | null>(null)
   const [optionsError, setOptionsError] = useState('')
+  const [unsupported, setUnsupported] = useState(false) // no AI voice model covers the book's language
   const [choice, setChoice] = useState<AudioChoice>({ model: '', voice: '' })
   const audio = useRef<HTMLAudioElement>(null)
   const starts = useMemo(
@@ -105,7 +106,10 @@ export function AudioPage({ bookId }: { bookId: number }) {
   }, [bookId])
   useEffect(load, [load])
   useEffect(() => {
-    getAudioOptions(bookId).then(setOptions, (e) => setOptionsError(e.message))
+    getAudioOptions(bookId).then(setOptions, (e: Error & { code?: string }) => {
+      setOptionsError(e.message)
+      setUnsupported(e.code === 'unsupported_language')
+    })
   }, [bookId])
 
   // Coming back while audio is being made (or waiting its turn) shows that job.
@@ -248,37 +252,43 @@ export function AudioPage({ bookId }: { bookId: number }) {
 
       <section className="card" aria-labelledby="make">
         <h2 id="make">Make new audio</h2>
-        <p className="muted">Ocarina voices the whole book. It adds a new version; your other audio is kept.</p>
-        <div className="audio-using-row">
-          {options ? (
-            <>
-              <span>
-                <strong>{modelName(options, choice.model || options.defaultModel)}</strong> · <strong>{voiceName(options, choice.voice || options.defaultVoice)}</strong>
-                {(choice.model || choice.voice) && <span className="muted"> (this time only)</span>}
-              </span>
-              <AudioOptionsMenu options={options} choice={choice} onChange={setChoice} disabled={running} label="Change" />
-              {(choice.model || choice.voice) && (
-                <button className="link-button" onClick={() => setChoice({ model: '', voice: '' })}>
-                  Use the defaults
-                </button>
-              )}
-            </>
-          ) : (
-            <span className="muted">{optionsError || 'Loading model and voice…'}</span>
-          )}
-        </div>
-        <label className="ap-slider">
-          <span className="ap-slider-head">
-            <span>Pause between sentences</span>
-            <output>{pause.toFixed(1)} s</output>
-          </span>
-          <input type="range" min={0.2} max={2} step={0.1} value={pause} aria-valuetext={`${pause.toFixed(1)} seconds`} onChange={(e) => setPause(Number(e.target.value))} />
-        </label>
-        <div className="card-actions">
-          <button disabled={running || optionsError !== ''} onClick={generate}>
-            Generate audio
-          </button>
-        </div>
+        {unsupported ? (
+          <p className="muted">{optionsError}</p>
+        ) : (
+          <>
+          <p className="muted">Ocarina voices the whole book. It adds a new version; your other audio is kept.</p>
+          <div className="audio-using-row">
+            {options ? (
+              <>
+                <span>
+                  <strong>{modelName(options, choice.model || options.defaultModel)}</strong> · <strong>{voiceName(options, choice.voice || options.defaultVoice)}</strong>
+                  {(choice.model || choice.voice) && <span className="muted"> (this time only)</span>}
+                </span>
+                <AudioOptionsMenu options={options} choice={choice} onChange={setChoice} disabled={running} label="Change" />
+                {(choice.model || choice.voice) && (
+                  <button className="link-button" onClick={() => setChoice({ model: '', voice: '' })}>
+                    Use the defaults
+                  </button>
+                )}
+              </>
+            ) : (
+              <span className="muted">{optionsError || 'Loading model and voice…'}</span>
+            )}
+          </div>
+          <label className="ap-slider">
+            <span className="ap-slider-head">
+              <span>Pause between sentences</span>
+              <output>{pause.toFixed(1)} s</output>
+            </span>
+            <input type="range" min={0.2} max={2} step={0.1} value={pause} aria-valuetext={`${pause.toFixed(1)} seconds`} onChange={(e) => setPause(Number(e.target.value))} />
+          </label>
+          <div className="card-actions">
+            <button disabled={running || optionsError !== ''} onClick={generate}>
+              Generate audio
+            </button>
+          </div>
+          </>
+        )}
       </section>
 
       <section className="card" aria-labelledby="own">

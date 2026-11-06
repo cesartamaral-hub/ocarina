@@ -200,7 +200,7 @@ def from_youtube(url, language, progress=None, keep_audio=False, check=None, tra
     if not text:
         log.info("No captions: %s", note)
         if transcribe is None:
-            raise ImportFailed(f"{note or 'The video has no captions.'} Download the Whisper model in Settings to transcribe it on this Mac.")
+            raise ImportFailed(f"{note or 'The video has no captions.'} Download the Whisper model in Settings to transcribe it locally.")
     # Automatic captions have no punctuation; Whisper's text does, so it is preferred when it can be had (the captions stay as the fallback).
     fallback = (text, note, anchors) if text and note == AUTOMATIC and transcribe else None
     if fallback:
@@ -215,11 +215,11 @@ def from_youtube(url, language, progress=None, keep_audio=False, check=None, tra
         if check:
             check()
         if not text:
-            say("Transcribing on this Mac (this can take a few minutes)...")
+            say("Transcribing locally (this can take a few minutes)...")
             try:
                 heard, segments = transcribe(audio, code)
                 text, anchors = build_text(segments or [(0.0, heard)], False)
-                note = "Transcribed on this Mac by Whisper, so it can have mistakes. Check it before saving."
+                note = "Transcribed locally by Whisper, so it can have mistakes. Check it before saving."
                 if not text:
                     raise ImportFailed("Nothing was heard in the video.")
             except Exception:  # pylint: disable=broad-exception-caught  # the captions are still a result

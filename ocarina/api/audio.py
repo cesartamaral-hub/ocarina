@@ -80,6 +80,17 @@ def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None, voice
             supervisor.unload()
 
 
+def _unsupported(book):
+    "The reply for a book in a language no voice model covers: what is not possible, and what is."
+    name = book.language.name
+    return jsonify(
+        {
+            "error": f"No AI voice model covers {name} yet, so Ocarina cannot read this book aloud. Words can still be said by the Mac voice: select a word and press S.",
+            "code": "unsupported_language",
+        }
+    )
+
+
 @bp.route("/books/<int:book_id>/audio", methods=["POST"])
 def start_audio(book_id):
     "Start generating audio for a book; returns the job."
@@ -92,8 +103,8 @@ def start_audio(book_id):
     try:
         code = tts_lang(book.language)
     except ValueError:
-        code = None
-    preferred = saved.get(f"model.{code}") if code else None
+        return _unsupported(book), 400
+    preferred = saved.get(f"model.{code}")
     failing = model_check.failing_ids(cfg.datapath)
     model = model_files.choose_model(body.get("model"), preferred, failing)
     if model is None:
@@ -171,7 +182,7 @@ def audio_options(book_id):
     try:
         code = tts_lang(book.language)
     except ValueError:
-        return jsonify({"error": f"Ocarina can't make audio for {book.language.name} yet", "code": "unsupported_language"}), 400
+        return _unsupported(book), 400
     datapath = current_app.env_config.datapath
     saved = prefs.load(prefs.path_for(datapath))
     failing = model_check.failing_ids(datapath)

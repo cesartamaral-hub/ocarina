@@ -3,19 +3,24 @@ import {
   deleteLanguage,
   getLanguageSettings,
   getLanguageTemplate,
+  getLanguageSupport,
   getLanguages,
   getParsers,
   saveLanguage,
   type DictionarySetting,
   type Language,
+  type LanguageSupport,
   type LanguageSettings,
 } from './api'
+import { SupportPills } from './SupportPills'
 
 export function LanguageList() {
   const [languages, setLanguages] = useState<Language[] | null>(null)
+  const [support, setSupport] = useState<Record<string, LanguageSupport>>({})
   const [error, setError] = useState('')
   useEffect(() => {
     getLanguages().then(setLanguages, (e) => setError(e.message))
+    getLanguageSupport().then((rows) => setSupport(Object.fromEntries(rows.map((r) => [r.language, r]))), () => undefined)
   }, [])
   if (error) return <p className="error">{error}</p>
   if (!languages) return <p className="muted">Loading…</p>
@@ -34,6 +39,7 @@ export function LanguageList() {
             <span className="muted">
               {l.books} {l.books === 1 ? 'book' : 'books'} · {l.terms} terms
             </span>
+            {support[l.name] && <SupportPills support={support[l.name]} />}
           </li>
         ))}
       </ul>

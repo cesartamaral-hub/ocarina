@@ -23,7 +23,7 @@ const renderEntries = (entries: DefinitionEntry[], onUse: (meaning: string) => v
 type State = { text: string; data: DefinitionData | null; error: string; offline: boolean }
 
 const sourceLine = (source: DictionarySource | undefined) =>
-  source ? `${source.name}${source.license ? ` · ${source.license}` : ''}${source.offline ? ' · on this Mac' : ''}` : 'Wiktionary'
+  source ? `${source.name}${source.license ? ` · ${source.license}` : ''}${source.offline ? ' · local' : ''}` : 'Wiktionary'
 
 // What the word means, from the dictionaries on this Mac (Settings → Dictionaries), and Wiktionary when none has it. "Use" copies a meaning into the translation.
 export function Definition({
@@ -118,7 +118,7 @@ export function Definition({
           )}
         </>
       ) : (
-        <p className="muted">{offline ? `No entry for “${text}” in the dictionaries on this Mac. You can add more under Settings → Dictionaries, or turn Work offline off to ask Wiktionary.` : `No entry for “${text}” in your dictionaries or Wiktionary. Try a dictionary below, or look up the words one by one.`}</p>
+        <p className="muted">{offline ? `No entry for “${text}” in the local dictionaries. You can add more under Settings → Dictionaries, or turn Work offline off to ask Wiktionary.` : `No entry for “${text}” in your dictionaries or Wiktionary. Try a dictionary below, or look up the words one by one.`}</p>
       )}
     </section>
   )

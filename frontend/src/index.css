@@ -980,3 +980,25 @@ button.mr-grade:hover { border-color: var(--muted); }
 .set-input { width: 260px; max-width: 100%; }
 .set-input.narrow { width: 80px; }
 .set-radio { width: 18px; height: 18px; accent-color: var(--accent); }
+.support { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; width: 100%; margin-top: 4px; }
+.support-level { font-size: 0.78rem; font-weight: 600; }
+.support-level.full { color: var(--accent); }
+.support-level.basic { color: var(--muted); }
+.support-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.support-pill { font-size: 0.75rem; line-height: 1; padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.support-pill.ready { color: var(--fg); border-color: var(--accent); }
+.support-pill.download, .support-pill.online { color: var(--fg); border-style: dashed; }
+.support-pill.none { opacity: 0.5; text-decoration: line-through; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.books li:has(.support) { flex-wrap: wrap; }
+.lang-picker { margin: 12px 0; }
+.lang-chosen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 40px; }
+.lang-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px 4px 12px; border: 1px solid var(--accent); border-radius: 999px; background: var(--panel); }
+.lang-x { min-height: 0; padding: 0 6px; border: 0; background: none; color: var(--muted); font-size: 1.1rem; line-height: 1; }
+.lang-panel { margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.lang-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.lang-chip { min-height: 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--fg); font-weight: 400; }
+.lang-chip.on { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.lang-full { margin-left: 6px; color: var(--accent); font-weight: 700; }
+.lang-chip.on .lang-full { color: inherit; }
+.lang-legend { margin: 4px 0 10px; font-size: 0.85rem; }

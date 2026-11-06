@@ -40,7 +40,7 @@ export function SetupCard() {
   return (
     <section className="card setup-card" aria-label="Finish setting up">
       <h2>Finish setting up</h2>
-      <p className="muted">Reading works already. These models add listening and translation, and run on this Mac.</p>
+      <p className="muted">Reading works already. These models add listening and translation, and run locally.</p>
       <ul className="starter-models">
         {missing.map((m) => (
           <li key={m.id}>

@@ -115,7 +115,7 @@ export function SentenceCard({
             <p className="sc-translated">{shown}</p>
             <p className="sc-meta muted">
               {result
-                ? `${targetName(result.target)} · ${serviceName(result.provider)}${result.cached ? ' · saved on this Mac' : ''}`
+                ? `${targetName(result.target)} · ${serviceName(result.provider)}${result.cached ? ' · saved locally' : ''}`
                 : 'From the translation of this book'}
               <span className="sc-note" title="Machine translation: it may be wrong" aria-label="Machine translation: it may be wrong">
                 {' '}

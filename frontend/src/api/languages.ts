@@ -34,3 +34,18 @@ export const deleteLanguage = (id: number, force: boolean) =>
   fetch(`${API}/languages/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }).then((r) =>
     json<{ deleted: number; books: number; terms: number }>(r),
   )
+
+export type Feature = 'ready' | 'download' | 'online' | 'none'
+export type LanguageSupport = {
+  language: string
+  code: string | null
+  level: 'full' | 'basic'
+  meanings: Feature
+  aiVoice: Feature
+  translation: Feature
+  audioSync: Feature
+  macVoice: Feature
+}
+
+export const getLanguageSupport = (names?: string[]) =>
+  fetch(`${API}/languages/support${names ? `?names=${encodeURIComponent(names.join(','))}` : ''}`).then((r) => json<LanguageSupport[]>(r))

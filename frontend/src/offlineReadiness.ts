@@ -8,6 +8,6 @@ export function offlineSummary(ready: Readiness): { ok: boolean; text: string } 
     .map((l) => ({ name: l.name, missing: (Object.keys(LABELS) as (keyof typeof LABELS)[]).filter((k) => !l[k].ok).map((k) => LABELS[k]) }))
     .filter((g) => g.missing.length > 0)
   if (ready.languages.length === 0) return { ok: true, text: '' }
-  if (gaps.length === 0) return { ok: true, text: 'Everything for your languages is on this Mac.' }
+  if (gaps.length === 0) return { ok: true, text: 'Everything for your languages is available locally.' }
   return { ok: false, text: `Still needed: ${gaps.map((g) => `${g.name} needs ${g.missing.join(' and ')}`).join('; ')}.` }
 }

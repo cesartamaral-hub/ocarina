@@ -4,7 +4,7 @@ const SERVICES: Record<string, string> = { local: 'Local model', mymemory: 'MyMe
 export const serviceName = (provider: string): string => SERVICES[provider] ?? provider
 
 // Where a sentence goes when it is translated: the privacy line under the Translate button.
-export const sendsTo = (provider: string): string => (provider === 'local' ? 'Stays on this Mac' : `Sent to ${serviceName(provider)}`)
+export const sendsTo = (provider: string): string => (provider === 'local' ? 'Processed locally' : `Sent to ${serviceName(provider)}`)
 
 export const TARGET_NAMES: Record<string, string> = { en: 'English', nl: 'Dutch', fr: 'French', de: 'German', es: 'Spanish', it: 'Italian', pt: 'Portuguese', pl: 'Polish' }
 export const targetName = (code: string): string => TARGET_NAMES[code] ?? code

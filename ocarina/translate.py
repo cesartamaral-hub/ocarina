@@ -188,7 +188,7 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
         raise TranslateError("There is nothing to translate.", "bad_input")
     provider, target = settings["provider"], settings["target"]
     if provider != "local" and offline.is_on():
-        raise TranslateError(f"{PROVIDERS[provider]['name']} needs the internet, and Work offline is on. Choose a model on this Mac, or turn it off in Settings → General.", "offline_mode")
+        raise TranslateError(f"{PROVIDERS[provider]['name']} needs the internet, and Work offline is on. Choose a local model, or turn it off in Settings → General.", "offline_mode")
     if len(text) > MAX_CHARS[provider]:
         raise TranslateError(f"This is too long for {PROVIDERS[provider]['name']} ({MAX_CHARS[provider]} characters at most).", "too_long")
     source = code_for(language_name)
