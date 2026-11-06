@@ -37,7 +37,9 @@ fi
 # "@executable_path/../../../../Python", which only holds inside that framework: point it at the Python the bundle carries.
 install_name_tool -change "@executable_path/../../../../Python" "@executable_path/../Frameworks/Python.framework/Versions/3.12/Python" dist/Ocarina.app/Contents/MacOS/python
 codesign --force --deep --sign - dist/Ocarina.app  # ad hoc: not an Apple ID signature, but keeps the bundle consistent
-# The helper must start, and import what the workers need (a build whose helper cannot start looks fine until a model is downloaded).
+# The helper must start, and import what the workers need and make an HTTPS context (a build whose helper cannot start looks fine until a model is downloaded).
 RES="$PWD/dist/Ocarina.app/Contents/Resources"
-PYTHONHOME="" PYTHONUTF8=1 PYTHONPATH="$RES/lib/python3.12:$RES/lib/python312.zip:$RES/lib/python3.12/lib-dynload" dist/Ocarina.app/Contents/MacOS/python -c "import huggingface_hub, mlx.core" || { echo "The bundled helper python cannot start: downloads and voices would fail." >&2; exit 1; }
+PYTHONHOME="" PYTHONUTF8=1 PYTHONPATH="$RES/lib/python3.12:$RES/lib/python312.zip:$RES/lib/python3.12/lib-dynload" dist/Ocarina.app/Contents/MacOS/python -c "import os, ssl; os.environ['SSL_CERT_FILE'] = os.environ['SSL_CERT_DIR'] = '/no/such/file'  # as the launcher sets them
+import huggingface_hub, mlx.core
+from ocarina import certs; certs.use_bundled(); ssl.create_default_context()" || { echo "The bundled helper python cannot start: downloads and voices would fail." >&2; exit 1; }
 du -sh dist/Ocarina.app

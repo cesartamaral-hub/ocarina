@@ -43,3 +43,7 @@ A Python built on a new macOS only runs on that macOS (the pyenv Python of the f
 ## The helper python must find its library
 
 `Contents/MacOS/python` runs every download, voice, sync and transcription job. py2app copies it from the python.org framework with the loader path `@executable_path/../../../../Python`, which only holds inside that framework, so in the bundle the helper died at start (`dyld: Library not loaded`) and every model download ended with "The download stopped unexpectedly" (releases 0.1.1 to 0.2.1). `build.sh` now points it at `Contents/Frameworks/Python.framework/Versions/3.12/Python` with `install_name_tool`, re-signs, and refuses to finish unless the helper starts and imports `huggingface_hub` and `mlx.core`. Check by hand: `otool -arch arm64 -L Ocarina.app/Contents/MacOS/python` must not list `../../../../Python`.
+
+## HTTPS in the bundle needs certificates
+
+py2app's launcher sets `SSL_CERT_FILE` and `SSL_CERT_DIR` to `openssl.ca/no-such-file`, and the helper python inherits that, so the model downloader (and yt-dlp) failed with a bare `FileNotFoundError` from `ssl.create_default_context()`. `ocarina/certs.py` points them at the bundled `certifi` when the app starts, and `build.sh` checks the helper can make an HTTPS context with the launcher's broken settings.
