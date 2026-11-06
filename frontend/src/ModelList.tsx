@@ -174,10 +174,10 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
           <button className="secondary small" onClick={() => a.onDownload(m.id)}>
             Try again
           </button>{' '}
-          <span className="muted">Files already downloaded are kept.</span>
+          <span className="muted">Files that finished downloading are kept; the one being fetched starts again.</span>
         </p>
       )}
-      {mine?.state === 'cancelled' && <p className="muted">Cancelled. Files already downloaded are kept, so downloading again continues from there.</p>}
+      {mine?.state === 'cancelled' && <p className="muted">Cancelled. What was downloaded has been removed, so downloading again starts from the beginning.</p>}
     </li>
   )
 }

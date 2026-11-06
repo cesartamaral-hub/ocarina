@@ -151,3 +151,46 @@ def test_the_connection_check_says_why_downloads_are_not_possible(client, monkey
     assert client.get("/ocarina/api/tts/models/connection").json == {"online": False, "reason": "no_connection"}
     monkeypatch.setattr("ocarina.api.tts_models.requests.head", lambda *a, **k: object())
     assert client.get("/ocarina/api/tts/models/connection").json == {"online": True}
+
+
+def _model_with_partial(tmp_path, monkeypatch):
+    "A model whose cache folder holds one finished file and one half-fetched file (as an interrupted download leaves them)."
+    monkeypatch.setattr(models.constants, "HF_HUB_CACHE", str(tmp_path))
+    blobs = tmp_path / "models--org--name" / "blobs"
+    blobs.mkdir(parents=True)
+    (blobs / "done").write_bytes(b"finished")
+    (blobs / "abc.1234.incomplete").write_bytes(b"half")
+    lock = tmp_path / ".locks" / "models--org--name"
+    lock.mkdir(parents=True)
+    (lock / "abc.lock").write_text("")
+    return {"repositories": [{"id": "org/name", "revision": "r", "files": {}}]}, blobs
+
+
+def test_half_fetched_files_are_removed_but_finished_ones_stay(monkeypatch, tmp_path):
+    model, blobs = _model_with_partial(tmp_path, monkeypatch)
+    models.remove_partials(model)
+    assert sorted(os.listdir(blobs)) == ["done"] and not (tmp_path / ".locks" / "models--org--name").exists()
+
+
+def test_a_cancelled_download_is_thrown_away_and_a_failed_one_keeps_finished_files(monkeypatch, tmp_path):
+    from ocarina.api import tts_models  # pylint: disable=import-outside-toplevel
+
+    model, blobs = _model_with_partial(tmp_path, monkeypatch)
+
+    def cancelled(*_a, **_k):
+        raise Cancelled()
+
+    monkeypatch.setattr(models, "download", cancelled)
+    with pytest.raises(Cancelled):
+        tts_models._fetch(model, None, lambda: None)  # pylint: disable=protected-access
+    assert not (tmp_path / "models--org--name").exists()
+
+    model, blobs = _model_with_partial(tmp_path, monkeypatch)
+
+    def failed(*_a, **_k):
+        raise RuntimeError("network")
+
+    monkeypatch.setattr(models, "download", failed)
+    with pytest.raises(RuntimeError):
+        tts_models._fetch(model, None, lambda: None)  # pylint: disable=protected-access
+    assert sorted(os.listdir(blobs)) == ["done"]

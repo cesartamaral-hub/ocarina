@@ -26,9 +26,23 @@ _OFFLINE_REPLY = {"error": "Work offline is on, so nothing can be downloaded. Tu
 bp = Blueprint("ocarina_tts_models", __name__, url_prefix="/ocarina/api")
 
 
+def _fetch(model, progress, check):
+    "Download the model's files; a cancel throws the download away, a failure keeps the finished files and drops the half-fetched one."
+    model_files.remove_partials(model)  # leftovers of an earlier attempt
+    try:
+        model_files.download(model, progress, check)
+    except jobs.Cancelled:
+        model_files.delete(model)
+        raise
+    except Exception:
+        model_files.remove_partials(model)
+        raise
+
+
 def _run_download(job, check, model, folder=None, datapath=None, engine=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """
-    Queued job: download a model's files, or copy them from a folder (cancelling keeps what is there). A model you
+    Queued job: download a model's files, or copy them from a folder. A cancelled download is thrown away; a failed one keeps its finished
+    files and drops the half-fetched one (a half-fetched file is never continued, and would only use up disk space). A model you
     added yourself is then tried once, so you learn at once whether it works here (see ocarina/model_check.py).
     """
 
@@ -40,7 +54,7 @@ def _run_download(job, check, model, folder=None, datapath=None, engine=None):  
     if folder:
         model_files.import_from_folder(model, folder, progress)
     else:
-        model_files.download(model, progress, check)
+        _fetch(model, progress, check)
     if model.get("custom") and datapath:
         job["phase"] = "testing"
         model_check.check_model(datapath, model, engine)

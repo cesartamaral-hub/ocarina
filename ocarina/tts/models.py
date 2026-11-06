@@ -221,7 +221,8 @@ def download(model, on_progress=None, check=None):
     """
     Download all files of a model; on_progress(done_bytes, total_bytes). With `check` (a job's, which raises when the user cancels) the
     files are fetched by a process of its own, which is stopped the moment check() raises: in this process the downloads in flight
-    would have to finish first, which can take minutes for a large file. What was downloaded stays, and the next download continues it.
+    would have to finish first, which can take minutes for a large file. The caller then clears the half-fetched file (remove_partials):
+    a download never continues a half-fetched file, it starts that file again.
     """
     from ocarina import offline  # pylint: disable=import-outside-toplevel
 
@@ -265,6 +266,23 @@ def download(model, on_progress=None, check=None):
                 proc.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 proc.kill()
+
+
+def remove_partials(model):
+    "Delete the half-fetched files of a model (what an interrupted download leaves); finished files stay. A new download never continues them."
+    for repo in model["repositories"]:
+        folder = os.path.join(_repo_dir(repo["id"]), "blobs")
+        try:
+            names = os.listdir(folder)
+        except OSError:
+            continue
+        for name in names:
+            if name.endswith(".incomplete"):
+                try:
+                    os.remove(os.path.join(folder, name))
+                except OSError:
+                    pass
+        shutil.rmtree(os.path.join(constants.HF_HUB_CACHE, ".locks", "models--" + repo["id"].replace("/", "--")), ignore_errors=True)
 
 
 def blob_links(folder):

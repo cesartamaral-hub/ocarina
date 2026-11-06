@@ -2,8 +2,8 @@
 Downloads the files of one model in a process of its own (see models.download), so that cancelling stops it at once.
 
 Reads one line of JSON, the catalog entry of the model, from standard input; writes lines of JSON to the process that started it:
-{"done": bytes, "total": bytes} as the files come, then {"ok": true} or {"error": message}. Files already downloaded are kept, and a
-file that was being fetched is continued the next time.
+{"done": bytes, "total": bytes} as the files come, then {"ok": true} or {"error": message}. Finished files are kept; a file that was being fetched is
+started again (the caller removes the half-fetched one).
 """
 
 import json
