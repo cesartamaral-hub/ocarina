@@ -8,12 +8,27 @@ const base = (languages: Readiness['languages']): Readiness => ({ offline: false
 
 describe('offlineSummary', () => {
   it('is ready when every language has all three', () => {
-    expect(offlineSummary(base([{ code: 'nl', name: 'Dutch', dictionary: ok, translation: ok, voice: ok }]))).toEqual({ ok: true, text: 'Everything for your languages is available locally.' })
+    expect(offlineSummary(base([{ code: 'nl', name: 'Dutch', dictionary: ok, translation: ok, voice: ok }]))).toEqual({ ok: true, text: 'Everything for your languages is available locally.', notes: [] })
   })
-  it('names what is missing per language', () => {
-    const r = offlineSummary(base([{ code: 'pl', name: 'Polish', dictionary: ok, translation: no, voice: no }]))
+  it('suggests the models page when none of the languages has a translation model', () => {
+    const r = offlineSummary(base([{ code: 'pl', name: 'Polish', dictionary: ok, translation: no, voice: ok }]))
     expect(r.ok).toBe(false)
-    expect(r.text).toBe('Still needed: Polish needs a translation model and a voice model.')
+    expect(r.notes).toEqual([{ text: "You have no local translation model downloaded, so translation won't work offline.", page: 'Models', href: '#/settings/models' }])
+  })
+  it('names the languages when only some are missing something', () => {
+    const r = offlineSummary(
+      base([
+        { code: 'nl', name: 'Dutch', dictionary: ok, translation: ok, voice: ok },
+        { code: 'pl', name: 'Polish', dictionary: no, translation: no, voice: no },
+        { code: 'fr', name: 'French', dictionary: ok, translation: no, voice: ok },
+      ]),
+    )
+    expect(r.notes.map((n) => n.text)).toEqual([
+      "There is no local translation model for Polish and French, so translating them won't work offline.",
+      "There is no dictionary for Polish on this Mac, so word meanings won't work offline.",
+      "This Mac has no voice for Polish, so books won't be read aloud in it.",
+    ])
+    expect(r.notes.map((n) => n.page)).toEqual(['Models', 'Dictionaries', 'Voices'])
   })
   it('says nothing without languages', () => {
     expect(offlineSummary(base([])).text).toBe('')

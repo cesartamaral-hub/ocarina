@@ -29,8 +29,8 @@ export function LanguageList() {
     <>
       <div className="title-row">
         <h1>Languages</h1>
-        <a href="#/settings/languages/new" className="button">
-          Add a language
+        <a href="#/settings/languages/add" className="button">
+          Add languages
         </a>
       </div>
       <ul className="books">

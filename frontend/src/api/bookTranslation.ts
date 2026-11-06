@@ -21,6 +21,7 @@ export type BookTranslation = {
   remainingChars: number
   remainingByPage: Record<string, number>
   running: boolean
+  offline?: boolean // Work offline is on
 }
 
 export const getBookTranslation = (bookId: number) => fetch(`${API}/books/${bookId}/translation`).then((r) => json<BookTranslation>(r))

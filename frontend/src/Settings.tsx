@@ -20,7 +20,7 @@ import {
   type Model,
   type Voice,
   getStorage,
-  getLanguages,
+  getLanguageSupport,
   getTranslateSettings,
   putTranslateSettings,
   type TranslateSettings,
@@ -32,7 +32,7 @@ import { ModelList, type ModelActions } from './ModelList'
 import { speechCodesUsing, speechModelFor } from './modelRows'
 import { formatBytes } from './format'
 import { notify } from './notices'
-import { SPEECH_LANGUAGES, codeOfLanguage } from './speechLanguages'
+import { SPEECH_LANGUAGES } from './speechLanguages'
 import { Voices } from './Voices'
 import { Pronunciation } from './Pronunciation'
 
@@ -51,9 +51,17 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
   const [chosen, setChosen] = useState<Record<string, string>>({})
   const [voices, setVoices] = useState<Voice[]>([])
   const [libraryCodes, setLibraryCodes] = useState<string[]>([])
+  const [libraryNames, setLibraryNames] = useState<Record<string, string>>({})
   const [translation, setTranslation] = useState<TranslateSettings | null>(null)
   useEffect(() => {
-    getLanguages().then((list) => setLibraryCodes(Object.keys(SPEECH_LANGUAGES).filter((c) => list.some((l) => codeOfLanguage(l.name) === c))), () => undefined)
+    getLanguageSupport().then(
+      (rows) => {
+        const known = rows.filter((r) => r.code)
+        setLibraryCodes([...new Set(known.map((r) => r.code as string))])
+        setLibraryNames(Object.fromEntries(known.map((r) => [r.code as string, r.language])))
+      },
+      () => undefined,
+    )
     getTranslateSettings().then(setTranslation, () => undefined)
   }, [])
   const loadVoices = useCallback(() => getVoices().then(setVoices, () => undefined), [])
@@ -175,7 +183,7 @@ export function Settings({ part }: { part: 'models' | 'voices' }) {
   const everyone = (used: string[]): 'all' | string[] | null => (used.length === 0 ? null : used.length === codes.length ? 'all' : used)
   const actions = (kind: NonNullable<Model['kind']>): ModelActions => {
     const ofKind = models.filter((m) => (m.kind ?? 'speech') === kind)
-    const base = { busy, offline, job, speed, codes, onDownload: download, onImport: importFrom, onTest: test, onDelete: remove, onForget: forget, onJob: setJob }
+    const base = { busy, offline, job, speed, codes, names: libraryNames, onDownload: download, onImport: importFrom, onTest: test, onDelete: remove, onForget: forget, onJob: setJob }
     if (kind === 'speech') {
       return {
         ...base,

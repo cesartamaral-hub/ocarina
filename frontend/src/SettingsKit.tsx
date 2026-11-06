@@ -28,12 +28,15 @@ export function InfoTip({ text, label }: { text: string; label: string }) {
   )
 }
 
-export function SettingRow({ label, info, disabled, children }: { label: string; info?: string; disabled?: boolean; children?: ReactNode }) {
+export function SettingRow({ label, info, hint, disabled, children }: { label: string; info?: string; hint?: string; disabled?: boolean; children?: ReactNode }) {
   return (
     <div className={`set-row${disabled ? ' disabled' : ''}`}>
-      <div className="set-label">
-        <span>{label}</span>
-        {info && <InfoTip text={info} label={label} />}
+      <div className="set-labelbox">
+        <div className="set-label">
+          <span>{label}</span>
+          {info && <InfoTip text={info} label={label} />}
+        </div>
+        {hint && <span className="set-hint">{hint}</span>}
       </div>
       {children && <div className="set-control">{children}</div>}
     </div>

@@ -8,12 +8,16 @@ import { cancelJob, getJob, isActive, type Job, type Model } from './api'
 import { SPEECH_LANGUAGES } from './speechLanguages'
 import { purposeOf } from './modelPurpose'
 
+const MAX_COLUMNS = 6
+const shown = (codes: string[]) => codes.slice(0, MAX_COLUMNS)
+
 export type ModelActions = {
   busy: boolean
   offline?: boolean // Work offline is on: nothing can be downloaded
   job: Job | null
   speed: number
-  codes: string[] // the languages shown as columns
+  codes: string[] // the languages shown as columns (the first few; the rest sit behind +N)
+  names?: Record<string, string> // a language's name by its code
   usedFor: (m: Model) => string[] | 'all' | null // where the model is used: all your languages, some of them, or nowhere
   onUse?: (m: Model) => void // makes it the model in use for every language (when more than one can be)
   onUseFor?: (m: Model, code: string) => void // makes it the model in use for one language
@@ -100,14 +104,17 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
           {m.downloadError && !downloading && <div className="error mr-error">The download failed: {m.downloadError} Use the download button to try again.</div>}
         </div>
         <div className="mr-grades">
-          {a.codes.map((code) => {
-            const grade = m.grades?.[code]
+          {shown(a.codes).map((code) => {
+            const row = m.quality?.[code]
+            const grade = m.quality ? (row?.grade && row.grade !== 'X' ? row.grade : undefined) : m.grades?.[code]
             const supported = m.languages.includes(code)
-            const name = SPEECH_LANGUAGES[code] ?? code.toUpperCase()
+            const name = a.names?.[code] ?? SPEECH_LANGUAGES[code] ?? code.toUpperCase()
+            const how = row ? ` · chrF ${row.chrf} · ${row.source === 'checked' ? 'checked on this Mac' : 'measured by Ocarina on 10 sentences'}` : ''
+            const measured = m.quality && row ? (row.grade === 'X' ? 'poor in our test' : row.grade === null ? 'the model refused it' : `grade ${row.grade}`) : undefined
             const here = used === 'all' || (Array.isArray(used) && used.includes(code))
             const canPick = supported && m.installed && !failed && !downloading && !!a.onUseFor
             const level = gradeLevel(supported ? grade : undefined)
-            const text = supported ? (grade ?? '—') : '·'
+            const text = m.quality && row?.grade === 'X' ? '✕' : supported ? (grade ?? '—') : '·'
             const className = `mr-grade ${level}${here ? ' used' : ''}`
             if (canPick) {
               return (
@@ -116,7 +123,7 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
                   data-code={code.toUpperCase()}
                   className={className}
                   aria-pressed={here}
-                  title={here ? `Used for ${name} (${grade ?? 'not rated'})` : `Use for ${name} only (${grade ?? 'not rated'})`}
+                  title={here ? `Used for ${name} (${measured ?? grade ?? 'not rated'}${how})` : `Use for ${name} only (${measured ?? grade ?? 'not rated'}${how})`}
                   disabled={a.busy || here}
                   onClick={() => a.onUseFor!(m, code)}
                 >
@@ -125,11 +132,12 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
               )
             }
             return (
-              <span key={code} data-code={code.toUpperCase()} className={className} title={supported ? `${name}: ${grade ?? 'not rated'}` : `Does not support ${name}`}>
+              <span key={code} data-code={code.toUpperCase()} className={className} title={measured ? `${name}: ${measured}${how}` : supported ? `${name}: ${grade ?? 'not rated'}` : `Does not support ${name}`}>
                 {text}
               </span>
             )
           })}
+          {a.codes.length > MAX_COLUMNS && <span className="mr-grade none" title={`${a.codes.length - MAX_COLUMNS} more languages: see Settings → Languages`}>…</span>}
         </div>
         <span className="mr-speed" style={m.builtin ? { visibility: 'hidden' } : undefined} role="img" aria-label={`Speed ${level} of 4`} title={m.check?.ok ? 'Measured on this Mac' : 'Speed (press Test to measure it on this Mac)'}>
           {[1, 2, 3, 4].map((n) => (
@@ -182,9 +190,12 @@ export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
     <div className="mr-head" aria-hidden="true">
       <span className="mr-head-title">{have.length > 0 ? 'Installed' : 'Available'}</span>
       <span className="mr-grades">
-        {a.codes.map((c) => (
-          <span key={c}>{c.toUpperCase()}</span>
+        {shown(a.codes).map((c) => (
+          <span key={c} title={a.names?.[c]}>
+            {c.toUpperCase()}
+          </span>
         ))}
+        {a.codes.length > MAX_COLUMNS && <span title={a.codes.slice(MAX_COLUMNS).map((c) => a.names?.[c] ?? c).join(', ')}>+{a.codes.length - MAX_COLUMNS}</span>}
       </span>
       <span className="mr-speed-head">Speed</span>
       <span className="mr-size">Size</span>
@@ -192,7 +203,7 @@ export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
     </div>
   )
   return (
-    <div className="model-list">
+    <div className={`model-list${a.codes.length > 3 ? ' many' : ''}`}>
       {head}
       {have.length > 0 && (
         <ul>

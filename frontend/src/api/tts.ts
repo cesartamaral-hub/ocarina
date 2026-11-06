@@ -48,6 +48,7 @@ export type Model = {
   grades?: Record<string, string> // how well it does in a language, A to D (the catalog's own estimate)
   speed?: number // 1 to 4, before it has been tried here
   badge?: string
+  quality?: Record<string, { chrf: number; grade: string | null; errors: number; source: 'shipped' | 'checked' }> | null // translation models: how well each language was measured
   builtin?: boolean // the Mac voice: part of macOS, nothing to download, test or delete
   starter?: boolean // part of the set Welcome ticks for you; the other recommended models are only for one feature
   benchmark?: { secondsPerSecondOfAudio?: number; secondsPerSentence?: number; machine: string }

@@ -12,6 +12,7 @@ import {
   putPageText,
   setPref,
   type BookStats,
+  type BookTranslation,
   type Item,
   type ReaderPage,
   type Term,
@@ -27,7 +28,7 @@ import { TextEditor } from './TextEditor'
 import { VocabularyPanel } from './VocabularyPanel'
 import { TranslationModes } from './TranslationModes'
 import { TranslationPanel } from './TranslationPanel'
-import { effectiveMode, nextMode, pageTranslations, type TranslationMode } from './translationView'
+import { effectiveMode, modeAfterJob, nextMode, pageTranslations, type TranslationMode } from './translationView'
 import { useBookTranslation } from './useBookTranslation'
 import { useAnchoredPopover } from '../useAnchoredPopover'
 import { pageVocabulary, type NewWord } from './vocabulary'
@@ -121,7 +122,8 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const vocab = useMemo(() => pageVocabulary(flat), [flat])
 
   // A translated version of the text, shown beside it or instead of it.
-  const tr = useBookTranslation(bookId)
+  const afterTranslation = useRef<(data: BookTranslation) => void>(() => undefined)
+  const tr = useBookTranslation(bookId, (data) => afterTranslation.current(data))
   const [chosenMode, setChosenMode] = useState<TranslationMode>(() => getPref<TranslationMode>('reader.translationMode', 'original'))
   const pageTr = useMemo(() => (page && tr.data ? pageTranslations(page.paragraphs, tr.data.sentences, page.page) : new Map()), [page, tr.data])
   const shown = effectiveMode(chosenMode, pageTr.size > 0)
@@ -129,6 +131,15 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     setChosenMode(m)
     setPref('reader.translationMode', m)
   }, [])
+  // A translation just finished: from the original, switch to the two columns once, if this page has a translation.
+  useEffect(() => {
+    afterTranslation.current = (data) => {
+      const here = page?.page
+      const has = here !== undefined && data.sentences.some((s) => s.page === here && s.translation !== null)
+      const next = modeAfterJob(chosenMode, has)
+      if (next !== chosenMode) chooseMode(next)
+    }
+  })
   const { anchor: tpAnchor, placement: tpPlacement, toggle: tpToggle, close: tpClose } = useAnchoredPopover(360, 'end')
   // Focus mode: only the text, its display modes and the player. Not remembered; F, Esc or the button leave it.
   const [focus, setFocus] = useState(false)

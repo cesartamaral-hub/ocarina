@@ -25,6 +25,10 @@ export function pageTranslations(paragraphs: Item[][][], sentences: TranslatedSe
 // What is shown: the chosen mode, or the original while this page has no translation to show.
 export const effectiveMode = (chosen: TranslationMode, pageHasTranslation: boolean): TranslationMode => (pageHasTranslation ? chosen : 'original')
 
+// When a translation job finishes and the current page has a translation, someone reading the original gets the two columns (original
+// beside translation). Anyone already looking at the translation, or at both, stays where they are.
+export const modeAfterJob = (chosen: TranslationMode, pageHasTranslation: boolean): TranslationMode => (chosen === 'original' && pageHasTranslation ? 'both' : chosen)
+
 // The key that goes through the modes; with no translation on the page it stays on the original.
 export function nextMode(current: TranslationMode, pageHasTranslation: boolean): TranslationMode {
   if (!pageHasTranslation) return 'original'

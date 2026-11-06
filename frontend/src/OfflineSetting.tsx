@@ -31,7 +31,12 @@ export function OfflineSetting() {
         <Toggle label="Work offline" checked={offline} onChange={setOffline} />
       </SettingRow>
       {error && <p className="error set-note">{error}</p>}
-      {summary?.text && <p className={`offline-status set-note${summary.ok ? '' : ' warn'}`}>{summary.text}</p>}
+      {summary?.ok && summary.text && <p className="offline-status set-note">{summary.text}</p>}
+      {summary?.notes.map((n) => (
+        <p key={n.text} className="offline-status set-note">
+          {n.text} <a href={n.href}>Check the {n.page} page.</a>
+        </p>
+      ))}
       {ready && ready.languages.length > 0 && (
         <details className="offline-details set-note">
           <summary>Details by language</summary>

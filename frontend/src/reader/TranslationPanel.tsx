@@ -1,3 +1,4 @@
+import { NoLocalModelNotice } from '../NoLocalModelNotice'
 import { isActive } from '../api'
 import { MODES, type TranslationMode } from './translationView'
 import { TranslateSplit } from './TranslateSplit'
@@ -52,7 +53,11 @@ export function TranslationPanel({
       </p>
       <progress value={d.done} max={Math.max(d.total, 1)} aria-label="Sentences translated" />
 
-      {running && tr.job ? (
+      {d.offline && !running && !d.methods.some((m) => m.available) ? (
+        <p className="tp-warn">
+          <NoLocalModelNotice />
+        </p>
+      ) : running && tr.job ? (
         <div className="tp-running">
           <span className="muted">
             {tr.job.state === 'queued' ? 'Waiting…' : `Translating · ${n(tr.job.done)} / ${tr.job.total || '…'}`}

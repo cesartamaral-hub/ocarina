@@ -4,7 +4,7 @@ import { BookRow } from './BookRow'
 import { LearnedBar } from './LearnedBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
-import { SetupCard } from './SetupCard'
+import { SetupLine } from './SetupLine'
 import { VersionFooter } from './VersionFooter'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
@@ -168,7 +168,6 @@ export function BookList() {
           </label>
         )}
       </div>
-      {!archived && <SetupCard />}
       {error && <p className="error">{error}</p>}
       {shown.length === 0 && <p className="muted">{archived ? 'No archived books.' : 'No books yet. Add one to start reading.'}</p>}
       {languages.map((lang) => (
@@ -200,6 +199,7 @@ export function BookList() {
           </ul>
         </section>
       ))}
+      {!archived && <SetupLine />}
       <VersionFooter />
     </>
   )

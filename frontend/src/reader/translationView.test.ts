@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Item } from '../api'
-import { effectiveMode, nextMode, pageTranslations } from './translationView'
+import { effectiveMode, modeAfterJob, nextMode, pageTranslations } from './translationView'
 
 let n = 0
 const word = (sentence: number): Item => ({ text: 'w', display: 'w', isWord: true, termId: null, status: 0, sentence, index: n++ })
@@ -39,5 +39,18 @@ describe('modes', () => {
     expect(nextMode('both', true)).toBe('translation')
     expect(nextMode('translation', true)).toBe('original')
     expect(nextMode('both', false)).toBe('original')
+  })
+})
+
+describe('modeAfterJob', () => {
+  it('switches from the original to the two columns when the page has a translation', () => {
+    expect(modeAfterJob('original', true)).toBe('both')
+  })
+  it('stays on the original when this page got no translation', () => {
+    expect(modeAfterJob('original', false)).toBe('original')
+  })
+  it('leaves someone already on both or on the translation alone', () => {
+    expect(modeAfterJob('both', true)).toBe('both')
+    expect(modeAfterJob('translation', true)).toBe('translation')
   })
 })

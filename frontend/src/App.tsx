@@ -5,6 +5,7 @@ import { onEscapeKey } from './escape'
 import { mayFollow } from './leaveGuard'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
+import { LegacyPortuguese } from './LegacyPortuguese'
 import { UpdateDialog } from './UpdateDialog'
 import { BookList } from './BookList'
 import { AudioPage } from './AudioPage'
@@ -102,6 +103,7 @@ export default function App() {
         </nav>
       </header>
       <UpdateDialog />
+      <LegacyPortuguese />
       <main className={reading ? 'w-full' : medium ? 'w-medium' : undefined}>
         {!ready ? null : settings ? (
           <SettingsShell section={settings.section} rest={settings.rest} />

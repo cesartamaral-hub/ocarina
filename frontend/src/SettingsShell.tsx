@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { setPref } from './api'
+import { AddLanguagesPage } from './AddLanguagesPage'
 import { Appearance } from './Appearance'
 import { About } from './About'
 import { Backups } from './Backups'
@@ -23,6 +24,7 @@ function Content({ section, rest }: { section: SectionId; rest: string }) {
     case 'general':
       return <General />
     case 'languages':
+      if (rest === 'add') return <AddLanguagesPage />
       return rest === '' ? <LanguageList /> : <LanguageEditor key={rest} languageId={rest === 'new' ? null : Number(rest)} />
     case 'tags':
       return <Tags />

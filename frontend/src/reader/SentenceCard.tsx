@@ -79,7 +79,7 @@ export function SentenceCard({
     }
   }
 
-  const needsSettings = error && ['no_key', 'no_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
+  const needsSettings = error && ['no_key', 'no_model', 'no_local_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
   const shown = result?.translation ?? stored
   return (
     <section className="sentence-card" aria-label={cardLabel(kind, text)}>
@@ -134,7 +134,7 @@ export function SentenceCard({
         {error && (
           <p className="sc-error">
             {error.message}{' '}
-            {needsSettings && <a href="#/settings/translation">Open translation settings</a>}
+            {needsSettings && (error.code === 'no_local_model' ? <a href="#/settings/models">Open Models</a> : <a href="#/settings/translation">Open translation settings</a>)}
             {onOpenInBrowser && (
               <>
                 {needsSettings ? ' · ' : ''}

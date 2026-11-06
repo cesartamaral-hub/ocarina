@@ -10,6 +10,7 @@ describe('parentRoute', () => {
   it('goes from a language to the languages list, and from a settings section to the book list', () => {
     expect(parentRoute('#/settings/languages/4')).toBe('#/settings/languages')
     expect(parentRoute('#/settings/languages/new')).toBe('#/settings/languages')
+    expect(parentRoute('#/settings/languages/add')).toBe('#/settings/languages')
     expect(parentRoute('#/settings/languages')).toBe('#/')
     expect(parentRoute('#/settings/appearance')).toBe('#/')
     expect(parentRoute('#/settings/storage')).toBe('#/')

@@ -1,13 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { cancelJob, getActiveJobs, getBookTranslation, getJob, isActive, removeBookTranslation, startBookTranslation, type BookTranslation, type Job } from '../api'
 
 // The book's translation and the job making it. While a job runs the sentences that are done appear in the text as they finish.
-export function useBookTranslation(bookId: number) {
+export function useBookTranslation(bookId: number, onDone?: (data: BookTranslation) => void) {
   const [data, setData] = useState<BookTranslation | null>(null)
   const [job, setJob] = useState<Job | null>(null)
   const [error, setError] = useState('')
 
-  const refresh = useCallback(() => getBookTranslation(bookId).then(setData, () => undefined), [bookId])
+  const finished = useRef(onDone)
+  useEffect(() => {
+    finished.current = onDone
+  })
+  const refresh = useCallback(
+    () =>
+      getBookTranslation(bookId).then(
+        (d) => (setData(d), d),
+        () => null,
+      ),
+    [bookId],
+  )
   useEffect(() => {
     refresh()
     getActiveJobs().then(
@@ -23,7 +34,8 @@ export function useBookTranslation(bookId: number) {
       const j = await getJob(jobId).catch(() => null)
       if (!j) return
       setJob(j)
-      refresh()
+      const fresh = await refresh()
+      if (j.state === 'done' && fresh) finished.current?.(fresh) // the translation is ready: the reader may switch its view
     }, 1500)
     return () => clearInterval(timer)
   }, [jobId, refresh])
