@@ -1,4 +1,3 @@
-import { difficulty, type Difficulty } from '../bookStats'
 
 // What the words of a page say about how well you know it. "Known" is status 4, 5 and 99; "learning" 1, 2 and 3; 98 is ignored;
 // "new" is a word you have not started on (status 0). Ignored words do not count towards the known share.
@@ -19,7 +18,6 @@ export type PageVocabulary = {
   fresh: { running: number; unique: number }
   ignored: { running: number; unique: number }
   knownPercent: number // of the words that count (not the ignored ones)
-  level: Difficulty
   minutes: number
   newWords: NewWord[] // the words not started on, most frequent first
 }
@@ -58,7 +56,6 @@ export function pageVocabulary(items: WordLike[]): PageVocabulary {
     fresh: sum('fresh'),
     ignored: sum('ignored'),
     knownPercent,
-    level: difficulty(knownPercent),
     minutes: Math.round(words / WORDS_PER_MINUTE),
     newWords,
   }

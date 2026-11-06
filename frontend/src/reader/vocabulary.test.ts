@@ -23,7 +23,6 @@ describe('pageVocabulary', () => {
     n = 0
     const v = pageVocabulary([w('a', 5), w('b', 5), w('c', 0), w('d', 0), w('e', 98), w('f', 98)])
     expect(v.knownPercent).toBe(50)
-    expect(v.level).toBe('hard')
   })
 
   it('reads well-known (99) as known and rates the page', () => {
@@ -32,7 +31,6 @@ describe('pageVocabulary', () => {
     const v = pageVocabulary(items)
     expect(v.known.running).toBe(49)
     expect(v.knownPercent).toBe(98)
-    expect(v.level).toBe('easy')
   })
 
   it('lists new words most frequent first, with where they first appear', () => {

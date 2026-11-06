@@ -27,6 +27,8 @@ export type LanguageStats = {
   firstRead: string | null
   lastRead: string | null
   growth: { date: string; known: number }[]
+  learned: number // words you learned in Ocarina (see ocarina/status_log.py)
+  learnedGrowth: { date: string; learned: number }[]
   chart: ChartPoint[]
 }
 
@@ -41,5 +43,5 @@ export type Stats = {
 export const getStats = () => fetch(`${API}/stats`).then((r) => json<Stats>(r))
 
 // Words known and being learned per language, for the level bar on the book list.
-export type VocabularyCount = { id: number; name: string; known: number; learning: number }
+export type VocabularyCount = { id: number; name: string; known: number; learning: number; learned: number; goal: number | null; countsPrior: boolean }
 export const getVocabularyCounts = () => fetch(`${API}/stats/vocabulary`).then((r) => json<VocabularyCount[]>(r))

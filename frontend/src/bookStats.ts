@@ -1,16 +1,6 @@
 import type { Book, BookStats } from './api'
 
 // How the book list presents a book's numbers, and how it orders them.
-export type Difficulty = 'easy' | 'comfortable' | 'challenging' | 'hard'
-
-// A rule of thumb from reading research: about 98% known words is easy, 95% comfortable, 90% a stretch.
-export function difficulty(knownPercent: number): Difficulty {
-  if (knownPercent >= 98) return 'easy'
-  if (knownPercent >= 95) return 'comfortable'
-  if (knownPercent >= 90) return 'challenging'
-  return 'hard'
-}
-export const DIFFICULTY_LABEL: Record<Difficulty, string> = { easy: 'Easy', comfortable: 'Comfortable', challenging: 'Challenging', hard: 'Hard' }
 
 // The widths of the known / learning / new parts of the bar, in percent of the words that count (ignored ones do not).
 export function barParts(s: BookStats): { known: number; learning: number; new: number } {
@@ -26,6 +16,9 @@ export function duration(minutes: number): string {
   const m = minutes % 60
   return m === 0 ? `${h} h` : `${h} h ${m} min`
 }
+
+// "about 4 min", or "under a minute" for a very short text.
+export const readingTime = (minutes: number): string => (minutes < 1 ? duration(minutes) : `about ${duration(minutes)}`)
 
 export type SortKey = 'recent' | 'easiest' | 'progress' | 'title'
 export const SORTS: { key: SortKey; label: string }[] = [

@@ -48,6 +48,7 @@ export type Model = {
   grades?: Record<string, string> // how well it does in a language, A to D (the catalog's own estimate)
   speed?: number // 1 to 4, before it has been tried here
   badge?: string
+  builtin?: boolean // the Mac voice: part of macOS, nothing to download, test or delete
   starter?: boolean // part of the set Welcome ticks for you; the other recommended models are only for one feature
   benchmark?: { secondsPerSecondOfAudio?: number; secondsPerSentence?: number; machine: string }
 }
@@ -55,6 +56,10 @@ export type Model = {
 export const getModels = () => fetch(`${API}/tts/models`).then((r) => json<Model[]>(r))
 
 export type DiskSpace = { freeBytes: number; marginBytes: number; queuedBytes: number }
+
+export type Connection = { online: boolean; reason?: 'offline_mode' | 'no_connection' }
+
+export const getConnection = () => fetch(`${API}/tts/models/connection`).then((r) => json<Connection>(r))
 
 export const getDiskSpace = () => fetch(`${API}/tts/models/space`).then((r) => json<DiskSpace>(r))
 
@@ -99,7 +104,7 @@ export type AudioOptions = {
   defaultModel: string
   defaultVoice: string
   models: { id: string; name: string; installed: boolean; custom: boolean; problem?: string | null }[]
-  voices: { id: string; name: string; builtin: boolean }[]
+  voices: { id: string; name: string; builtin: boolean; model?: string }[] // a voice with a model belongs to that model only (the Mac voice)
 }
 
 export const getAudioOptions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/options`).then((r) => json<AudioOptions>(r))
@@ -116,6 +121,8 @@ export type AudioVersion = {
   selected: boolean
   hasTimings: boolean
   synced: boolean // your own recording, synced with the text
+  syncMethod?: 'aligner' | 'pauses' | 'estimate' | 'subtitles' | null // how: a model (precise), the pauses, a spread by length, or a subtitle file
+  approximate?: boolean // synced without the model: close, not exact
   missing: boolean
 }
 
@@ -139,8 +146,26 @@ export const startAudio = (id: number, opts: { pause?: number; model?: string; v
     body: JSON.stringify(opts),
   }).then((r) => json<Job>(r))
 
-export const syncAudioVersion = (bookId: number, versionId: number) =>
-  fetch(`${API}/books/${bookId}/audio/versions/${versionId}/sync`, { method: 'POST' }).then((r) => json<Job>(r))
+export const syncAudioVersion = (bookId: number, versionId: number, method?: 'aligner' | 'pauses') =>
+  fetch(`${API}/books/${bookId}/audio/versions/${versionId}/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(method ? { method } : {}),
+  }).then((r) => json<Job>(r))
+
+// Pin a sentence's start to a time (null removes the pin); the rest of a pause-synced recording is fitted again.
+export const setSyncAnchor = (bookId: number, versionId: number, sentence: number, time: number | null) =>
+  fetch(`${API}/books/${bookId}/audio/versions/${versionId}/anchors`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sentence, time }),
+  }).then((r) => json<{ pins: Record<string, number>; suspect: number; method: string }>(r))
+
+export const syncFromSubtitles = (bookId: number, versionId: number, file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return fetch(`${API}/books/${bookId}/audio/versions/${versionId}/subtitles`, { method: 'POST', body: form }).then((r) => json<AudioVersion[]>(r))
+}
 
 export type Voice = { id: string; name: string; builtin: boolean; seconds: number; transcript: string }
 

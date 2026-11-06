@@ -31,7 +31,9 @@ export function AudioOptionsMenu({
   const missing = options.models.filter((m) => !m.installed || m.problem)
   const items: Item[] = [
     ...installed.map((m): Item => ({ group: 'model', id: m.id, label: m.name, note: m.id === options.defaultModel ? 'language default' : undefined })),
-    ...options.voices.map((v): Item => ({ group: 'voice', id: v.id, label: v.name, note: v.id === options.defaultVoice ? 'language default' : undefined })),
+    ...options.voices
+      .filter((v) => (v.model ? v.model === modelId : modelId !== 'mac-voice')) // a Mac voice goes with the Mac voice, clips with the other models
+      .map((v): Item => ({ group: 'voice', id: v.id, label: v.name, note: v.id === options.defaultVoice ? 'language default' : undefined })),
   ]
   const checked = (it: Item) => (it.group === 'model' ? it.id === modelId : it.id === voiceId)
 
@@ -75,7 +77,7 @@ export function AudioOptionsMenu({
 
   function pick(it: Item) {
     const isDefault = it.id === (it.group === 'model' ? options.defaultModel : options.defaultVoice)
-    onChange({ ...choice, [it.group]: isDefault ? '' : it.id })
+    onChange(it.group === 'model' ? { model: isDefault ? '' : it.id, voice: '' } : { ...choice, voice: isDefault ? '' : it.id }) // another model starts from its own voice
     close(true)
   }
 

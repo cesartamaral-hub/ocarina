@@ -12,6 +12,7 @@ import {
   type LanguageSupport,
   type LanguageSettings,
 } from './api'
+import { ProgressSettings } from './ProgressSettings'
 import { SupportPills } from './SupportPills'
 
 export function LanguageList() {
@@ -43,6 +44,7 @@ export function LanguageList() {
           </li>
         ))}
       </ul>
+      <ProgressSettings languages={languages} />
     </>
   )
 }

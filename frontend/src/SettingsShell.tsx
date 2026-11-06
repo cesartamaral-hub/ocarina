@@ -12,6 +12,7 @@ import { Tags } from './Tags'
 import { Dictionaries } from './Dictionaries'
 import { General } from './General'
 import { Translation } from './Translation'
+import { loadUpdate, useUpdate } from './updateStore'
 
 function Content({ section, rest }: { section: SectionId; rest: string }) {
   switch (section) {
@@ -44,9 +45,13 @@ function Content({ section, rest }: { section: SectionId; rest: string }) {
 
 // Settings: a list of sections on the left, the chosen one on the right. Settings alone opens the section you were last in.
 export function SettingsShell({ section, rest }: { section: SectionId; rest: string }) {
+  const { available } = useUpdate()
   useEffect(() => {
     setPref('settings.section', section)
   }, [section])
+  useEffect(() => {
+    loadUpdate()
+  }, [])
   return (
     <div className="settings-shell">
       <nav className="settings-nav" aria-label="Settings sections">
@@ -58,6 +63,11 @@ export function SettingsShell({ section, rest }: { section: SectionId; rest: str
                 <li key={s.id}>
                   <a href={sectionHash(s.id)} aria-current={s.id === section ? 'page' : undefined}>
                     {s.label}
+                    {s.id === 'general' && available && (
+                      <span className="nav-alert" role="img" aria-label="An update is available" title="An update is available">
+                        !
+                      </span>
+                    )}
                   </a>
                 </li>
               ))}

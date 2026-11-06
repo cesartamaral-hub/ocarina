@@ -131,20 +131,20 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
             )
           })}
         </div>
-        <span className="mr-speed" role="img" aria-label={`Speed ${level} of 4`} title={m.check?.ok ? 'Measured on this Mac' : 'Speed (press Test to measure it on this Mac)'}>
+        <span className="mr-speed" style={m.builtin ? { visibility: 'hidden' } : undefined} role="img" aria-label={`Speed ${level} of 4`} title={m.check?.ok ? 'Measured on this Mac' : 'Speed (press Test to measure it on this Mac)'}>
           {[1, 2, 3, 4].map((n) => (
             <i key={n} className={n <= level ? 'on' : ''} style={{ height: 4 + n * 3 }} />
           ))}
         </span>
-        <span className="muted mr-size">{formatBytes(m.sizeBytes)}</span>
+        <span className="muted mr-size">{m.builtin ? 'Built in' : formatBytes(m.sizeBytes)}</span>
         <span className="mr-actions">
           {m.installed && m.check?.ok && (
             <span className="mr-ok" title="Works here" aria-label="Works here">
               ✓
             </span>
           )}
-          <Menu m={m} a={a} />
-          {m.installed && (
+          {!m.builtin && <Menu m={m} a={a} />}
+          {m.installed && !m.builtin && (
             <button className="quiet small icon mr-bin" aria-label={`Delete ${m.name}`} title={`Delete (frees ${formatBytes(m.sizeBytes)})`} disabled={a.busy} onClick={() => a.onDelete(m)}>
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                 {BIN}

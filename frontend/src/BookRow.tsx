@@ -1,6 +1,6 @@
 import type { Book } from './api'
 import { MoreMenu } from './MoreMenu'
-import { barParts, difficulty, DIFFICULTY_LABEL, duration } from './bookStats'
+import { barParts, readingTime } from './bookStats'
 
 function SpeakerIcon() {
   return (
@@ -16,13 +16,12 @@ const number = (n: number) => n.toLocaleString('en')
 function Numbers({ book }: { book: Book }) {
   const s = book.stats
   if (!s) return <span className="muted book-numbers">{book.indexing ? 'Counting words…' : '—'}</span>
-  const level = difficulty(s.knownPercent)
   const parts = barParts(s)
   return (
-    <div className="book-numbers" title={`${number(s.words)} words, ${number(s.unique)} different · about ${duration(s.minutes)} to read`}>
+    <div className="book-numbers" title={`${number(s.words)} words, ${number(s.unique)} different · ${readingTime(s.minutes)} to read`}>
       <div className="numbers-line">
         <strong>{Math.round(s.knownPercent)}% known</strong>
-        <span className={`chip-level ${level}`}>{DIFFICULTY_LABEL[level]}</span>
+        <span className="muted">· {readingTime(s.minutes)}</span>
       </div>
       <div className="numbers-line muted">
         {number(s.newUnique)} new words · {number(s.words)} words

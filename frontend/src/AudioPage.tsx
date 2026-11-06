@@ -8,7 +8,10 @@ import {
   getSentences,
   isActive,
   startAudio,
+  getAudioVersions,
+  setSyncAnchor,
   syncAudioVersion,
+  syncFromSubtitles,
   uploadAudio,
   type AudioOptions,
   type AudioVersion,
@@ -17,12 +20,16 @@ import {
 } from './api'
 import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
 import { AudioVersions } from './AudioVersions'
+import { notify } from './notices'
 import { useWindowTitle } from './desktop'
 import { useNowPlaying } from './nowPlaying'
 import { usePlaybackKeys } from './playbackKeys'
 
 const modelName = (o: AudioOptions, id: string) => o.models.find((m) => m.id === id)?.name ?? id
 const voiceName = (o: AudioOptions, id: string) => o.voices.find((v) => v.id === id)?.name ?? id
+// The voice shown next to the model: the Mac voice has its own (chosen under Settings → Voices), the others a clip.
+const voiceShown = (o: AudioOptions, modelId: string, voiceId: string) =>
+  modelId === 'mac-voice' ? (o.voices.find((v) => v.model === 'mac-voice')?.name ?? 'Mac voice') : voiceName(o, voiceId || o.defaultVoice)
 
 // What is happening in the background for this book, always in the same place under the page title.
 function JobStrip({ job, onCancel, needsAligner, needsModel }: { job: Job | null; onCancel: () => void; needsAligner: boolean; needsModel: boolean }) {
@@ -87,6 +94,7 @@ export function AudioPage({ bookId }: { bookId: number }) {
   const [current, setCurrent] = useState(-1)
   const [options, setOptions] = useState<AudioOptions | null>(null)
   const [optionsError, setOptionsError] = useState('')
+  const [currentVersion, setCurrentVersion] = useState<AudioVersion | null>(null) // the selected version, to know how it was synced
   const [unsupported, setUnsupported] = useState(false) // no AI voice model covers the book's language
   const [choice, setChoice] = useState<AudioChoice>({ model: '', voice: '' })
   const audio = useRef<HTMLAudioElement>(null)
@@ -153,12 +161,41 @@ export function AudioPage({ bookId }: { bookId: number }) {
     }
   }
 
+  useEffect(() => {
+    getAudioVersions(bookId).then((all) => setCurrentVersion(all.find((v) => v.selected) ?? null), () => undefined)
+  }, [bookId, versionsKey, audioVersion, job?.state])
+
+  // "Starts here": pin the sentence to where the recording is now (for a recording synced by its pauses), then the rest is fitted again.
+  async function pin(sentence: number) {
+    if (!currentVersion || !audio.current) return
+    setError('')
+    try {
+      await setSyncAnchor(bookId, currentVersion.id, sentence, Math.round(audio.current.currentTime * 100) / 100)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function fromSubtitles(file: File) {
+    if (!currentVersion) return
+    setError('')
+    try {
+      await syncFromSubtitles(bookId, currentVersion.id, file)
+      setVersionsKey((k) => k + 1)
+      load()
+      notify('Synced from the subtitles')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   // Syncing finds when each sentence of the text is spoken in your own recording.
-  async function sync(v: AudioVersion) {
+  async function sync(v: AudioVersion, method?: 'aligner' | 'pauses') {
     setError('')
     setNeedsAligner(false)
     try {
-      setJob(await syncAudioVersion(bookId, v.id))
+      setJob(await syncAudioVersion(bookId, v.id, method))
     } catch (e) {
       const err = e as Error & { code?: string }
       if (err.code === 'model_not_installed') setNeedsAligner(true)
@@ -244,6 +281,18 @@ export function AudioPage({ bookId }: { bookId: number }) {
                 : 'Sentences can’t follow this recording yet. Press “Sync with the text” and they will light up as it plays.'}
               {book.hasTimings && book.audioModel && options && <> Made with {modelName(options, book.audioModel)}.</>}
             </p>
+            {currentVersion?.approximate && (
+              <p className="muted audio-status">
+                {currentVersion.syncMethod === 'subtitles'
+                  ? 'Synced from a subtitle file: close, not exact.'
+                  : 'Synced by its pauses, without a model: close, not exact. If a sentence lights up at the wrong place, play the recording to where it really starts and press “Starts here” on that sentence below.'}{' '}
+                {currentVersion.kind === 'own' && (
+                  <button className="link-button" disabled={running} onClick={() => sync(currentVersion, 'aligner')}>
+                    Sync more precisely
+                  </button>
+                )}
+              </p>
+            )}
           </>
         ) : (
           <p className="muted">No audio yet. Make some below, or add a recording of your own.</p>
@@ -261,10 +310,15 @@ export function AudioPage({ bookId }: { bookId: number }) {
             {options ? (
               <>
                 <span>
-                  <strong>{modelName(options, choice.model || options.defaultModel)}</strong> · <strong>{voiceName(options, choice.voice || options.defaultVoice)}</strong>
+                  <strong>{modelName(options, choice.model || options.defaultModel)}</strong> · <strong>{voiceShown(options, choice.model || options.defaultModel, choice.voice)}</strong>
                   {(choice.model || choice.voice) && <span className="muted"> (this time only)</span>}
                 </span>
                 <AudioOptionsMenu options={options} choice={choice} onChange={setChoice} disabled={running} label="Change" />
+                {(choice.model || options.defaultModel) === 'mac-voice' && options.models.some((m) => !m.installed) && (
+                  <span className="muted">
+                    Want a more natural voice? <a href="#/settings/models">Download a better voice</a>.
+                  </span>
+                )}
                 {(choice.model || choice.voice) && (
                   <button className="link-button" onClick={() => setChoice({ model: '', voice: '' })}>
                     Use the defaults
@@ -308,6 +362,21 @@ export function AudioPage({ bookId }: { bookId: number }) {
             />
             <span className={`button secondary${running ? ' disabled' : ''}`}>Add a recording…</span>
           </label>
+          {currentVersion?.kind === 'own' && (
+            <label className="file-button" title="An SRT, WebVTT or LRC file that goes with the selected recording">
+              <input
+                type="file"
+                accept=".srt,.vtt,.lrc,text/vtt"
+                disabled={running}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) fromSubtitles(f)
+                }}
+              />
+              <span className={`button secondary${running ? ' disabled' : ''}`}>Sync from subtitles…</span>
+            </label>
+          )}
         </div>
       </section>
 
@@ -323,6 +392,18 @@ export function AudioPage({ bookId }: { bookId: number }) {
             }}
           >
             {s.text}
+            {(currentVersion?.syncMethod === 'pauses' || currentVersion?.syncMethod === 'estimate') && (
+              <button
+                className="quiet small starts-here"
+                title="This sentence starts where the recording is now"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  pin(i)
+                }}
+              >
+                Starts here
+              </button>
+            )}
           </li>
         ))}
       </ol>

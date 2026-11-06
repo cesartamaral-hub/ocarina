@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { BookStats } from '../api'
-import { DIFFICULTY_LABEL, difficulty, duration } from '../bookStats'
+import { readingTime } from '../bookStats'
 import type { NewWord, PageVocabulary } from './vocabulary'
 
 const SHOWN = 12
@@ -46,7 +46,6 @@ export function VocabularyPanel({
   }
   const counted = Math.max(stats.known + stats.learning + stats.new, 1)
   const parts = { known: (100 * stats.known) / counted, learning: (100 * stats.learning) / counted, fresh: (100 * stats.new) / counted }
-  const level = difficulty(stats.knownPercent)
   return (
     <div className="vocab">
       <div className="vocab-head">
@@ -56,14 +55,14 @@ export function VocabularyPanel({
         </button>
       </div>
       <p className="vocab-size">
-        {n(stats.words)} words · about {duration(stats.minutes)} to read
+        {n(stats.words)} words · {readingTime(stats.minutes)} to read
         {book === undefined || book === null ? <span className="muted"> · counting…</span> : null}
       </p>
 
       <section aria-labelledby="vocab-stats">
         <h3 id="vocab-stats">How well you know it</h3>
         <p className="vocab-big">
-          <strong>{Math.round(stats.knownPercent)}%</strong> known <span className={`chip-level ${level}`}>{DIFFICULTY_LABEL[level]}</span>
+          <strong>{Math.round(stats.knownPercent)}%</strong> known
         </p>
         <Bar parts={parts} />
         <dl className="vocab-rows">

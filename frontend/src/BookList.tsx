@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { changeBook, getPref, setPref, deleteBook, getBackupsAfterStartup, getBooks, getLanguages, getVocabularyCounts, type Book, type VocabularyCount } from './api'
 import { BookRow } from './BookRow'
-import { CefrBar } from './CefrBar'
+import { LearnedBar } from './LearnedBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
 import { SetupCard } from './SetupCard'
+import { VersionFooter } from './VersionFooter'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
   const [title, setTitle] = useState(book.title)
@@ -60,7 +61,7 @@ export function BookList() {
   const [error, setError] = useState('')
   const [firstRun, setFirstRun] = useState(false)
   const [backupWarning, setBackupWarning] = useState('')
-  const [levels, setLevels] = useState<Record<string, VocabularyCount>>({}) // the words known in each language, for its level bar
+  const [levels, setLevels] = useState<Record<string, VocabularyCount>>({}) // the words learned in each language, for its progress bar
 
   const load = useCallback(
     () => getBooks(archived).then(setBooks, (e) => setError(e.message)),
@@ -173,7 +174,7 @@ export function BookList() {
       {languages.map((lang) => (
         <section key={lang}>
           <h2>{lang}</h2>
-          {levels[lang] && <CefrBar known={levels[lang].known} />}
+          {levels[lang] && <LearnedBar learned={levels[lang].learned} goal={levels[lang].goal} known={levels[lang].known} countsPrior={levels[lang].countsPrior} />}
           <ul className="books">
             {shown
               .filter((b) => b.language === lang)
@@ -199,6 +200,7 @@ export function BookList() {
           </ul>
         </section>
       ))}
+      <VersionFooter />
     </>
   )
 }

@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Book, BookStats } from './api'
-import { barParts, difficulty, duration, sortBooks } from './bookStats'
+import { barParts, duration, readingTime, sortBooks } from './bookStats'
 
 const stats = (over: Partial<BookStats> = {}): BookStats => ({ words: 100, unique: 60, known: 50, learning: 20, ignored: 0, new: 30, newUnique: 20, knownPercent: 50, minutes: 1, ...over })
 const book = (id: number, title: string, over: Partial<Book> = {}): Book => ({
   id, title, language: 'Dutch', hasAudio: false, ocarinaAudio: false, pages: 10, currentPage: 1, sourceUri: '', tags: [], archived: false, stats: null, indexing: false, lastRead: null, ...over,
-})
-
-describe('difficulty', () => {
-  it('has its limits at 98, 95 and 90 percent', () => {
-    expect(difficulty(100)).toBe('easy')
-    expect(difficulty(98)).toBe('easy')
-    expect(difficulty(97.9)).toBe('comfortable')
-    expect(difficulty(95)).toBe('comfortable')
-    expect(difficulty(94.9)).toBe('challenging')
-    expect(difficulty(90)).toBe('challenging')
-    expect(difficulty(89.9)).toBe('hard')
-    expect(difficulty(0)).toBe('hard')
-  })
 })
 
 describe('barParts', () => {
@@ -54,5 +41,13 @@ describe('sortBooks', () => {
   it('does not change the list it was given', () => {
     sortBooks(books, 'recent')
     expect(books.map((b) => b.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe('readingTime', () => {
+  it('says "about" for a few minutes and none for a very short text', () => {
+    expect(readingTime(4)).toBe('about 4 min')
+    expect(readingTime(90)).toBe('about 1 h 30 min')
+    expect(readingTime(0)).toBe('under a minute')
   })
 })

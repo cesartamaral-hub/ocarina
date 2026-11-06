@@ -1,7 +1,7 @@
-import { CefrBar } from './CefrBar'
+import { LearnedBar } from './LearnedBar'
 import { useEffect, useState } from 'react'
 import { getPref, getStats, setPref, type LanguageStats, type Stats as StatsData } from './api'
-import { DIFFICULTY_LABEL, difficulty, duration } from './bookStats'
+import { duration } from './bookStats'
 import { growthPoints, relativeDay, visibleLanguages } from './readingStats'
 
 const W = 640
@@ -29,12 +29,12 @@ function LineChart({ points, label, caption }: { points: { label: string; value:
   )
 }
 
-function Kpi({ title, value, sub, chip }: { title: string; value: string; sub?: string; chip?: { text: string; level: string } }) {
+function Kpi({ title, value, sub }: { title: string; value: string; sub?: string }) {
   return (
     <div className="kpi">
       <span className="kpi-title">{title}</span>
       <span className="kpi-big">
-        {value} {chip && <span className={`chip-level ${chip.level}`}>{chip.text}</span>}
+        {value}
       </span>
       {sub && <span className="muted kpi-sub">{sub}</span>}
     </div>
@@ -43,7 +43,6 @@ function Kpi({ title, value, sub, chip }: { title: string; value: string; sub?: 
 
 function Section({ lang, detail, onOpen }: { lang: LanguageStats; detail: boolean; onOpen: () => void }) {
   const c = lang.coverage
-  const level = c.knownPercent === null ? null : difficulty(c.knownPercent)
   const counted = c.known + c.learning + c.new
   const part = (v: number) => (counted > 0 ? (100 * v) / counted : 0)
   const growth = growthPoints(lang.growth)
@@ -58,13 +57,12 @@ function Section({ lang, detail, onOpen }: { lang: LanguageStats; detail: boolea
         )}
       </div>
 
-      <CefrBar known={lang.terms.known} learning={lang.terms.learning} detail={detail} />
+      <LearnedBar learned={lang.learned} known={lang.terms.known} />
 
       <div className="kpis">
         <Kpi
           title="Your texts"
           value={c.knownPercent === null ? '—' : `${Math.round(c.knownPercent)}% known`}
-          chip={level ? { text: DIFFICULTY_LABEL[level], level } : undefined}
           sub={lang.books.count === 0 ? 'No books' : `${lang.books.count} ${lang.books.count === 1 ? 'book' : 'books'} · ${n(c.words)} words`}
         />
         <Kpi title="Vocabulary" value={`${n(lang.terms.vocabulary)} words`} sub={`${n(lang.terms.known)} known · ${n(lang.terms.learning)} learning`} />
