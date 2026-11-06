@@ -14,7 +14,7 @@ export function speedLevel(m: Pick<Model, 'kind' | 'speed' | 'check' | 'benchmar
 
 // The model that makes the audio for a language: the one chosen for it if it is installed, else the first installed that speaks it.
 export function speechModelFor(code: string, models: Model[], chosenId: string): Model | undefined {
-  const usable = models.filter((m) => (m.kind ?? 'speech') === 'speech' && m.installed && !(m.check && !m.check.ok) && m.languages.includes(code))
+  const usable = models.filter((m) => (m.kind ?? 'speech') === 'speech' && m.installed && !(m.check && !m.check.ok) && (m.builtin || m.languages.includes(code))) // the Mac voice speaks what macOS has a voice for
   return usable.find((m) => m.id === chosenId) ?? usable[0]
 }
 
@@ -22,7 +22,15 @@ export function speechModelFor(code: string, models: Model[], chosenId: string):
 export const speechCodesUsing = (m: Model, codes: string[], models: Model[], chosen: (code: string) => string): string[] =>
   codes.filter((code) => speechModelFor(code, models, chosen(code))?.id === m.id)
 
-export const gradeLevel = (grade: string | undefined): 'top' | 'good' | 'fair' | 'none' => {
-  if (!grade) return 'none'
-  return grade.startsWith('A') ? 'top' : grade.startsWith('B') ? 'good' : 'fair'
+// A short note when a model leaves out languages you study ("Doesn't cover Polish"); null when it covers them all (or you study none yet).
+export function coverageNote(m: Pick<Model, 'languages'>, codes: string[], nameOf: (code: string) => string): string | null {
+  const missing = codes.filter((c) => !m.languages.includes(c))
+  if (missing.length === 0) return null
+  return missing.length === codes.length && codes.length > 1 ? "Doesn't cover your languages" : `Doesn't cover ${missing.map(nameOf).join(', ')}`
+}
+
+// How many languages a model has, in a few words: the names when there are only a few.
+export function languageCount(m: Pick<Model, 'languages'>, nameOf: (code: string) => string): string {
+  const n = m.languages.length
+  return n <= 3 ? m.languages.map(nameOf).join(', ') : `${n} languages`
 }

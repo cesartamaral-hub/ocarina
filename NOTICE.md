@@ -14,7 +14,6 @@ Ocarina is a hard fork of [Lute v3](https://github.com/LuteOrg/lute-v3) (Learnin
 
 ## Test data
 
-- **FLORES-200** (NLLB Team, Meta AI, [github.com/facebookresearch/flores](https://github.com/facebookresearch/flores)), licence **CC BY-SA 4.0**. `ocarina/quality/quality_set.json` is a selection of ten of its devtest sentences per language, with their English translations, used to measure how well each translation model does per language (`ocarina/quality/quality.json`). Because of the share-alike term these two files stay under CC BY-SA 4.0; the licence of the app's code is not affected.
 
 ## Models (downloaded by the user, never bundled)
 

@@ -2,10 +2,15 @@ import type { ReactNode } from 'react'
 
 // The building blocks of the settings pages: an uppercase label over a card of rows; each row has a label with an (i) tip on the left and its control on the right.
 
-export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
+// description: one short line under the title; aside: a small note at the right of it (a size, say).
+export function SettingsGroup({ title, description, aside, children }: { title: string; description?: ReactNode; aside?: ReactNode; children: ReactNode }) {
   return (
     <section className="set-group">
-      <h2 className="set-group-title">{title}</h2>
+      <h2 className="set-group-title">
+        <span>{title}</span>
+        {aside && <span className="set-group-aside">{aside}</span>}
+      </h2>
+      {description && <p className="set-group-desc">{description}</p>}
       <div className="set-card">{children}</div>
     </section>
   )

@@ -244,7 +244,7 @@ def test_you_can_choose_which_model_translates(app, client):
     "The list shows every translation model; the choice is saved, and an unknown one is refused."
     settings = client.get(f"{URL}/settings").json
     ids = [m["id"] for m in settings["localModels"]]
-    assert ids[0] == "qwen3-4b-instruct-mlx" and "translategemma-4b-mlx" in ids and "qwen3-8b-mlx" in ids
+    assert ids[0] == "translategemma-4b-mlx" and "qwen3-4b-instruct-mlx" in ids and "qwen3-8b-mlx" in ids  # the better starter is listed first
     assert settings["localModel"]["id"] == "qwen3-4b-instruct-mlx"
     assert client.put(f"{URL}/settings", json={"localModel": "translategemma-4b-mlx"}).json["localModel"]["id"] == "translategemma-4b-mlx"
     assert client.put(f"{URL}/settings", json={"localModel": "chatterbox-multilingual-v3-mlx"}).status_code == 400  # a voice

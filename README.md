@@ -13,7 +13,7 @@ Ocarina is a personal project and a fork of [Lute v3](https://github.com/LuteOrg
 - **Read and learn.** Click a word to see its meaning and give it a status from 1 to 5; mark words as well known or ignored; save phrases. Hover a word for a quick meaning. A focus mode hides everything but the text.
 - **Meanings on your Mac.** Small Wiktionary-based dictionaries come with the app (WikDict); fuller ones can be downloaded, and Wiktionary is asked online only when nothing local knows a word.
 - **Listen.** Books are read aloud by your Mac's own voice, in any language your Mac has a voice for. An optional, more natural voice runs locally too. Add your own recording and Ocarina syncs it with the text so the sentence being spoken lights up (by its pauses, with no model, or precisely with an optional model; subtitle files work as well).
-- **Translate.** Translate a sentence, or a whole text shown side by side with the original. Use a model on your Mac (Qwen3 or TranslateGemma) or an online service (MyMemory, DeepL with your own key). The models page shows how well each model translates each language, measured by Ocarina on 56 languages.
+- **Translate.** Translate a sentence, or a whole text shown side by side with the original. Use a model on your Mac (Qwen3 or TranslateGemma) or an online service (MyMemory, DeepL with your own key).
 - **Bring your own material.** Files (text, PDF, EPUB), web pages and YouTube videos (captions, or a local transcription when there are none).
 - **See your progress.** A bar of the words you learned in Ocarina, reading statistics, a vocabulary page and an overview per language.
 - **Your languages.** 66 languages ready to add, each with a sample story; European and Brazilian Portuguese are separate languages.
@@ -50,4 +50,4 @@ How the pieces fit is in [docs/ocarina/architecture.md](./docs/ocarina/architect
 
 ## Credits and licence
 
-Ocarina is a hard fork of [Lute v3](https://github.com/LuteOrg/lute-v3) by Jeff Zohrab and contributors (MIT). The Lute manual at [luteorg.github.io/lute-manual](https://luteorg.github.io/lute-manual/) explains the ideas behind the reader, though Ocarina's screens are its own. Dictionary data comes from Wiktionary through Wiktextract and WikDict (CC BY-SA 4.0); the translation test set is FLORES-200 (CC BY-SA 4.0). The code is released under the MIT licence: see [LICENSE.txt](./LICENSE.txt), which must stay with every copy, and [NOTICE.md](./NOTICE.md).
+Ocarina is a hard fork of [Lute v3](https://github.com/LuteOrg/lute-v3) by Jeff Zohrab and contributors (MIT). The Lute manual at [luteorg.github.io/lute-manual](https://luteorg.github.io/lute-manual/) explains the ideas behind the reader, though Ocarina's screens are its own. Dictionary data comes from Wiktionary through Wiktextract and WikDict (CC BY-SA 4.0). The code is released under the MIT licence: see [LICENSE.txt](./LICENSE.txt), which must stay with every copy, and [NOTICE.md](./NOTICE.md).

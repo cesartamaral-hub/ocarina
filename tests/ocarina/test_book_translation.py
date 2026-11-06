@@ -155,32 +155,30 @@ def test_a_method_that_cannot_be_used_is_refused_with_the_reason(app, client):
     assert client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "local", "model": "x"}).status_code == 400
 
 
-def test_a_model_can_be_chosen_for_one_language(app, client):
-    book_id = _book(app, "Per taal")
+def test_a_model_picked_for_one_run_beats_the_general_one(app, client):
+    book_id = _book(app, "Een keer")
     two = [m["id"] for m in client.get("/ocarina/api/translate/settings").json["localModels"]][:2]
     assert len(two) == 2
-    client.put("/ocarina/api/translate/settings", json={"localModel": two[0], "allLanguages": True})
-    # Dutch gets the second model; the general one stays the first
-    assert client.put("/ocarina/api/translate/settings", json={"localModelFor": {"language": "nl", "model": two[1]}}).status_code == 200
+    client.put("/ocarina/api/translate/settings", json={"localModel": two[0]})
     settings = client.get("/ocarina/api/translate/settings").json
-    assert settings["localModel"]["id"] == two[0] and settings["localModelByLanguage"] == {"nl": two[1]}
-    status = _get(client, book_id)
-    names = {m["id"]: m["name"] for m in settings["localModels"]}
-    assert status["providerName"] == names[two[1]]  # the book is Dutch
-    assert next(m for m in status["methods"] if m["model"] == two[1])["isDefault"]
-    # a model picked for one run beats the one chosen for the language
-    r = client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "local", "model": two[0]})
+    assert settings["localModel"]["id"] == two[0] and "localModelByLanguage" not in settings and "localAuto" not in settings
+    r = client.post(f"{BOOKS}/{book_id}/translation", json={"scope": "book", "provider": "local", "model": two[1]})
     assert r.status_code == 202
     wait_for_job(client, r.json["id"])
-    # choosing a model for all languages forgets the one chosen for Dutch
-    client.put("/ocarina/api/translate/settings", json={"localModel": two[0], "allLanguages": True})
-    assert client.get("/ocarina/api/translate/settings").json["localModelByLanguage"] == {}
 
 
-def test_a_model_for_a_language_must_be_known(client):
-    bad_model = client.put("/ocarina/api/translate/settings", json={"localModelFor": {"language": "nl", "model": "nope"}})
-    bad_language = client.put("/ocarina/api/translate/settings", json={"localModelFor": {"language": "xx", "model": "qwen3-4b-instruct-mlx"}})
-    assert bad_model.status_code == 400 and bad_language.status_code == 400
+def test_a_model_must_be_known(client):
+    assert client.put("/ocarina/api/translate/settings", json={"localModel": "nope"}).status_code == 400
+
+
+def test_without_a_choice_the_first_model_you_have_is_used(app, client, monkeypatch):
+    from ocarina import prefs  # pylint: disable=import-outside-toplevel
+    from ocarina.tts import models as model_files  # pylint: disable=import-outside-toplevel
+
+    prefs.update(prefs.path_for(app.env_config.datapath), {"translate.localModel": ""})  # the data folder outlives a test
+    wanted = "translategemma-4b-mlx"
+    monkeypatch.setattr(model_files, "is_installed", lambda m: m["id"] == wanted)
+    assert client.get("/ocarina/api/translate/settings").json["localModel"]["id"] == wanted
 
 
 def test_end_of_turn_marks_are_not_part_of_a_translation(app, client, tmp_path):

@@ -1,26 +1,21 @@
 import { useAnchoredPopover } from './useAnchoredPopover'
 import { Popover } from './Popover'
 import { formatBytes } from './format'
-import { gradeLevel, speedLevel } from './modelRows'
+import { coverageNote, languageCount, speedLevel } from './modelRows'
 import { TransferProgress } from './TransferProgress'
 import { CheckResult } from './CheckResult'
 import { cancelJob, getJob, isActive, type Job, type Model } from './api'
 import { SPEECH_LANGUAGES } from './speechLanguages'
-import { purposeOf } from './modelPurpose'
-
-const MAX_COLUMNS = 6
-const shown = (codes: string[]) => codes.slice(0, MAX_COLUMNS)
 
 export type ModelActions = {
   busy: boolean
   offline?: boolean // Work offline is on: nothing can be downloaded
   job: Job | null
   speed: number
-  codes: string[] // the languages shown as columns (the first few; the rest sit behind +N)
+  codes: string[] // the languages you study, to say when a model leaves one out
   names?: Record<string, string> // a language's name by its code
-  usedFor: (m: Model) => string[] | 'all' | null // where the model is used: all your languages, some of them, or nowhere
-  onUse?: (m: Model) => void // makes it the model in use for every language (when more than one can be)
-  onUseFor?: (m: Model, code: string) => void // makes it the model in use for one language
+  inUse: (m: Model) => boolean // whether the model is the one doing this job now
+  onUse?: (m: Model) => void // makes it the model in use (when more than one can be)
   onDownload: (id: string) => void
   onImport: (m: Model) => void
   onTest: (m: Model) => void
@@ -29,19 +24,16 @@ export type ModelActions = {
   onJob: (job: Job) => void
 }
 
-const CHECK = <path d="M4 8.5l2.7 2.7L12 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 const BIN = (
   <path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8M7 7v3.5M9 7v3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
 )
-const DOWNLOAD = <path d="M8 2.5v7.5M4.8 7.2L8 10.4l3.2-3.2M3 13h10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 
 function Menu({ m, a }: { m: Model; a: ModelActions }) {
   const { anchor, placement, toggle, close } = useAnchoredPopover(220, 'end')
-  const item = (label: string, run: () => void, danger = false) => (
+  const item = (label: string, run: () => void) => (
     <li role="none">
       <button
         role="menuitem"
-        className={danger ? 'danger-text' : undefined}
         disabled={a.busy}
         onClick={() => {
           close()
@@ -52,6 +44,8 @@ function Menu({ m, a }: { m: Model; a: ModelActions }) {
       </button>
     </li>
   )
+  const entries = [m.installed && item(m.check ? 'Test again' : 'Test', () => a.onTest(m)), !m.installed && item('Import from a folder…', () => a.onImport(m)), m.custom && item('Remove from the list', () => a.onForget(m))].filter(Boolean)
+  if (entries.length === 0) return null
   return (
     <>
       <button ref={anchor} className="quiet small icon mr-more" aria-label={`More for ${m.name}`} title="More" aria-haspopup="menu" aria-expanded={placement !== null} onClick={() => toggle()}>
@@ -59,11 +53,7 @@ function Menu({ m, a }: { m: Model; a: ModelActions }) {
       </button>
       {placement && (
         <Popover anchor={anchor} placement={placement} onClose={close} label={`More for ${m.name}`} role="menu" className="more-menu">
-          <ul>
-            {m.installed && item(m.check ? 'Test again' : 'Test', () => a.onTest(m))}
-            {!m.installed && item('Import from a folder…', () => a.onImport(m))}
-            {m.custom && item('Remove from the list', () => a.onForget(m))}
-          </ul>
+          <ul>{entries}</ul>
         </Popover>
       )}
     </>
@@ -73,86 +63,51 @@ function Menu({ m, a }: { m: Model; a: ModelActions }) {
 function Row({ m, a }: { m: Model; a: ModelActions }) {
   const mine = a.job?.model_id === m.id ? a.job : null
   const downloading = mine !== null && isActive(mine)
-  const used = m.installed ? a.usedFor(m) : null
   const failed = Boolean(m.check && !m.check.ok)
+  const used = m.installed && a.inUse(m)
   const level = speedLevel(m)
-  const partial = Array.isArray(used) && used.length > 0
+  const nameOf = (code: string) => a.names?.[code] ?? SPEECH_LANGUAGES[code] ?? code.toUpperCase()
+  const note = coverageNote(m, a.codes, nameOf)
+  const downloadError = !downloading && mine?.state !== 'error' ? m.downloadError : null
   return (
-    <li className={`model-row${used === 'all' ? ' in-use' : ''}`}>
+    <li className="model-row">
       <div className="mr-main">
-        <button
-          className={`mr-mark${used === 'all' ? ' on' : ''}${partial ? ' some' : ''}`}
-          aria-label={used === 'all' ? `${m.name} is in use` : m.installed ? `Use ${m.name}` : `Download ${m.name}`}
-          aria-pressed={used === 'all'}
-          title={!m.installed && a.offline ? 'Needs the internet (Work offline is on)' : used === 'all' ? 'In use' : m.installed ? (failed ? 'It does not work here' : 'Use this one') : `Download (${formatBytes(m.sizeBytes)})`}
-          disabled={a.busy || downloading || (m.installed ? !a.onUse || failed || used === 'all' : Boolean(a.offline))}
-          onClick={() => (m.installed ? a.onUse?.(m) : a.onDownload(m.id))}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            {m.installed ? CHECK : DOWNLOAD}
-          </svg>
-        </button>
         <div className="mr-text">
           <div className="mr-name">
-            <span className="name">{m.name}</span>
+            <span className="name" title={m.name}>{m.name.replace(/\s*\(.*\)\s*$/, '')}</span>
             {m.badge && <span className="mr-badge">{m.badge}</span>}
-            {partial && <span className="muted mr-note">used for {(used as string[]).map((c) => c.toUpperCase()).join(', ')}</span>}
-            {m.custom && <span className="mr-badge plain">added by you</span>}
+            {m.custom && <span className="mr-badge plain">Added by you</span>}
           </div>
-          <div className="mr-purpose">For {purposeOf(m).charAt(0).toLowerCase() + purposeOf(m).slice(1)}</div>
           <div className="muted mr-desc">{m.description}</div>
-          {m.downloadError && !downloading && <div className="error mr-error">The download failed: {m.downloadError} Use the download button to try again.</div>}
+          <div className="muted mr-meta">
+            <span>{formatBytes(m.sizeBytes)}</span>
+            <span>{languageCount(m, nameOf)}</span>
+            {m.installed && m.check?.ok && <span className="mr-ok">Works here</span>}
+            {note && <span className="mr-warn">{note}</span>}
+          </div>
+          {downloadError && <div className="error mr-error">The download failed: {downloadError} Press Download to try again.</div>}
         </div>
-        <div className="mr-grades">
-          {shown(a.codes).map((code) => {
-            const row = m.quality?.[code]
-            const grade = m.quality ? (row?.grade && row.grade !== 'X' ? row.grade : undefined) : m.grades?.[code]
-            const supported = m.languages.includes(code)
-            const name = a.names?.[code] ?? SPEECH_LANGUAGES[code] ?? code.toUpperCase()
-            const how = row ? ` · chrF ${row.chrf} · ${row.source === 'checked' ? 'checked on this Mac' : 'measured by Ocarina on 10 sentences'}` : ''
-            const measured = m.quality && row ? (row.grade === 'X' ? 'poor in our test' : row.grade === null ? 'the model refused it' : `grade ${row.grade}`) : undefined
-            const here = used === 'all' || (Array.isArray(used) && used.includes(code))
-            const canPick = supported && m.installed && !failed && !downloading && !!a.onUseFor
-            const level = gradeLevel(supported ? grade : undefined)
-            const text = m.quality && row?.grade === 'X' ? '✕' : supported ? (grade ?? '—') : '·'
-            const className = `mr-grade ${level}${here ? ' used' : ''}`
-            if (canPick) {
-              return (
-                <button
-                  key={code}
-                  data-code={code.toUpperCase()}
-                  className={className}
-                  aria-pressed={here}
-                  title={here ? `Used for ${name} (${measured ?? grade ?? 'not rated'}${how})` : `Use for ${name} only (${measured ?? grade ?? 'not rated'}${how})`}
-                  disabled={a.busy || here}
-                  onClick={() => a.onUseFor!(m, code)}
-                >
-                  {text}
-                </button>
-              )
-            }
-            return (
-              <span key={code} data-code={code.toUpperCase()} className={className} title={measured ? `${name}: ${measured}${how}` : supported ? `${name}: ${grade ?? 'not rated'}` : `Does not support ${name}`}>
-                {text}
-              </span>
-            )
-          })}
-          {a.codes.length > MAX_COLUMNS && <span className="mr-grade none" title={`${a.codes.length - MAX_COLUMNS} more languages: see Settings → Languages`}>…</span>}
-        </div>
-        <span className="mr-speed" style={m.builtin ? { visibility: 'hidden' } : undefined} role="img" aria-label={`Speed ${level} of 4`} title={m.check?.ok ? 'Measured on this Mac' : 'Speed (press Test to measure it on this Mac)'}>
+        <span className="mr-speed" role="img" aria-label={`Speed ${level} of 4`} title={m.check?.ok ? 'Speed, measured on this Mac' : 'Speed (press Test to measure it on this Mac)'}>
           {[1, 2, 3, 4].map((n) => (
             <i key={n} className={n <= level ? 'on' : ''} style={{ height: 4 + n * 3 }} />
           ))}
         </span>
-        <span className="muted mr-size">{m.builtin ? 'Built in' : formatBytes(m.sizeBytes)}</span>
         <span className="mr-actions">
-          {m.installed && m.check?.ok && (
-            <span className="mr-ok" title="Works here" aria-label="Works here">
-              ✓
-            </span>
+          {!m.installed ? (
+            <button className="secondary small" disabled={a.busy || downloading || Boolean(a.offline)} title={a.offline ? 'Needs the internet (Work offline is on)' : undefined} onClick={() => a.onDownload(m.id)}>
+              Download
+            </button>
+          ) : used ? (
+            <span className="mr-inuse">In use</span>
+          ) : (
+            a.onUse && (
+              <button className="secondary small" disabled={a.busy || failed} title={failed ? 'It does not work here' : undefined} onClick={() => a.onUse?.(m)}>
+                Use
+              </button>
+            )
           )}
-          {!m.builtin && <Menu m={m} a={a} />}
-          {m.installed && !m.builtin && (
+          <Menu m={m} a={a} />
+          {m.installed && (
             <button className="quiet small icon mr-bin" aria-label={`Delete ${m.name}`} title={`Delete (frees ${formatBytes(m.sizeBytes)})`} disabled={a.busy} onClick={() => a.onDelete(m)}>
               <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                 {BIN}
@@ -162,12 +117,18 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
         </span>
       </div>
       {m.installed && failed && <CheckResult model={m} />}
-      {downloading && mine && <TransferProgress job={mine} speed={a.speed} onCancel={() =>
+      {downloading && mine && (
+        <TransferProgress
+          job={mine}
+          speed={a.speed}
+          onCancel={() =>
             cancelJob(mine.id)
               .then(() => new Promise((resolve) => setTimeout(resolve, 250))) // the process is ended at once: look again right away
               .then(() => getJob(mine.id))
               .then(a.onJob, () => undefined)
-          } />}
+          }
+        />
+      )}
       {mine?.state === 'error' && (
         <p className="error">
           {mine.error}{' '}
@@ -182,46 +143,15 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
   )
 }
 
-// The models of one kind as compact rows: one in use is ticked, the languages you study have a grade each, then speed and size.
+// The models of one kind as rows in a settings card: name, what it is, size and languages, speed, and one action (Download, Use, or In use).
+// Installed models come first.
 export function ModelList({ models, a }: { models: Model[]; a: ModelActions }) {
-  const have = models.filter((m) => m.installed)
-  const more = models.filter((m) => !m.installed)
-  const head = (
-    <div className="mr-head" aria-hidden="true">
-      <span className="mr-head-title">{have.length > 0 ? 'Installed' : 'Available'}</span>
-      <span className="mr-grades">
-        {shown(a.codes).map((c) => (
-          <span key={c} title={a.names?.[c]}>
-            {c.toUpperCase()}
-          </span>
-        ))}
-        {a.codes.length > MAX_COLUMNS && <span title={a.codes.slice(MAX_COLUMNS).map((c) => a.names?.[c] ?? c).join(', ')}>+{a.codes.length - MAX_COLUMNS}</span>}
-      </span>
-      <span className="mr-speed-head">Speed</span>
-      <span className="mr-size">Size</span>
-      <span className="mr-actions" />
-    </div>
-  )
+  const sorted = [...models.filter((m) => m.installed), ...models.filter((m) => !m.installed)]
   return (
-    <div className={`model-list${a.codes.length > 3 ? ' many' : ''}`}>
-      {head}
-      {have.length > 0 && (
-        <ul>
-          {have.map((m) => (
-            <Row key={m.id} m={m} a={a} />
-          ))}
-        </ul>
-      )}
-      {more.length > 0 && (
-        <>
-          {have.length > 0 && <div className="mr-sub">To download</div>}
-          <ul>
-            {more.map((m) => (
-              <Row key={m.id} m={m} a={a} />
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
+    <ul className="model-rows">
+      {sorted.map((m) => (
+        <Row key={m.id} m={m} a={a} />
+      ))}
+    </ul>
   )
 }

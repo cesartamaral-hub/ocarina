@@ -3,7 +3,6 @@ import { getTranslateSettings, putTranslateSettings, type TranslateSettings } fr
 import { useOffline } from './offline'
 import { formatBytes } from './format'
 import { notify } from './notices'
-import { SPEECH_LANGUAGES } from './speechLanguages'
 import { SettingRow, SettingsGroup } from './SettingsKit'
 import { NoLocalModelNotice } from './NoLocalModelNotice'
 import { TryTranslation } from './TryTranslation'
@@ -80,16 +79,8 @@ export function Translation() {
         </SettingRow>
 
         {s.provider === 'local' && (
-          <SettingRow label="Local model" info="The translation model that runs locally. Chosen per language under Models.">
-            <span className="muted">
-              {s.localAuto && s.localModels.filter((m) => m.installed).length > 1 ? 'Automatic: the best of your models for each language' : short(s.localModel.name)}
-              {Object.entries(s.localModelByLanguage ?? {}).map(([code, id]) => (
-                <span key={code}>
-                  {' '}
-                  · {SPEECH_LANGUAGES[code] ?? code.toUpperCase()}: {short(s.localModels.find((m) => m.id === id)?.name ?? id)}
-                </span>
-              ))}
-            </span>
+          <SettingRow label="Local model" info="The translation model that runs locally. Download or switch it under Models.">
+            <span className="muted">{short(s.localModel.name)}</span>
             <a href="#/settings/models">Change</a>
           </SettingRow>
         )}

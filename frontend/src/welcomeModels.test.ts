@@ -6,21 +6,18 @@ const model = (id: string, languages: string[], extra: Partial<Model> = {}): Mod
   ({ id, name: id, description: '', license: '', languages, installed: false, sizeBytes: 1e9, downloadJob: null, badge: 'Recommended', ...extra }) as Model
 const space = (free: number): DiskSpace => ({ freeBytes: free, marginBytes: 2e9, queuedBytes: 0 })
 
-const withQuality = (m: Model, scores: Record<string, number>): Model => ({ ...m, quality: Object.fromEntries(Object.entries(scores).map(([c, chrf]) => [c, { chrf, grade: chrf >= 55 ? 'B' : chrf >= 48 ? 'C' : 'D', errors: 0, source: 'shipped' as const }])) })
-
 describe('the translation model Welcome offers', () => {
-  const qwen = withQuality(model('qwen', ['nl', 'pt', 'ru'], { starter: true, kind: 'text' }), { nl: 55, pt: 65, ru: 62 })
-  const gemma = withQuality(model('gemma', ['nl', 'pt', 'ru', 'ar'], { starter: true, kind: 'text' }), { nl: 58, pt: 58, ru: 60, ar: 67 })
-  it('offers the one with the better average for your languages, and only one', () => {
-    expect(relevantModels([qwen, gemma], ['nl']).map((m) => m.id)).toEqual(['gemma'])
-    expect(relevantModels([qwen, gemma], ['pt', 'ru']).map((m) => m.id)).toEqual(['qwen'])
-    expect(relevantModels([qwen, gemma], ['ar']).map((m) => m.id)).toEqual(['gemma'])
+  const gemma = model('gemma', ['nl', 'pt', 'ru', 'ar'], { starter: true, kind: 'text' })
+  const qwen = model('qwen', ['nl', 'pt', 'ru'], { starter: true, kind: 'text' })
+  it('offers the one that covers more of your languages, and only one', () => {
+    expect(relevantModels([qwen, gemma], ['nl', 'ar']).map((m) => m.id)).toEqual(['gemma'])
+    expect(relevantModels([qwen, gemma], ['pt', 'ru']).map((m) => m.id)).toEqual(['qwen']) // the first listed wins a tie
   })
   it('keeps the one you already have', () => {
-    expect(relevantModels([qwen, { ...gemma, installed: true }], ['pt']).map((m) => m.id)).toEqual(['gemma'])
+    expect(relevantModels([gemma, { ...qwen, installed: true }], ['pt']).map((m) => m.id)).toEqual(['qwen'])
   })
   it('marks only the chosen translation model as the starter', () => {
-    expect(relevantModels([qwen, gemma], ['nl']).every((m) => m.starter)).toBe(true)
+    expect(relevantModels([gemma, qwen], ['nl']).every((m) => m.starter)).toBe(true)
   })
 })
 

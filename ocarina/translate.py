@@ -208,20 +208,6 @@ def _local(text, source_name, source, target, engine, model_id=None):  # pylint:
     return answer
 
 
-def settings_for(settings, source):
-    "The settings with the model on this Mac that was chosen for this source language, when one was (else the general one)."
-    chosen = (settings.get("localModelByLanguage") or {}).get(source)
-    if chosen:
-        return {**settings, "localModel": chosen}
-    if settings.get("localAuto"):  # you never picked one: of the models you have, the one that measured best for this language
-        from ocarina import quality  # pylint: disable=import-outside-toplevel
-
-        best = quality.best_model(source, [m["id"] for m in model_files.text_models() if model_files.is_installed(m)])
-        if best:
-            return {**settings, "localModel": best}
-    return settings
-
-
 def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
     """
     Translate a sentence from a Lute language into the target language. settings: {provider, target, email, localModel}.
@@ -240,7 +226,7 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
         raise TranslateError(f"Ocarina does not know the language code for {language_name} yet.", "unsupported_language")
     if same_language(source, target):
         raise TranslateError(f"The sentence is already in {target_name(target)}. Pick another target language in Settings.", "bad_input")
-    model_id = settings_for(settings, source).get("localModel")
+    model_id = settings.get("localModel")
     path = _cache_path(datapath, cache_provider(provider, model_id), source, target, text)
     cached = _read(path) if use_cache else None
     if cached is not None:

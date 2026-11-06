@@ -12,12 +12,13 @@ def test_a_language_the_models_cover_is_full_once_meanings_are_here(monkeypatch)
     monkeypatch.setattr(language_support.registry, "active", lambda datapath, code: ["pack"])
     found = language_support.support("Polish", "/nowhere")
     assert found["code"] == "pl" and found["level"] == "full"
-    assert (found["meanings"], found["aiVoice"], found["translation"], found["audioSync"], found["macVoice"]) == ("ready", "download", "download", "none", "ready")  # the aligner does not list Polish
+    assert (found["meanings"], found["aiVoice"], found["translation"], found["audioSync"], found["macVoice"]) == ("ready", "download", "download", "download", "ready")  # the aligner does not list Polish, but it was tried and works
     monkeypatch.setattr(models, "is_installed", lambda m: True)
     assert language_support.support("Polish", "/nowhere")["aiVoice"] == "ready"
 
 
 def test_a_language_with_no_voice_model_is_basic(monkeypatch):
+    monkeypatch.setattr(models, "is_installed", lambda m: False)  # whatever this Mac has downloaded
     monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [{"name": "Alice"}])
     monkeypatch.setattr(language_support.registry, "active", lambda datapath, code: ["pack"])
     found = language_support.support("Albanian", "/nowhere")  # no voice model lists it, the translation models do

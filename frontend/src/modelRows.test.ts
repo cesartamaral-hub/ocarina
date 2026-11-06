@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Model } from './api'
-import { gradeLevel, speechCodesUsing, speechModelFor, speedLevel } from './modelRows'
+import { coverageNote, languageCount, speechCodesUsing, speechModelFor, speedLevel } from './modelRows'
 
 const model = (id: string, extra: Partial<Model> = {}): Model =>
   ({ id, name: id, description: '', license: 'mit', languages: ['nl', 'pl'], installed: true, kind: 'speech', sizeBytes: 1, downloadJob: null, ...extra }) as Model
@@ -38,8 +38,32 @@ describe('which voice model is used', () => {
   })
 })
 
-describe('gradeLevel', () => {
-  it('groups the letters', () => {
-    expect(['A', 'A-', 'B+', 'B', 'C+', undefined].map(gradeLevel)).toEqual(['top', 'top', 'good', 'good', 'fair', 'none'])
+describe('the Mac voice as an engine', () => {
+  const mac = model('mac', { builtin: true, languages: [] })
+  it('speaks any language, and comes after a downloaded voice model', () => {
+    expect(speechModelFor('it', [model('a'), mac], '')?.id).toBe('mac')
+    expect(speechModelFor('nl', [model('a'), mac], '')?.id).toBe('a')
+    expect(speechModelFor('nl', [model('a'), mac], 'mac')?.id).toBe('mac')
+  })
+})
+
+describe('coverageNote', () => {
+  const name = (c: string) => ({ nl: 'Dutch', pl: 'Polish' })[c] ?? c
+  it('says nothing when the model covers your languages', () => {
+    expect(coverageNote({ languages: ['nl', 'pl'] }, ['nl', 'pl'], name)).toBeNull()
+    expect(coverageNote({ languages: [] }, [], name)).toBeNull()
+  })
+  it('names the languages it leaves out', () => {
+    expect(coverageNote({ languages: ['nl'] }, ['nl', 'pl'], name)).toBe("Doesn't cover Polish")
+    expect(coverageNote({ languages: ['fr'] }, ['nl', 'pl'], name)).toBe("Doesn't cover your languages")
+    expect(coverageNote({ languages: ['fr'] }, ['pl'], name)).toBe("Doesn't cover Polish")
+  })
+})
+
+describe('languageCount', () => {
+  const name = (c: string) => c.toUpperCase()
+  it('lists a few, counts many', () => {
+    expect(languageCount({ languages: ['nl', 'pl'] }, name)).toBe('NL, PL')
+    expect(languageCount({ languages: ['a', 'b', 'c', 'd'] }, name)).toBe('4 languages')
   })
 })

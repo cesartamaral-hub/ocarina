@@ -62,8 +62,10 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
     setLanguages((cur) => (cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code]))
 
   return (
-    <>
-      <h2>Add a model</h2>
+    <section className="set-group">
+      <details className="set-card add-model-details">
+        <summary>Add a model from Hugging Face…</summary>
+        <div className="add-model-body">
       <p className="muted">
         Any Hugging Face model that works with one of the styles below: a voice, or a chat model that translates sentences. The app looks up its files, remembers the exact version, and downloads
         it like the others. A model of another kind won't load.
@@ -123,6 +125,8 @@ export function AddModel({ onAdded }: { onAdded: () => void }) {
         )}
         {error && <p className="error">{error}</p>}
       </div>
-    </>
+        </div>
+      </details>
+    </section>
   )
 }

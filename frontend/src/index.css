@@ -253,8 +253,6 @@ table.tags td:first-child { width: 160px; }
 .starter-models { list-style: none; padding: 0; margin: 12px 0; }
 .starter-models li { padding: 4px 0; }
 .starter-purpose { margin-left: 24px; font-size: 0.88rem; }
-.mr-error { margin-top: 4px; font-size: 0.88rem; }
-.mr-purpose { margin-top: 2px; font-size: 0.88rem; font-weight: 500; }
 .welcome input:not([type='checkbox']) { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 .welcome label:not(.inline) { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 
@@ -417,7 +415,6 @@ body:has(.reader) { overflow: hidden; }
 .bulk-hint { margin-left: auto; font-size: 0.85rem; }
 
 /* Storage */
-.storage-summary { margin: 4px 0 0; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 
 /* Appearance page */
 .pal-light { --bg: #fbfaf8; --fg: #1f1d1a; --panel: #f1eee8; --line: #ded9d0; --accent: #2f6f5e; --s0: #cfe3ff; --s1: #f6b8ad; --s2: #f7d2a6; --s3: #f6e8a2; --s4: #d5e9ac; --s5: #c3e6cd; }
@@ -698,61 +695,6 @@ h2 .speak { margin-left: 6px; }
 
 /* The models: a row each (ModelList). A tick for the one in use, a grade for each language you study (click one to use the model for
    that language), speed, size, and a bin. */
-.model-list { margin: 8px 0 8px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); }
-.model-list ul { list-style: none; margin: 0; padding: 0; }
-.mr-head, .mr-main { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 64px 78px 76px; align-items: center; gap: 20px; padding: 0 20px; }
-.mr-head { min-height: 38px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
-.mr-head-title { grid-column: 1 / 3; }
-.mr-sub { padding: 10px 20px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--fg) 3%, transparent); }
-.mr-grades { display: flex; gap: 8px; justify-content: flex-end; }
-.mr-head .mr-grades span { width: 46px; text-align: center; }
-.mr-head .mr-size, .mr-size { text-align: right; font-size: 0.9rem; white-space: nowrap; }
-.mr-speed-head { text-align: center; }
-.model-row { border-bottom: 1px solid var(--line); }
-.model-row:last-child { border-bottom: 0; }
-.model-row.in-use { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.model-row > p, .model-row > .check-failed, .model-row > .transfer { margin: 0 20px 14px 80px; }
-.mr-main { padding-top: 18px; padding-bottom: 18px; min-height: 76px; }
-.mr-mark { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1.5px dashed var(--muted); background: none; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
-.mr-mark.on { background: var(--accent); border: 1.5px solid var(--accent); color: var(--accent-fg); opacity: 1; }
-.mr-mark.some { border: 1.5px solid var(--accent); color: var(--accent); }
-.mr-mark:disabled { opacity: 1; cursor: default; }
-.mr-text { min-width: 0; }
-.mr-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
-.mr-name .name { font-weight: 600; font-size: 1rem; }
-.mr-badge { font-size: 0.72rem; line-height: 1; padding: 4px 9px; border: 1px solid var(--muted); border-radius: 999px; color: var(--fg); white-space: nowrap; }
-.mr-badge.plain { border-color: var(--line); color: var(--muted); }
-.mr-note { font-size: 0.78rem; }
-.mr-desc { margin-top: 4px; font-size: 0.88rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mr-grade { width: 46px; height: 32px; border-radius: 8px; border: 1.5px solid transparent; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.92rem; background: color-mix(in srgb, var(--fg) 12%, transparent); color: var(--fg); font-family: inherit; padding: 0; }
-.mr-grade.top { background: var(--fg); color: var(--bg); }
-.mr-grade.fair { background: none; border-color: var(--line); color: var(--muted); }
-.mr-grade.none { background: none; color: var(--muted); font-weight: 400; }
-button.mr-grade { cursor: pointer; }
-button.mr-grade:hover { border-color: var(--muted); }
-.mr-grade.used { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
-.mr-hint { margin: -4px 0 10px; font-size: 0.82rem; }
-.mr-speed { display: inline-flex; align-items: flex-end; gap: 3px; height: 22px; justify-content: center; }
-.mr-speed i { width: 5px; border-radius: 1.5px; background: color-mix(in srgb, var(--fg) 22%, transparent); }
-.mr-speed i.on { background: var(--fg); }
-.mr-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
-.mr-ok { color: var(--accent); font-size: 0.85rem; margin-right: 4px; }
-.mr-bin { color: var(--muted); }
-.mr-bin:hover { color: var(--error); }
-.mr-more { opacity: 0; transition: opacity 0.15s ease; }
-.model-row:hover .mr-more, .model-row:focus-within .mr-more, .mr-more[aria-expanded="true"] { opacity: 1; }
-@media (max-width: 760px) {
-  .mr-head { display: none; }
-  .mr-main { grid-template-columns: 40px minmax(0, 1fr) auto; row-gap: 10px; padding-left: 14px; padding-right: 14px; }
-  .mr-grades { grid-column: 2; justify-content: flex-start; }
-  .mr-grade { width: auto; min-width: 46px; padding: 0 8px; gap: 5px; }
-  .mr-grade::before { content: attr(data-code); font-size: 0.68rem; font-weight: 400; opacity: 0.7; }
-  .mr-speed { grid-column: 2; justify-content: flex-start; }
-  .mr-size { grid-column: 2; text-align: left; }
-  .mr-actions { grid-column: 3; grid-row: 1; }
-  .mr-more { opacity: 1; }
-  .model-row > p, .model-row > .check-failed, .model-row > .transfer { margin-left: 14px; }
-}
 
 /* The Vocabulary page: a toolbar, filter chips, and a table of words with the sentence each was saved from. */
 .vl { display: flex; flex-direction: column; height: 100%; min-height: 0; }
@@ -878,6 +820,53 @@ button.mr-grade:hover { border-color: var(--muted); }
 .set-group { margin: 0 0 28px; }
 .set-group-title { margin: 0 0 8px 4px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .set-card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+
+/* Models: a settings card of rows. Each has the name and what it is, a meta line, the four speed bars, and one action. */
+.set-group-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.set-group-aside { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 0.82rem; }
+.set-group-desc { margin: -2px 4px 10px; font-size: 0.88rem; line-height: 1.45; color: var(--muted); }
+.models-caption { margin: -6px 0 20px; font-size: 0.9rem; }
+.model-rows { list-style: none; margin: 0; padding: 0; }
+/* The dictionaries page lists its dictionaries the same way, in a card of its own. */
+.model-list { margin: 8px 0 8px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); }
+.model-list ul { list-style: none; margin: 0; padding: 0; }
+.mr-note { font-size: 0.78rem; }
+.dict-list .mr-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.model-row { border-bottom: 1px solid var(--line); }
+.model-row:last-child { border-bottom: 0; }
+.model-row > p, .model-row > .check-failed, .model-row > .transfer { margin: 0 18px 14px; }
+.mr-main { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 20px; padding: 14px 18px; min-height: 64px; }
+.mr-text { min-width: 0; }
+.mr-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.mr-name .name { font-weight: 600; font-size: 1rem; }
+.mr-badge { font-size: 0.72rem; line-height: 1; padding: 4px 9px; border: 1px solid var(--muted); border-radius: 999px; color: var(--fg); white-space: nowrap; }
+.mr-badge.plain { border-color: var(--line); color: var(--muted); }
+.mr-desc { margin-top: 4px; font-size: 0.88rem; line-height: 1.4; }
+.mr-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 6px; font-size: 0.82rem; }
+.mr-ok { color: var(--accent); }
+.mr-warn { color: var(--error); }
+.mr-error { margin-top: 6px; font-size: 0.88rem; }
+.mr-speed { display: inline-flex; align-items: flex-end; gap: 3px; height: 22px; }
+.mr-speed i { width: 5px; border-radius: 1.5px; background: color-mix(in srgb, var(--fg) 22%, transparent); }
+.mr-speed i.on { background: var(--fg); }
+.mr-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 120px; }
+.mr-inuse { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+.mr-bin { color: var(--muted); }
+.mr-bin:hover { color: var(--error); }
+.mr-more { opacity: 0; transition: opacity 0.15s ease; }
+.model-row:hover .mr-more, .model-row:focus-within .mr-more, .mr-more[aria-expanded="true"] { opacity: 1; }
+.add-model-details > summary { cursor: pointer; padding: 14px 18px; font-weight: 600; list-style: none; }
+.add-model-details > summary::-webkit-details-marker { display: none; }
+.add-model-details[open] > summary { border-bottom: 1px solid var(--line); }
+.add-model-body { padding: 14px 18px 18px; }
+.add-model-body > p:first-child { margin-top: 0; }
+@media (max-width: 760px) {
+  .mr-main { grid-template-columns: minmax(0, 1fr) auto; padding-left: 14px; padding-right: 14px; }
+  .mr-text { grid-column: 1 / -1; }
+  .mr-speed { grid-column: 1; grid-row: 2; }
+  .mr-actions { grid-column: 2; grid-row: 2; min-width: 0; }
+  .mr-more { opacity: 1; }
+}
 .set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 52px; padding: 8px 18px; border-bottom: 1px solid var(--line); }
 .set-row:last-child { border-bottom: 0; }
 .set-row.disabled .set-label { opacity: 0.5; }
@@ -973,10 +962,3 @@ button.mr-grade:hover { border-color: var(--muted); }
 .setup-text { font-weight: 500; }
 .setup-actions { display: flex; gap: 6px; margin-left: auto; }
 .setup-error { flex-basis: 100%; }
-/* With more than three languages the grades go on a line of their own under the model, each cell with its language code, so the name keeps its room. */
-.model-list.many .mr-head, .model-list.many .mr-main { grid-template-columns: 40px minmax(0, 1fr) 64px 78px 76px; }
-.model-list.many .mr-head .mr-grades { display: none; }
-.model-list.many .mr-head-title { grid-column: 1 / 3; }
-.model-list.many .mr-main .mr-grades { grid-column: 2 / -1; grid-row: 2; justify-content: flex-start; flex-wrap: wrap; }
-.model-list.many .mr-grade { width: auto; min-width: 58px; padding: 0 8px; }
-.model-list.many .mr-grade::before { content: attr(data-code) '\00a0'; font-weight: 400; font-size: 0.72rem; opacity: 0.7; }
