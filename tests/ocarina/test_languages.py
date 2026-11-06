@@ -112,3 +112,42 @@ def test_first_run_adds_predefined_languages_with_or_without_stories(client):
     assert first not in client.get(f"{URL}/template").json["predefined"]
     assert client.post(f"{URL}/predefined", json={"names": []}).status_code == 400
     assert client.post(f"{URL}/predefined", json={"names": ["Klingon"]}).status_code == 400
+
+
+def _names(client):
+    return client.get("/ocarina/api/languages/template").json["predefined"]
+
+
+def test_portuguese_is_offered_as_european_and_brazilian(client):
+    names = _names(client)
+    assert "European Portuguese" in names and "Brazilian Portuguese" in names and "Portuguese" not in names
+
+
+def test_the_template_says_which_languages_have_a_sample_story(client):
+    data = client.get("/ocarina/api/languages/template").json
+    assert {"Dutch", "French", "European Portuguese", "Brazilian Portuguese"} <= set(data["withStory"])
+    assert set(data["withStory"]) <= set(data["predefined"])
+
+
+def test_a_portuguese_language_is_added_with_its_own_story(app, client):
+    from lute.db import db  # pylint: disable=import-outside-toplevel
+    from sqlalchemy import text as sql  # pylint: disable=import-outside-toplevel
+
+    r = client.post("/ocarina/api/languages/predefined", json={"names": ["European Portuguese", "Brazilian Portuguese"], "books": True})
+    assert r.status_code in (200, 201) and len(r.json["added"]) == 2
+    with app.app_context():
+        titles = {t for (t,) in db.session.execute(sql("select BkTitle from books"))}
+    assert {"A Padaria da Dona Rosa", "A Maldição"} <= titles
+    assert "Portuguese" not in _names(client)
+
+
+def test_plain_portuguese_cannot_be_added_but_an_old_one_can_be_renamed(client):
+    assert client.post("/ocarina/api/languages/predefined", json={"names": ["Portuguese"]}).json["skipped"] == ["Portuguese"]
+    assert client.get("/ocarina/api/languages/legacy-portuguese").json is None
+    assert client.post(URL, json={**SETTINGS, "name": "Portuguese"}).status_code in (200, 201)  # a library from before the two kinds
+    found = client.get("/ocarina/api/languages/legacy-portuguese").json
+    assert found["name"] == "Portuguese"
+    assert client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "x"}).status_code == 400
+    r = client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "brazilian"})
+    assert r.json["name"] == "Brazilian Portuguese" and client.get("/ocarina/api/languages/legacy-portuguese").json is None
+    assert client.post(f"/ocarina/api/languages/{found['id']}/portuguese", json={"kind": "brazilian"}).status_code == 404  # no longer the plain one

@@ -104,6 +104,7 @@ def test_a_subtitle_file_syncs_a_recording(app, client):
         book_id = make_dutch_book("Ondertitels").id
     up = client.post(f"{BOOKS}/{book_id}/audio/upload", data={"audio": (io.BytesIO(b"ID3x"), "eigen.mp3")}, content_type="multipart/form-data")
     version_id = up.json["versionId"]
+    wait_for_job(client, up.json["sync"]["job"]["id"])  # the upload starts a sync of its own (it fails on this fake audio): let it end before the next test
     srt = "1\n00:00:01,000 --> 00:00:03,000\nHallo! Mijn naam is Carla.\n\n2\n00:00:03,500 --> 00:00:06,000\nIk woon in Nederland.\n\n3\n00:00:07,000 --> 00:00:09,000\nElke ochtend sta ik op.\n"
     r = client.post(f"{BOOKS}/{book_id}/audio/versions/{version_id}/subtitles", data={"file": (io.BytesIO(srt.encode()), "x.srt")}, content_type="multipart/form-data")
     assert r.status_code == 200

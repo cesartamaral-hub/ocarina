@@ -285,16 +285,19 @@ def _installed_voices():
     return voices_found
 
 
-def mac_voices(code):
-    "The voices installed on this Mac for a language (a two-letter code), best first: Premium, Enhanced, standard; novelty voices last."
+def mac_voices(code, locale=None):
+    """
+    The voices installed on this Mac for a language (a two-letter code), best first: Premium, Enhanced, standard; novelty voices last.
+    With a `locale` (pt_PT) the voices of that locale come first, the others of the language after them.
+    """
     rank = {"premium": 0, "enhanced": 1, "standard": 2}
     found = [{**v, "novelty": v["name"].split(" (")[0] in NOVELTY} for v in _installed_voices() if v["code"] == code]
-    return sorted(found, key=lambda v: (v["novelty"], rank[v["quality"]]))
+    return sorted(found, key=lambda v: (v["locale"] != locale if locale else False, v["novelty"], rank[v["quality"]]))
 
 
-def mac_voice(code, chosen=None):
-    "Name of the voice to use for the language: the one you chose if it is installed, else the best one; None when there is none."
-    found = mac_voices(code)
+def mac_voice(code, chosen=None, locale=None):
+    "Name of the voice to use for the language: the one you chose if it is installed, else the best one (of the locale, if given); None when there is none."
+    found = mac_voices(code, locale)
     if chosen and any(v["name"] == chosen for v in found):
         return chosen
     return found[0]["name"] if found else None
@@ -326,9 +329,9 @@ def _speak_with(cfg, voice, text):
     return out
 
 
-def _from_system(cfg, text, code):
+def _from_system(cfg, text, code, locale=None):
     saved = prefs.load(prefs.path_for(cfg.datapath))
-    voice = mac_voice(code, saved.get(f"systemvoice.{code}"))
+    voice = mac_voice(code, saved.get(f"systemvoice.{code}"), locale)
     if voice is None:
         raise Unavailable(NO_MAC_VOICE)
     return _speak_with(cfg, voice, text)
@@ -337,10 +340,10 @@ def _from_system(cfg, text, code):
 # --- choosing ----------------------------------------------------------------------------------------------------------------
 
 
-def _auto(cfg, app_config, text, code, saved, busy):
+def _auto(cfg, app_config, text, code, saved, busy, locale=None):
     "The first source that can say it, in the order AI voice, Mac voice, recording of a person; Unavailable when none can."
     reasons = []
-    attempts = [("voice", lambda: _from_voice(cfg, app_config, text, code, saved, busy)), ("system", lambda: _from_system(cfg, text, code))]
+    attempts = [("voice", lambda: _from_voice(cfg, app_config, text, code, saved, busy)), ("system", lambda: _from_system(cfg, text, code, locale))]
     if not offline.is_on():
         attempts.append(("speaker", lambda: _from_speaker(cfg, text, code)))
     for name, attempt in attempts:
@@ -351,7 +354,7 @@ def _auto(cfg, app_config, text, code, saved, busy):
     raise Unavailable(f"Nothing can say this yet. {reasons[1]} Or download a voice model under Settings → Models." if len(reasons) > 1 else reasons[0])
 
 
-def say(cfg, app_config, text, code, source, saved, busy=False):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def say(cfg, app_config, text, code, source, saved, busy=False, locale=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """
     (path, source used, note). `source` is the one asked for; when it cannot be used the system voice answers instead, and the note says
     why. Raises Unavailable only when even the system voice cannot.
@@ -363,7 +366,7 @@ def say(cfg, app_config, text, code, source, saved, busy=False):  # pylint: disa
         text = text[:MAX_TEXT].rsplit(" ", 1)[0] or text[:MAX_TEXT]
     source = source if source in SOURCES else "voice"
     if source == "auto":
-        return _auto(cfg, app_config, text, code, saved, busy)
+        return _auto(cfg, app_config, text, code, saved, busy, locale)
     if offline.is_on() and source in ("speaker", "google"):
         source = "voice"  # these two need the internet: the voice chosen for the language answers instead
     try:
@@ -373,9 +376,9 @@ def say(cfg, app_config, text, code, source, saved, busy=False):  # pylint: disa
             return _from_speaker(cfg, text, code), "speaker", None
         if source == "google":
             return _from_google(cfg, text, code), "google", None
-        return _from_system(cfg, text, code), "system", None
+        return _from_system(cfg, text, code, locale), "system", None
     except (Unavailable, TtsError, subprocess.SubprocessError, OSError) as e:
         reason = str(e) if isinstance(e, Unavailable) else "That voice failed."
         if source == "system":
             raise Unavailable(reason) from e
-        return _from_system(cfg, text, code), "system", f"{reason} The Mac system voice was used."
+        return _from_system(cfg, text, code, locale), "system", f"{reason} The Mac system voice was used."

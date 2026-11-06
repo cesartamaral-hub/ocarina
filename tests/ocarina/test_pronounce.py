@@ -23,7 +23,7 @@ def dutch_id(app):
 def fake_mac(monkeypatch):
     "The voice of the Mac: a file with the text in it (so the tests need no speech, no ffmpeg)."
 
-    def system(cfg, text, code):
+    def system(cfg, text, code, locale=None):
         out = pronounce.cache_path(cfg.datapath, f"system\nTest\n{text}")
         os.makedirs(os.path.dirname(out), exist_ok=True)
         with open(out, "wb") as f:
@@ -186,7 +186,7 @@ def test_automatic_uses_the_first_source_that_works(app, client, monkeypatch):
 def test_automatic_goes_on_to_a_recording_and_never_to_google(app, client, monkeypatch):
     monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)
 
-    def no_mac(cfg, text, code):
+    def no_mac(cfg, text, code, locale=None):
         raise pronounce.Unavailable(pronounce.NO_MAC_VOICE)
 
     monkeypatch.setattr(pronounce, "_from_system", no_mac)
@@ -228,3 +228,26 @@ def test_system_settings_opens_at_spoken_content(client, monkeypatch):
     monkeypatch.setattr(pronounce.subprocess, "run", lambda cmd, **k: (calls.append(cmd), Done())[1])
     assert client.post(SAY.replace("pronounce", "pronounce/open-voice-settings")).json == {"ok": True}
     assert calls == [["/usr/bin/open", pronounce.VOICE_SETTINGS_URL]]
+
+
+PT_LISTING = """\
+Joana               pt_PT    # Olá! Chamo-me Joana.
+Luciana             pt_BR    # Olá! Meu nome é Luciana.
+Catarina (Premium)  pt_PT    # Olá! Chamo-me Catarina.
+"""
+
+
+def test_each_portuguese_gets_the_voice_of_its_own_locale(monkeypatch):
+    class Done:
+        stdout = PT_LISTING
+
+    monkeypatch.setattr(pronounce.tools, "find", lambda name: "/usr/bin/say")
+    monkeypatch.setattr(pronounce.subprocess, "run", lambda *a, **k: Done())
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access
+    assert [v["name"] for v in pronounce.mac_voices("pt", "pt_PT")] == ["Catarina (Premium)", "Joana", "Luciana"]
+    assert [v["name"] for v in pronounce.mac_voices("pt", "pt_BR")] == ["Luciana", "Catarina (Premium)", "Joana"]
+    assert pronounce.mac_voice("pt", None, "pt_BR") == "Luciana" and pronounce.mac_voice("pt") == "Catarina (Premium)"
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access
+    from ocarina import translate  # pylint: disable=import-outside-toplevel
+
+    assert translate.code_for("European Portuguese") == "pt" and translate.locale_of("Brazilian Portuguese") == "pt_BR" and translate.locale_of("Dutch") is None

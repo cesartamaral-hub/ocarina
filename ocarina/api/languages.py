@@ -9,6 +9,8 @@ JSON API for languages and their settings (dictionaries, parser, word characters
     GET    /ocarina/api/languages/template         defaults for a new language, or a predefined one
                                                    (?name=Dutch); predefined names are listed too
     GET    /ocarina/api/languages/support          what Ocarina can do for each language (?names=Italian,Dutch for others)
+    GET    /ocarina/api/languages/legacy-portuguese  the language named plain "Portuguese", if there is one
+    POST   /ocarina/api/languages/<id>/portuguese  {kind: european | brazilian}: rename it to European or Brazilian Portuguese
     GET    /ocarina/api/languages/parsers          parser types that can be chosen
     POST   /ocarina/api/languages/predefined       add predefined languages by name ({"names": [...],
                                                    "books": true to also add their sample stories})
@@ -25,6 +27,7 @@ from lute.parse.registry import supported_parsers
 from ocarina import language_support
 from ocarina.dictionaries import setup as dictionary_setup
 
+HIDDEN = {"Portuguese"}  # offered as European Portuguese and Brazilian Portuguese; a library that has the plain one keeps it
 bp = Blueprint("ocarina_languages", __name__, url_prefix="/ocarina/api")
 
 USE_FOR = ("terms", "sentences")
@@ -132,6 +135,33 @@ def support():
     return jsonify([language_support.support(n, datapath) for n in names])
 
 
+PORTUGUESE = {"european": "European Portuguese", "brazilian": "Brazilian Portuguese"}
+
+
+@bp.route("/languages/legacy-portuguese", methods=["GET"])
+def legacy_portuguese():
+    "The library's language named plain 'Portuguese' (from before the two kinds), or null: the app asks which one it is."
+    row = db.session.execute(sql("select LgID from languages where LgName = 'Portuguese'")).first()
+    return jsonify({"id": row[0], "name": "Portuguese"} if row else None)
+
+
+@bp.route("/languages/<int:language_id>/portuguese", methods=["POST"])
+def choose_portuguese(language_id):
+    "Rename the plain 'Portuguese' language to European or Brazilian Portuguese (its books, terms and settings stay as they are)."
+    kind = (request.get_json(silent=True) or {}).get("kind")
+    if kind not in PORTUGUESE:
+        return jsonify({"error": "Choose european or brazilian"}), 400
+    row = db.session.execute(sql("select LgName from languages where LgID = :i"), {"i": language_id}).first()
+    if row is None or row[0] != "Portuguese":
+        return jsonify({"error": "That language is not the plain Portuguese"}), 404
+    taken = db.session.execute(sql("select 1 from languages where LgName = :n"), {"n": PORTUGUESE[kind]}).first()
+    if taken:
+        return jsonify({"error": f"You already have {PORTUGUESE[kind]}"}), 409
+    db.session.execute(sql("update languages set LgName = :n where LgID = :i"), {"n": PORTUGUESE[kind], "i": language_id})
+    db.session.commit()
+    return jsonify({"id": language_id, "name": PORTUGUESE[kind]})
+
+
 @bp.route("/languages/parsers", methods=["GET"])
 def parsers():
     "Parser types that can be chosen."
@@ -141,7 +171,8 @@ def parsers():
 @bp.route("/languages/template", methods=["GET"])
 def template():
     "Settings to start a new language from: blank defaults, or a predefined language by name."
-    predefined = LanguageService(db.session).supported_predefined_languages()
+    service = LanguageService(db.session)
+    predefined = [p for p in service.supported_predefined_languages() if p.name not in HIDDEN]
     taken = {n for (n,) in db.session.execute(sql("select LgName from languages"))}
     available = [p for p in predefined if p.name not in taken]
     name = request.args.get("name")
@@ -150,7 +181,8 @@ def template():
         return jsonify({"error": "Unknown predefined language"}), 404
     body = _language_settings(chosen)
     body["id"] = None
-    return jsonify({"language": body, "predefined": sorted(p.name for p in available)})
+    names = sorted(p.name for p in available)
+    return jsonify({"language": body, "predefined": names, "withStory": [n for n in names if service.get_language_def(n).books]})
 
 
 @bp.route("/languages/predefined", methods=["POST"])
@@ -161,7 +193,7 @@ def add_predefined():
     if not isinstance(names, list) or not names:
         return jsonify({"error": "Choose at least one language"}), 400
     service = LanguageService(db.session)
-    available = {p.name for p in service.supported_predefined_languages()}
+    available = {p.name for p in service.supported_predefined_languages() if p.name not in HIDDEN}
     taken = {n for (n,) in db.session.execute(sql("select LgName from languages"))}
     added, skipped = [], []
     for name in names:

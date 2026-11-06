@@ -4,11 +4,11 @@ JSON API for translating a sentence (see ocarina/translate.py) and its settings.
     GET  /ocarina/api/translate/settings   provider, target language, whether a DeepL key is saved (never the key)
     PUT  /ocarina/api/translate/settings   change them; deeplKey saves a key, "" removes it
     POST /ocarina/api/translate            {languageId, text} -> {translation, provider, source, target, cached}
-    POST /ocarina/api/translate/test       a trial translation with the current settings (asks the service for real)
+    POST /ocarina/api/translate/test       {languageId?, text?}: a trial translation with the current settings (asks the service for real)
     POST /ocarina/api/translate/compare    {languageId, text}: the sentence translated by every model on this Mac that is
                                            installed, with how long each took
 
-Errors are {error, code}; code is one of offline, quota, bad_key, no_key, no_model, unsupported_language,
+Errors are {error, code}; code is one of offline, quota, bad_key, no_key, no_model, no_local_model, unsupported_language,
 too_long, bad_input, failed.
 """
 
@@ -24,7 +24,7 @@ from ocarina.tts import models as model_files
 
 bp = Blueprint("ocarina_translate", __name__, url_prefix="/ocarina/api")
 
-STATUS = {"no_model": 400, "bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "offline_mode": 409, "quota": 429, "offline": 502, "failed": 502}
+STATUS = {"no_local_model": 409, "no_model": 400, "bad_input": 400, "too_long": 400, "unsupported_language": 400, "no_key": 400, "bad_key": 400, "offline_mode": 409, "quota": 429, "offline": 502, "failed": 502}
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -50,8 +50,9 @@ def _settings():
     return {
         "provider": provider,
         "localModel": local,
+        "localAuto": not saved.get("translate.localModel"),  # not chosen yet: the best installed model for each language
         "localModelByLanguage": by_language,
-        "target": target if target in translate.TARGETS else "en",
+        "target": translate.normalise_target(target) or "en",
         "email": saved.get("translate.email") or "",
     }
 
@@ -66,7 +67,17 @@ def _settings_json():
         "localModel": _local_model_json(_settings()["localModel"]),
         "localModels": [_local_model_json(m["id"]) for m in model_files.text_models()],
         "targets": [{"code": k, "name": v} for k, v in translate.TARGETS.items()],
+        "samples": _samples(),
     }
+
+
+def _samples():
+    "A short sentence in each language of the library, to try a translation with: [{languageId, name, sample}]."
+    out = []
+    for language in db.session.query(Language).order_by(Language.name).all():
+        code = translate.code_for(language.name)
+        out.append({"languageId": language.id, "name": language.name, "sample": translate.SAMPLES.get(code or "", "")})
+    return out
 
 
 def _local_model_json(model_id):
@@ -150,12 +161,18 @@ def translate_sentence():
 
 @bp.route("/translate/test", methods=["POST"])
 def test_translation():
-    "Try the current settings with a short Dutch sentence, asking the service for real."
+    "Try the current settings on a sentence (a short sample sentence when none is given), asking the service for real."
+    body = request.get_json(silent=True) or {}
+    language = db.session.get(Language, body["languageId"]) if isinstance(body.get("languageId"), int) else None
+    name = language.name if language else "Dutch"
+    code = translate.code_for(name)
+    text = body.get("text") if isinstance(body.get("text"), str) and body["text"].strip() else translate.SAMPLES.get(code or "", translate.SAMPLES["nl"])
+    started = time.time()
     try:
-        result = translate.translate(_datapath(), _settings(), "Dutch", "Goedemorgen, hoe gaat het met je?", use_cache=False, local_engine=_local_engine())
+        result = translate.translate(_datapath(), _settings(), name, text, use_cache=False, local_engine=_local_engine())
     except translate.TranslateError as e:
         return _failure(e)
-    return jsonify(result)
+    return jsonify({**result, "text": text, "seconds": round(time.time() - started, 1), "targetName": translate.target_name(result["target"])})
 
 
 @bp.route("/translate/compare", methods=["POST"])

@@ -30,7 +30,7 @@ from ocarina.tts.cache import SentenceCache
 from ocarina.tts import voices
 from ocarina.tts.supervisor import Supervisor
 from ocarina.tts.system_voice import SystemSupervisor
-from ocarina import pronounce
+from ocarina import pronounce, translate
 from ocarina.tts import system_voice
 
 bp = Blueprint("ocarina_audio", __name__, url_prefix="/ocarina/api")
@@ -117,7 +117,7 @@ def start_audio(book_id):
         return jsonify({"error": "Unknown model"}), 400
     mac_name = None
     if model_files.is_builtin(model):
-        mac_name = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"))
+        mac_name = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"), translate.locale_of(book.language.name))
         if mac_name is None:
             return jsonify({"error": pronounce.NO_MAC_VOICE, "code": "no_mac_voice"}), 409
     if model["id"] in failing:
@@ -205,7 +205,7 @@ def audio_options(book_id):
     failing = model_check.failing_ids(datapath)
     default_model = model_files.choose_model(None, saved.get(f"model.{code}"), failing, code, neural_only=not _uses_real_engine(current_app))
     voice_list = voices.list_voices(datapath)
-    mac = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"))
+    mac = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"), translate.locale_of(book.language.name))
     voice_id = saved.get(f"voice.{code}") or voices.default_voice_id(code)
     default_voice = next((v for v in voice_list if v["id"] == voices.LEGACY_IDS.get(voice_id, voice_id)), voice_list[0])
     return jsonify(

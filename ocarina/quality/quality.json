@@ -1,0 +1,702 @@
+{
+ "version": 1,
+ "measured": "2026-11-06",
+ "test": "FLORES-200 devtest, 10 sentences per language, into English, chrF (CC BY-SA 4.0, NLLB Team, Meta AI)",
+ "bands": [
+  {
+   "from": 62.0,
+   "grade": "A"
+  },
+  {
+   "from": 55.0,
+   "grade": "B"
+  },
+  {
+   "from": 48.0,
+   "grade": "C"
+  },
+  {
+   "from": 38.0,
+   "grade": "D"
+  }
+ ],
+ "note": "Portuguese was measured with FLORES's Portuguese, which is Brazilian; the same score is shown for European Portuguese.",
+ "models": {
+  "qwen3-4b-instruct-mlx": {
+   "Afrikaans": {
+    "code": "af",
+    "chrf": 74.0,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Albanian": {
+    "code": "sq",
+    "chrf": 46.4,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Amharic": {
+    "code": "am",
+    "chrf": 23.9,
+    "errors": 0,
+    "grade": "X"
+   },
+   "Arabic": {
+    "code": "ar",
+    "chrf": 57.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Armenian": {
+    "code": "hy",
+    "chrf": 52.0,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Azerbaijani": {
+    "code": "az",
+    "chrf": 43.4,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Basque": {
+    "code": "eu",
+    "chrf": 44.2,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Belarusian": {
+    "code": "be",
+    "chrf": 44.6,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Bengali": {
+    "code": "bn",
+    "chrf": 48.8,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Bosnian": {
+    "code": "bs",
+    "chrf": 56.6,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Brazilian Portuguese": {
+    "code": "pt",
+    "chrf": 65.1,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Bulgarian": {
+    "code": "bg",
+    "chrf": 63.3,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Catalan": {
+    "code": "ca",
+    "chrf": 65.6,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Cebuano": {
+    "code": "ceb",
+    "chrf": 48.7,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Croatian": {
+    "code": "hr",
+    "chrf": 57.0,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Czech": {
+    "code": "cs",
+    "chrf": 60.3,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Danish": {
+    "code": "da",
+    "chrf": 61.9,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Dutch": {
+    "code": "nl",
+    "chrf": 55.3,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Esperanto": {
+    "code": "eo",
+    "chrf": 53.6,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Estonian": {
+    "code": "et",
+    "chrf": 52.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Farsi": {
+    "code": "fa",
+    "chrf": 51.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Finnish": {
+    "code": "fi",
+    "chrf": 49.9,
+    "errors": 0,
+    "grade": "C"
+   },
+   "French": {
+    "code": "fr",
+    "chrf": 66.0,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Galician": {
+    "code": "gl",
+    "chrf": 63.9,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Georgian": {
+    "code": "ka",
+    "chrf": 40.6,
+    "errors": 0,
+    "grade": "D"
+   },
+   "German": {
+    "code": "de",
+    "chrf": 58.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Greek": {
+    "code": "el",
+    "chrf": 54.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Hebrew": {
+    "code": "he",
+    "chrf": 54.4,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Hindi": {
+    "code": "hi",
+    "chrf": 53.8,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Hungarian": {
+    "code": "hu",
+    "chrf": 59.2,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Icelandic": {
+    "code": "is",
+    "chrf": 38.8,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Indonesian": {
+    "code": "id",
+    "chrf": 62.5,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Italian": {
+    "code": "it",
+    "chrf": 55.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Japanese": {
+    "code": "ja",
+    "chrf": 48.0,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Kazakh": {
+    "code": "kk",
+    "chrf": 46.7,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Khmer": {
+    "code": "km",
+    "chrf": 39.6,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Latvian": {
+    "code": "lv",
+    "chrf": 54.7,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Lithuanian": {
+    "code": "lt",
+    "chrf": 43.9,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Macedonian": {
+    "code": "mk",
+    "chrf": 58.6,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Mandarin Chinese": {
+    "code": "zh",
+    "chrf": 55.9,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Norwegian": {
+    "code": "no",
+    "chrf": 59.7,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Polish": {
+    "code": "pl",
+    "chrf": 55.0,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Punjabi": {
+    "code": "pa",
+    "chrf": 46.0,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Romanian": {
+    "code": "ro",
+    "chrf": 61.7,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Russian": {
+    "code": "ru",
+    "chrf": 61.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Serbian": {
+    "code": "sr",
+    "chrf": 56.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Slovak": {
+    "code": "sk",
+    "chrf": 58.1,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Slovene": {
+    "code": "sl",
+    "chrf": 56.1,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Spanish": {
+    "code": "es",
+    "chrf": 58.3,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Swahili": {
+    "code": "sw",
+    "chrf": 34.5,
+    "errors": 0,
+    "grade": "X"
+   },
+   "Swedish": {
+    "code": "sv",
+    "chrf": 62.9,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Thai": {
+    "code": "th",
+    "chrf": 55.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Tibetan": {
+    "code": "bo",
+    "chrf": 17.5,
+    "errors": 0,
+    "grade": "X"
+   },
+   "Turkish": {
+    "code": "tr",
+    "chrf": 52.5,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Ukrainian": {
+    "code": "uk",
+    "chrf": 61.1,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Vietnamese": {
+    "code": "vi",
+    "chrf": 60.6,
+    "errors": 0,
+    "grade": "B"
+   }
+  },
+  "translategemma-4b-mlx": {
+   "Afrikaans": {
+    "code": "af",
+    "chrf": 66.0,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Albanian": {
+    "code": "sq",
+    "chrf": 59.1,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Amharic": {
+    "code": "am",
+    "chrf": 44.6,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Arabic": {
+    "code": "ar",
+    "chrf": 66.9,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Armenian": {
+    "code": "hy",
+    "chrf": 50.4,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Azerbaijani": {
+    "code": "az",
+    "chrf": 48.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Basque": {
+    "code": "eu",
+    "chrf": 49.9,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Belarusian": {
+    "code": "be",
+    "chrf": 52.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Bengali": {
+    "code": "bn",
+    "chrf": 56.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Bosnian": {
+    "code": "bs",
+    "chrf": 60.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Brazilian Portuguese": {
+    "code": "pt",
+    "chrf": 57.7,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Bulgarian": {
+    "code": "bg",
+    "chrf": 64.8,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Catalan": {
+    "code": "ca",
+    "chrf": 64.4,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Cebuano": {
+    "code": "ceb",
+    "chrf": 0.0,
+    "errors": 10,
+    "grade": null
+   },
+   "Croatian": {
+    "code": "hr",
+    "chrf": 57.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Czech": {
+    "code": "cs",
+    "chrf": 60.9,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Danish": {
+    "code": "da",
+    "chrf": 65.0,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Dutch": {
+    "code": "nl",
+    "chrf": 58.2,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Esperanto": {
+    "code": "eo",
+    "chrf": 55.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Estonian": {
+    "code": "et",
+    "chrf": 57.9,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Farsi": {
+    "code": "fa",
+    "chrf": 51.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Finnish": {
+    "code": "fi",
+    "chrf": 53.8,
+    "errors": 0,
+    "grade": "C"
+   },
+   "French": {
+    "code": "fr",
+    "chrf": 65.2,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Galician": {
+    "code": "gl",
+    "chrf": 61.0,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Georgian": {
+    "code": "ka",
+    "chrf": 48.1,
+    "errors": 0,
+    "grade": "C"
+   },
+   "German": {
+    "code": "de",
+    "chrf": 61.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Greek": {
+    "code": "el",
+    "chrf": 54.5,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Hebrew": {
+    "code": "he",
+    "chrf": 60.5,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Hindi": {
+    "code": "hi",
+    "chrf": 62.1,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Hungarian": {
+    "code": "hu",
+    "chrf": 58.2,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Icelandic": {
+    "code": "is",
+    "chrf": 53.8,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Indonesian": {
+    "code": "id",
+    "chrf": 62.2,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Italian": {
+    "code": "it",
+    "chrf": 60.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Japanese": {
+    "code": "ja",
+    "chrf": 51.8,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Kazakh": {
+    "code": "kk",
+    "chrf": 50.9,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Khmer": {
+    "code": "km",
+    "chrf": 43.7,
+    "errors": 0,
+    "grade": "D"
+   },
+   "Latvian": {
+    "code": "lv",
+    "chrf": 57.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Lithuanian": {
+    "code": "lt",
+    "chrf": 49.3,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Macedonian": {
+    "code": "mk",
+    "chrf": 65.2,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Mandarin Chinese": {
+    "code": "zh",
+    "chrf": 59.2,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Norwegian": {
+    "code": "no",
+    "chrf": 62.4,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Polish": {
+    "code": "pl",
+    "chrf": 58.5,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Punjabi": {
+    "code": "pa",
+    "chrf": 53.4,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Romanian": {
+    "code": "ro",
+    "chrf": 64.4,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Russian": {
+    "code": "ru",
+    "chrf": 59.7,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Serbian": {
+    "code": "sr",
+    "chrf": 60.5,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Slovak": {
+    "code": "sk",
+    "chrf": 60.8,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Slovene": {
+    "code": "sl",
+    "chrf": 56.1,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Spanish": {
+    "code": "es",
+    "chrf": 58.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Swahili": {
+    "code": "sw",
+    "chrf": 53.5,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Swedish": {
+    "code": "sv",
+    "chrf": 67.3,
+    "errors": 0,
+    "grade": "A"
+   },
+   "Thai": {
+    "code": "th",
+    "chrf": 52.1,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Tibetan": {
+    "code": "bo",
+    "chrf": 24.7,
+    "errors": 0,
+    "grade": "X"
+   },
+   "Turkish": {
+    "code": "tr",
+    "chrf": 53.7,
+    "errors": 0,
+    "grade": "C"
+   },
+   "Ukrainian": {
+    "code": "uk",
+    "chrf": 59.4,
+    "errors": 0,
+    "grade": "B"
+   },
+   "Vietnamese": {
+    "code": "vi",
+    "chrf": 55.8,
+    "errors": 0,
+    "grade": "B"
+   }
+  }
+ }
+}

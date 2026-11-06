@@ -8,25 +8,26 @@ from ocarina.tts import models
 
 def test_a_language_the_models_cover_is_full_once_meanings_are_here(monkeypatch):
     monkeypatch.setattr(models, "is_installed", lambda m: False)
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [{"name": "Zosia"}])
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [{"name": "Zosia"}])
     monkeypatch.setattr(language_support.registry, "active", lambda datapath, code: ["pack"])
     found = language_support.support("Polish", "/nowhere")
     assert found["code"] == "pl" and found["level"] == "full"
-    assert (found["meanings"], found["aiVoice"], found["translation"], found["audioSync"], found["macVoice"]) == ("ready", "download", "download", "download", "ready")
+    assert (found["meanings"], found["aiVoice"], found["translation"], found["audioSync"], found["macVoice"]) == ("ready", "download", "download", "none", "ready")  # the aligner does not list Polish
     monkeypatch.setattr(models, "is_installed", lambda m: True)
     assert language_support.support("Polish", "/nowhere")["aiVoice"] == "ready"
 
 
-def test_italian_has_no_ai_models_yet_so_it_is_basic(monkeypatch):
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [{"name": "Alice"}])
+def test_a_language_with_no_voice_model_is_basic(monkeypatch):
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [{"name": "Alice"}])
     monkeypatch.setattr(language_support.registry, "active", lambda datapath, code: ["pack"])
-    found = language_support.support("Italian", "/nowhere")
-    assert found["code"] == "it" and found["level"] == "basic"
-    assert (found["aiVoice"], found["translation"], found["macVoice"]) == ("none", "none", "ready")
+    found = language_support.support("Albanian", "/nowhere")  # no voice model lists it, the translation models do
+    assert found["code"] == "sq" and found["level"] == "basic"
+    assert (found["aiVoice"], found["translation"], found["macVoice"]) == ("none", "download", "ready")
+    assert language_support.support("Italian", "/nowhere")["level"] == "full"  # the makers list Italian for the voice, and it was measured for translation
 
 
 def test_meanings_fall_back_to_online_and_unknown_languages_get_a_plain_answer(monkeypatch):
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [])
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [])
     monkeypatch.setattr(language_support.registry, "active", lambda datapath, code: [])
     assert language_support.support("French", "/nowhere")["meanings"] == "online"
     found = language_support.support("Klingon", "/nowhere")
@@ -40,35 +41,35 @@ def test_the_route_lists_the_library_or_the_names_asked(client, app):
     assert [r["language"] for r in rows] == ["Italian", "Dutch"]
 
 
-def _italian_book(app):
+def _book_in(app, language_name):
     from lute.db import db  # pylint: disable=import-outside-toplevel
     from tests.ocarina.helpers import make_dutch_book  # pylint: disable=import-outside-toplevel
 
     with app.app_context():
         book = make_dutch_book()
-        book.language.name = "Italian"
+        book.language.name = language_name
         db.session.commit()
         return book.id
 
 
 def test_a_book_in_a_language_no_voice_covers_cannot_be_voiced(app, client, monkeypatch):
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [])  # this Mac has no Italian voice either
-    book_id = _italian_book(app)
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [])  # this Mac has no Albanian voice either
+    book_id = _book_in(app, "Albanian")
     options = client.get(f"/ocarina/api/books/{book_id}/audio/options")
     assert options.status_code == 400 and options.json["code"] == "unsupported_language"
-    assert "Italian" in options.json["error"] and "Mac voice" in options.json["error"]
+    assert "Albanian" in options.json["error"] and "Mac voice" in options.json["error"]
     started = client.post(f"/ocarina/api/books/{book_id}/audio", json={})
     assert started.status_code == 400 and started.json["code"] == "unsupported_language"  # not voiced with another language's model
 
 
 def test_a_book_is_read_by_the_mac_voice_when_no_model_covers_the_language(app, client, monkeypatch):
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [{"name": "Alice (Italian (Italy))", "novelty": False}])
-    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None: "Alice (Italian (Italy))")
-    book_id = _italian_book(app)
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [{"name": "Alice (Albanian)", "novelty": False}])
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None, locale=None: "Alice (Albanian)")
+    book_id = _book_in(app, "Albanian")
     options = client.get(f"/ocarina/api/books/{book_id}/audio/options").json
     assert options["defaultModel"] == "mac-voice"
     assert [m["id"] for m in options["models"]] == ["mac-voice"]
-    assert {"id": "mac:Alice (Italian (Italy))", "name": "Alice", "builtin": True, "model": "mac-voice"} in options["voices"]
+    assert {"id": "mac:Alice (Albanian)", "name": "Alice", "builtin": True, "model": "mac-voice"} in options["voices"]
 
 
 def test_a_language_a_model_lists_can_be_voiced(monkeypatch):

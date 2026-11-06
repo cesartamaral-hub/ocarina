@@ -39,8 +39,8 @@ def fake_say(monkeypatch):
     monkeypatch.setattr(system_voice.subprocess, "run", run)
     monkeypatch.setattr(model_files, "is_installed", lambda m: model_files.is_builtin(m))  # no neural model is downloaded
     name = f"Xander {uuid.uuid4().hex[:8]}"  # a new voice each time: the sentence cache outlives a test
-    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [{"name": name, "novelty": False}])
-    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None: name)
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code, locale=None: [{"name": name, "novelty": False}])
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None, locale=None: name)
     spoken.append(name)
     return spoken
 
@@ -68,7 +68,7 @@ def test_another_mac_voice_does_not_reuse_the_sentences_of_the_first(tmp_path):
 
 
 def test_without_a_mac_voice_for_the_language_the_answer_says_what_to_do(app, client, fake_say, monkeypatch):
-    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None: None)
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None, locale=None: None)
     with app.app_context():
         book_id = make_dutch_book("Zonder stem").id
     r = client.post(f"{BOOKS}/{book_id}/audio", json={"model": "mac-voice"})

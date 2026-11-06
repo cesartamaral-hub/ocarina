@@ -30,11 +30,45 @@ PROVIDERS = {
     "mymemory": {"name": "MyMemory", "needsKey": False, "description": "Free, no account. About 5,000 characters a day (50,000 with an email address)."},
     "deepl": {"name": "DeepL", "needsKey": True, "description": "The best quality. Needs your own free API key from deepl.com (500,000 characters a month)."},
 }
-TARGETS = {"en": "English", "nl": "Dutch", "fr": "French", "de": "German", "es": "Spanish", "it": "Italian", "pt": "Portuguese", "pl": "Polish"}
+TARGETS = {
+    "en": "English", "nl": "Dutch", "fr": "French", "de": "German", "es": "Spanish", "it": "Italian",
+    "pt-PT": "European Portuguese", "pt-BR": "Brazilian Portuguese", "pl": "Polish",
+}  # Portuguese comes in two, the way its speakers tell them apart
+LEGACY_TARGETS = {"pt": "Portuguese"}  # a translation stored before the two kinds existed
+NO_LOCAL_MODEL = "No local model installed. Offline, translation needs one: download it under Models, or turn off Work offline to translate online."
+SAMPLES = {  # a short sentence to try a translation with, by the language of the sentence
+    "nl": "Goedemorgen, hoe gaat het met je?", "pl": "Dzień dobry, jak się masz?", "fr": "Bonjour, comment vas-tu ?",
+    "de": "Guten Morgen, wie geht es dir?", "es": "Buenos días, ¿cómo estás?", "it": "Buongiorno, come stai?",
+    "pt": "Bom dia, como estás?", "en": "Good morning, how are you?",
+}
+
+
+LOCALES = {"european portuguese": "pt_PT", "brazilian portuguese": "pt_BR"}  # a language that comes in kinds: the macOS locale of its voices
+
+
+def locale_of(language_name):
+    "The macOS locale of a language that has kinds (European or Brazilian Portuguese), else None."
+    return LOCALES.get(language_name.strip().lower())
+
+
+def target_name(code):
+    "The name of a target language, also for one stored before Portuguese was split in two."
+    return TARGETS.get(code) or LEGACY_TARGETS.get(code) or code
+
+
+def same_language(source, target):
+    "Whether a sentence's language and the target are one language (pt is the same as pt-BR)."
+    return source.split("-")[0] == target.split("-")[0]
+
+
+def normalise_target(code):
+    "A saved target as it is now: the old plain Portuguese is Brazilian; None when unknown."
+    code = "pt-BR" if code == "pt" else code
+    return code if code in TARGETS else None
 
 # Lute language name (lower case) -> ISO code. Names in the language itself are included.
 CODES = {
-    "dutch": "nl", "nederlands": "nl", "polish": "pl", "polski": "pl", "french": "fr", "français": "fr", "francais": "fr",
+    "dutch": "nl", "nederlands": "nl", "european portuguese": "pt", "brazilian portuguese": "pt", "polish": "pl", "polski": "pl", "french": "fr", "français": "fr", "francais": "fr",
     "english": "en", "german": "de", "deutsch": "de", "spanish": "es", "español": "es", "italian": "it", "portuguese": "pt",
     "russian": "ru", "czech": "cs", "swedish": "sv", "danish": "da", "norwegian": "nb", "finnish": "fi", "greek": "el",
     "turkish": "tr", "hungarian": "hu", "romanian": "ro", "bulgarian": "bg", "ukrainian": "uk", "croatian": "hr",
@@ -42,7 +76,7 @@ CODES = {
     "hebrew": "he", "hindi": "hi", "thai": "th", "vietnamese": "vi", "indonesian": "id", "afrikaans": "af", "latvian": "lv",
     "lithuanian": "lt", "estonian": "et", "albanian": "sq", "icelandic": "is", "irish": "ga", "welsh": "cy", "basque": "eu",
 }
-DEEPL_TARGETS = {"en": "EN-GB", "pt": "PT-PT"}
+DEEPL_TARGETS = {"en": "EN-GB", "pt-PT": "PT-PT", "pt-BR": "PT-BR"}
 
 
 LOCAL_PROMPT = (
@@ -159,11 +193,13 @@ def _local(text, source_name, source, target, engine, model_id=None):  # pylint:
     if model is None or model_files.kind_of(model) != "text":
         raise TranslateError("That translation model is not in the list any more. Pick another in Settings.", "no_model")
     if engine is None and not model_files.is_installed(model):
+        if offline.is_on() and not any(model_files.is_installed(m) for m in model_files.text_models()):
+            raise TranslateError(NO_LOCAL_MODEL, "no_local_model")
         raise TranslateError(f"Download {model['name']} in Settings first.", "no_model")
     # Models with their own prompt format (TranslateGemma) are given the text and the two languages, nothing more.
     extra = {"style": model.get("prompt"), "source": source, "target": target, "text": text} if model.get("prompt") == "translategemma" else {}
     try:
-        answer = local_model.complete(model, LOCAL_PROMPT.format(target=TARGETS[target]), f"{source_name} sentence:\n{text}", engine=engine, **extra)
+        answer = local_model.complete(model, LOCAL_PROMPT.format(target=target_name(target)), f"{source_name} sentence:\n{text}", engine=engine, **extra)
     except Exception as e:  # pylint: disable=broad-exception-caught
         raise TranslateError(f"The translation model failed ({type(e).__name__}).", "failed") from e
     answer = strip_marks(answer).strip("\"“”").strip()
@@ -175,7 +211,15 @@ def _local(text, source_name, source, target, engine, model_id=None):  # pylint:
 def settings_for(settings, source):
     "The settings with the model on this Mac that was chosen for this source language, when one was (else the general one)."
     chosen = (settings.get("localModelByLanguage") or {}).get(source)
-    return {**settings, "localModel": chosen} if chosen else settings
+    if chosen:
+        return {**settings, "localModel": chosen}
+    if settings.get("localAuto"):  # you never picked one: of the models you have, the one that measured best for this language
+        from ocarina import quality  # pylint: disable=import-outside-toplevel
+
+        best = quality.best_model(source, [m["id"] for m in model_files.text_models() if model_files.is_installed(m)])
+        if best:
+            return {**settings, "localModel": best}
+    return settings
 
 
 def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
@@ -194,8 +238,8 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
     source = code_for(language_name)
     if source is None:
         raise TranslateError(f"Ocarina does not know the language code for {language_name} yet.", "unsupported_language")
-    if source == target:
-        raise TranslateError(f"The sentence is already in {TARGETS.get(target, target)}. Pick another target language in Settings.", "bad_input")
+    if same_language(source, target):
+        raise TranslateError(f"The sentence is already in {target_name(target)}. Pick another target language in Settings.", "bad_input")
     model_id = settings_for(settings, source).get("localModel")
     path = _cache_path(datapath, cache_provider(provider, model_id), source, target, text)
     cached = _read(path) if use_cache else None

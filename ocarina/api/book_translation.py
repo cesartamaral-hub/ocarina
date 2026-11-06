@@ -63,9 +63,10 @@ def _info(settings):
     "Who translates and into what, for the page to show."
     return {
         "target": settings["target"],
-        "targetName": translate.TARGETS[settings["target"]],
+        "targetName": translate.target_name(settings["target"]),
         "provider": settings["provider"],
         "providerName": book_translation.provider_label(settings, model_files.text_models()),
+        "offline": offline.is_on(),
         "methods": _methods(settings),
         "dailyLimit": 5000 if settings["provider"] == "mymemory" and not settings.get("email") else (50000 if settings["provider"] == "mymemory" else None),
     }
@@ -122,6 +123,9 @@ def queue_translation(book, body):
     if scope not in ("page", "book") or (scope == "page" and not isinstance(page, int)):
         return None, ({"error": "Choose a page or the whole book"}, 400)
     settings = translate.settings_for(translate_api._settings(), translate.code_for(book.language.name))  # pylint: disable=protected-access
+    engine = translate_api._local_engine()  # pylint: disable=protected-access
+    if body.get("provider") is None and settings["provider"] == "local" and offline.is_on() and engine is None and not any(model_files.is_installed(m) for m in model_files.text_models()):
+        return None, ({"error": translate.NO_LOCAL_MODEL, "code": "no_local_model"}, 409)
     chosen, problem = _method_for_this_run(settings, body)
     if problem:
         reply, status = problem
@@ -130,8 +134,8 @@ def queue_translation(book, body):
     source = translate.code_for(book.language.name)
     if source is None:
         return None, ({"error": f"Ocarina does not know the language code for {book.language.name} yet.", "code": "unsupported_language"}, 400)
-    if source == settings["target"]:
-        return None, ({"error": f"This book is already in {translate.TARGETS[source]}. Pick another language under Translation.", "code": "bad_input"}, 400)
+    if translate.same_language(source, settings["target"]):
+        return None, ({"error": f"This book is already in {translate.target_name(source)}. Pick another language under Translation.", "code": "bad_input"}, 400)
     if jobs.active(kind="translate", book_id=book.id):
         return None, ({"error": "This book is already being translated.", "code": "already_queued"}, 409)
     app = current_app._get_current_object()  # pylint: disable=protected-access

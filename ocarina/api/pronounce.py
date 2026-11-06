@@ -41,8 +41,9 @@ def system_voices():
     out = []
     for language in db.session.query(Language).order_by(Language.name).all():
         code = _code(language)
-        found = pronounce.mac_voices(code) if code else []
-        chosen = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}")) if code else None
+        locale = translate.locale_of(language.name)
+        found = pronounce.mac_voices(code, locale) if code else []
+        chosen = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"), locale) if code else None
         out.append({"languageId": language.id, "language": language.name, "code": code, "chosen": chosen, "voices": [{k: v[k] for k in ("name", "quality", "novelty")} for v in found]})
     return jsonify(out)
 
@@ -81,7 +82,7 @@ def say():
     saved = prefs.load(prefs.path_for(cfg.datapath))
     busy = any(jobs.active(kind=k) for k in VOICE_JOBS)
     try:
-        path, source, note = pronounce.say(cfg, current_app.config, text, code, body.get("source"), saved, busy)
+        path, source, note = pronounce.say(cfg, current_app.config, text, code, body.get("source"), saved, busy, translate.locale_of(language.name))
     except pronounce.Unavailable as e:
         return jsonify({"error": str(e)}), 503
     name = os.path.basename(path)

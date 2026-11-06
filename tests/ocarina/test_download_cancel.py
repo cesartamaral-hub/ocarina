@@ -104,10 +104,10 @@ def test_the_space_check_counts_the_margin():
     assert models.short_of_space(model, 1000 + models.SPACE_MARGIN, queued=500) == 500
 
 
-def test_only_the_translation_model_is_a_starter(client):
+def test_the_translation_models_that_can_be_the_starter(client):
     "The Mac voice reads books with nothing to download, so the voice model (Chatterbox) is an optional upgrade."
     listed = client.get("/ocarina/api/tts/models").json
-    assert {(m["kind"], m["id"]) for m in listed if m.get("starter")} == {("text", "qwen3-4b-instruct-mlx")}
+    assert {(m["kind"], m["id"]) for m in listed if m.get("starter")} == {("text", "qwen3-4b-instruct-mlx"), ("text", "translategemma-4b-mlx")}  # the front end picks the better one for your languages
     optional = {m["kind"] for m in listed if m.get("badge") == "Recommended" and not m.get("starter")}
     assert optional == {"speech", "aligner", "transcriber"}
     mac = next(m for m in listed if m["id"] == "mac-voice")

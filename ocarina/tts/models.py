@@ -68,6 +68,11 @@ def load_catalog():
     with open(CATALOG, encoding="utf-8") as f:
         shipped = json.load(f)["models"]
     ids = {m["id"] for m in shipped}
+    from ocarina import quality  # pylint: disable=import-outside-toplevel
+
+    for m in shipped:  # a translation model covers the languages Ocarina measured it grade A to D in
+        if m.get("kind") == "text" and quality.usable_codes(m["id"]):
+            m["languages"] = quality.usable_codes(m["id"])
     return shipped + [m for m in _load_user_models() if m.get("id") and m["id"] not in ids]
 
 

@@ -303,3 +303,53 @@ def test_comparing_skips_models_that_are_not_downloaded(app, client):
     with app.app_context():
         language_id = _get_test_language("Dutch").id
     assert client.post(f"{URL}/compare", json={"languageId": language_id, "text": "Hoe gaat het?"}).json["results"] == []
+
+
+def test_offline_with_no_local_model_the_answer_says_so(app, client, net, monkeypatch):
+    "Work offline forces the local model; with none installed the translation is refused with one clear notice."
+    monkeypatch.setattr("ocarina.offline.is_on", lambda: True)
+    r = client.post(URL, json={"languageId": _dutch(app), "text": "Waarom hebben we ze laten gaan?"})
+    assert r.status_code == 409 and r.json["code"] == "no_local_model"
+    assert r.json["error"] == translate.NO_LOCAL_MODEL and "Work offline" in r.json["error"]
+    assert not net["calls"]  # nothing was asked of the internet
+
+
+def test_a_whole_book_is_refused_at_once_offline_with_no_local_model(app, client, monkeypatch):
+    from tests.ocarina.helpers import make_dutch_book  # pylint: disable=import-outside-toplevel
+
+    monkeypatch.setattr("ocarina.offline.is_on", lambda: True)
+    with app.app_context():
+        book_id = make_dutch_book("Zonder model").id
+    r = client.post(f"/ocarina/api/books/{book_id}/translation", json={"scope": "book"})
+    assert r.status_code == 409 and r.json["code"] == "no_local_model" and r.json["error"] == translate.NO_LOCAL_MODEL
+
+
+def test_portuguese_is_european_or_brazilian(client):
+    names = {t["code"]: t["name"] for t in client.get(URL + "/settings").json["targets"]}
+    assert names["pt-PT"] == "European Portuguese" and names["pt-BR"] == "Brazilian Portuguese" and "pt" not in names
+    assert translate.DEEPL_TARGETS["pt-PT"] == "PT-PT" and translate.DEEPL_TARGETS["pt-BR"] == "PT-BR"
+    assert translate.normalise_target("pt") == "pt-BR" and translate.normalise_target("xx") is None
+    assert translate.target_name("pt") == "Portuguese" and translate.target_name("pt-PT") == "European Portuguese"
+    assert translate.same_language("pt", "pt-BR") and not translate.same_language("nl", "pt-BR")
+
+
+def test_a_saved_plain_portuguese_target_becomes_brazilian(app, client):
+    prefs.update(prefs.path_for(app.env_config.datapath), {"translate.target": "pt"})
+    assert client.get(URL + "/settings").json["target"] == "pt-BR"
+
+
+def test_deepl_is_asked_for_the_chosen_kind_of_portuguese(app, client, net):
+    client.put(URL + "/settings", json={"deeplKey": "abc:fx", "provider": "deepl", "target": "pt-PT"})
+    _ask(client, app)
+    assert net["calls"][-1][3]["target_lang"] == "PT-PT"
+
+
+def test_try_it_uses_your_sentence_or_a_sample(app, client, net):
+    _dutch(app)  # the library has Dutch
+    settings = client.get(URL + "/settings").json
+    assert any(s["name"] == "Dutch" and s["sample"] for s in settings["samples"])
+    mine = client.post(URL + "/test", json={"languageId": _dutch(app), "text": "Ik fiets naar mijn werk."}).json
+    assert mine["text"] == "Ik fiets naar mijn werk." and mine["targetName"] == "English" and "seconds" in mine
+    assert net["calls"][-1][1]["q"] == "Ik fiets naar mijn werk."
+    sample = client.post(URL + "/test", json={"languageId": _dutch(app)}).json
+    assert sample["text"] == translate.SAMPLES["nl"]
