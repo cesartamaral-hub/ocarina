@@ -11,6 +11,7 @@ and puts it back if it did not. Nothing here runs while Work offline is on.
 """
 
 import hashlib
+import logging
 import os
 import re
 import shutil
@@ -140,6 +141,7 @@ def _fetch(release, datapath):
     folder = os.path.join(paths.cache(datapath, "update"))
     os.makedirs(folder, exist_ok=True)
     dest = os.path.join(folder, f"Ocarina-{release['version']}.dmg")
+    logging.getLogger("ocarina.updater").info("Downloading %s", release["assetUrl"])
     sha = _expected_sha(release)
     digest = hashlib.sha256()
     with requests.get(release["assetUrl"], headers={"User-Agent": USER_AGENT}, stream=True, timeout=TIMEOUT) as r:
@@ -173,6 +175,7 @@ def start_download(release, datapath):
             with _lock:
                 _download.update(state="done", path=path)
         except (UpdateError, requests.exceptions.RequestException, OSError) as e:
+            logging.getLogger("ocarina.updater").warning("Download failed: %s", e, exc_info=True)
             with _lock:
                 _download.update(state="error", error=str(e) if isinstance(e, UpdateError) else "The download failed. Check the connection and try again.")
 
@@ -233,5 +236,6 @@ def install(datapath, quit_app):
     with open(script, "w", encoding="utf-8") as f:
         f.write(HELPER)
     os.chmod(script, 0o755)
+    logging.getLogger("ocarina.updater").info("Installing %s over %s", info["version"], target)
     subprocess.Popen(["/bin/bash", script, str(os.getpid()), staged, target], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # pylint: disable=consider-using-with
     quit_app()

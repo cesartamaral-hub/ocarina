@@ -33,3 +33,9 @@ A Python built on a new macOS only runs on that macOS (the pyenv Python of the f
 - On each start the app asks GitHub for the latest release (`ocarina/updater.py`, `/ocarina/api/update`; off with Settings → General → Updates, and never while Work offline is on). A newer release that has `Ocarina.dmg` and a checksum shows a banner: Update now, Remind me tomorrow, Skip this version.
 - Update now downloads the DMG inside the app (so macOS does not mark it as downloaded and no `xattr` step is needed), checks the SHA-256, unpacks the new app next to the installed one (`Ocarina.app.new`), checks its signature, and starts a helper that waits for the app to quit, swaps the two, opens the new one, and puts the old one back if the new one is not running 20 seconds later. The data folder is not touched.
 - It only works for an app in a folder the user can write to (Applications). Drafts and pre-releases are ignored.
+
+## Log file and bundle size
+
+- `ocarina/logs.py` writes `<data folder>/logs/ocarina.log` (kept as `.log.1` when over 2 MB at the next start). In the app bundle it also takes over the process's stdout and stderr, so what the model workers print is in it too. Failed jobs, the folder move and update steps are logged. Settings → About and licences has "Open the log folder".
+- Size: the app is about 690 MB (the DMG about 290 MB). The big parts are all needed: MLX and its Metal library (~170 MB), `transformers` (~120 MB; its architectures are not trimmed because models you add yourself may need any of them), the bundled WikDict packs (~90 MB), scipy, babel's locale data (courlan uses it). Removing setuptools and the Python test modules would save about 7 MB, which was not worth the risk.
+- `scripts/release.sh` asks for a one or two line note for the release page (or take it as the second argument).

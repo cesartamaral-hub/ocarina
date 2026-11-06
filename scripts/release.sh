@@ -16,7 +16,11 @@ CURRENT=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' ocarina/version.py)
 NOTES="${2:-}"
 if [ -z "$NOTES" ]; then
   LAST=$(git describe --tags --abbrev=0 2>/dev/null || true)
-  NOTES=$(git log -n 30 ${LAST:+$LAST..}HEAD --pretty='- %s')
+  echo "Changes since ${LAST:-the start}:"
+  git log -n 15 ${LAST:+$LAST..}HEAD --pretty='  - %s' | cut -c1-110
+  echo
+  read -r -p "What is new in $VERSION? One or two lines for the release page: " NOTES
+  [ -n "$NOTES" ] || { echo "Write a short note (or pass it as the second argument)." >&2; exit 1; }
 fi
 
 echo "Releasing $VERSION (now $CURRENT)"

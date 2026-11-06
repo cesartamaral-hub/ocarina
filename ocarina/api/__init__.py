@@ -13,6 +13,7 @@ from ocarina.api import (
     books,
     dictionaries,
     dictionary,
+    diagnostics,
     jobs,
     languages,
     offline_mode,
@@ -38,5 +39,5 @@ def register(app):
     models.configure(getattr(getattr(app, "env_config", None), "datapath", None))
     offline.configure(getattr(getattr(app, "env_config", None), "datapath", None))
     offline.install_guard()  # while Work offline is on, nothing of this process reaches another computer
-    for module in (audio, audio_versions, backups, book_import, book_translation, books, dictionaries, dictionary, jobs, languages, offline_mode, pages, pronounce, stats, storage, system, tags, term_list, terms, translate, tts_models, update, voices, web):
+    for module in (audio, audio_versions, backups, book_import, book_translation, books, dictionaries, dictionary, diagnostics, jobs, languages, offline_mode, pages, pronounce, stats, storage, system, tags, term_list, terms, translate, tts_models, update, voices, web):
         app.register_blueprint(module.bp)

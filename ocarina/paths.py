@@ -12,6 +12,7 @@ configure() is called when the app starts: it moves what older versions kept els
 models in the shared Hugging Face folder) and points Hugging Face at models/.
 """
 
+import logging
 import os
 import shutil
 import subprocess
@@ -71,6 +72,7 @@ def _bring_models(datapath, old):
     if os.path.exists(dst) or not old or not os.path.isdir(old):
         os.makedirs(dst, exist_ok=True)
         return
+    logging.getLogger("ocarina.paths").info("Copying the models from %s to %s", old, dst)
     part = dst + ".part"
     shutil.rmtree(part, ignore_errors=True)
     os.makedirs(part)

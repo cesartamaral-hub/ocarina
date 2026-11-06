@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getModels, getUpdate, type Model } from './api'
+import { getLogInfo, getModels, getUpdate, openLogFolder, type LogInfo, type Model } from './api'
+import { formatBytes } from './format'
 
 const LINKS: [string, string, string][] = [
   ['Lute v3', 'https://github.com/LuteOrg/lute-v3', 'MIT, Copyright (c) 2023 Jeff Zohrab: the reader, parser, terms and database this app is forked from.'],
@@ -15,9 +16,11 @@ const LINKS: [string, string, string][] = [
 export function About() {
   const [models, setModels] = useState<Model[]>([])
   const [version, setVersion] = useState('')
+  const [log, setLog] = useState<LogInfo | null>(null)
   useEffect(() => {
     getModels().then(setModels, () => undefined)
     getUpdate().then((s) => setVersion(s.current), () => undefined)
+    getLogInfo().then(setLog, () => undefined)
   }, [])
   return (
     <>
@@ -61,6 +64,18 @@ export function About() {
           ))}
         </ul>
         <p className="muted">Gemma is provided under and subject to the Gemma Terms of Use, ai.google.dev/gemma/terms.</p>
+      </section>
+      <section className="ap-card general-card">
+        <h2>If something goes wrong</h2>
+        <p className="muted">
+          Ocarina keeps a log of what it does and of its errors{log ? ` (${formatBytes(log.bytes)})` : ''}. Send it with a description of what happened. It holds file locations, versions and error messages,
+          not the texts you read; look it over first.
+        </p>
+        <p>
+          <button className="secondary" onClick={() => openLogFolder().catch(() => undefined)}>
+            Open the log folder
+          </button>
+        </p>
       </section>
       <p className="muted">The full text of these credits is in NOTICE.md, next to LICENSE.txt, inside the app and in the project.</p>
     </>

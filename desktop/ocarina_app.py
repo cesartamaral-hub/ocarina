@@ -13,6 +13,7 @@ import webview
 from waitress import create_server
 
 from lute.app_factory import create_app
+from ocarina import logs
 from ocarina.startup import prepare_library
 from ocarina.tts.supervisor import path_with_tools
 
@@ -62,7 +63,9 @@ class Bridge:
 
 
 def main():
-    app = create_app(_write_config(), output_func=lambda s: None)
+    config = _write_config()
+    logs.setup(APP_DIR)  # before anything else, so a start that fails leaves a trace
+    app = create_app(config, output_func=lambda s: None)
     prepare_library(app)
 
     port = _free_port()

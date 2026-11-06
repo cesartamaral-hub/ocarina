@@ -10,6 +10,7 @@ States: queued, running, done, error, cancelled. A job's function is called as r
 and calls check() now and then; check() raises Cancelled once the user cancelled the job.
 """
 
+import logging
 import threading
 import uuid
 
@@ -70,6 +71,7 @@ def _dispatch():
             outcome = ("cancelled", None)
         except Exception as e:  # pylint: disable=broad-exception-caught
             technical = f"{type(e).__name__}: {e}"
+            logging.getLogger("ocarina.jobs").error("%s job failed: %s", job.get("kind"), technical, exc_info=True)
             friendly = explain(technical)
             outcome = ("error", friendly or technical, technical if friendly else None)
         with _cond:
