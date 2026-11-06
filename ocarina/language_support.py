@@ -14,7 +14,7 @@ from ocarina.tts import models as model_files
 
 
 def _models_state(kind_models, code):
-    covering = [m for m in kind_models if code in m.get("languages", [])]
+    covering = [m for m in kind_models if code in m.get("languages", []) and not model_files.is_builtin(m)]  # the Mac voice has its own column
     if not covering:
         return "none"
     return "ready" if any(model_files.is_installed(m) for m in covering) else "download"

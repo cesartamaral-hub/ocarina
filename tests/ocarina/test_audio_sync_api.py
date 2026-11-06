@@ -89,5 +89,5 @@ def test_syncing_needs_the_downloaded_model(app, client, monkeypatch):
     with app.app_context():
         book_id = make_dutch_book("Sync no model").id
     _, version_id = _upload(client, book_id)
-    r = client.post(f"{BOOKS}/{book_id}/audio/versions/{version_id}/sync")
+    r = client.post(f"{BOOKS}/{book_id}/audio/versions/{version_id}/sync", json={"method": "aligner"})
     assert r.status_code == 409 and r.json["code"] == "model_not_installed" and r.json["model"] == "qwen3-forced-aligner-mlx"

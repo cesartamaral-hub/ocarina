@@ -33,7 +33,7 @@ def readiness(datapath):
         if code is None:
             continue
         packs = registry.active(datapath, code)
-        speaking = [m for m in voices if code in m.get("languages", [])]
+        speaking = [m for m in voices if model_files.covers(m, code)]
         languages.append(
             {
                 "code": code,

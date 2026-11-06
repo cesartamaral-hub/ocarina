@@ -19,6 +19,13 @@ OWN, GENERATED = "own", "generated"
 MAX_LABEL = 100
 
 
+def _method(info):
+    "How the timings were made: aligner (a model, precise), pauses, estimate or subtitles; None when there are none."
+    if not info or not info.get("aligned"):
+        return None
+    return info.get("method") or "aligner"
+
+
 def _json(row, selected_filename, audio_dir):
     "A version as the API shows it."
     exists = os.path.exists(os.path.join(audio_dir, row.BaFilename))
@@ -35,6 +42,8 @@ def _json(row, selected_filename, audio_dir):
         "selected": row.BaFilename == selected_filename,
         "hasTimings": has_timings(audio_dir, row.BaFilename),
         "synced": bool((timings_info(audio_dir, row.BaFilename) or {}).get("aligned")),
+        "syncMethod": _method(timings_info(audio_dir, row.BaFilename)),
+        "approximate": bool((timings_info(audio_dir, row.BaFilename) or {}).get("approximate")),
         "missing": not exists,
     }
 

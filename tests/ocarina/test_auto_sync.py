@@ -28,14 +28,14 @@ def test_a_recording_added_later_is_synced_at_once(app, client):
     assert client.get(f"{BOOKS}/{book_id}/sentences").json["hasTimings"]
 
 
-def test_without_the_sync_model_the_recording_is_kept_and_you_are_told(app, client, monkeypatch):
+def test_without_the_sync_model_the_pauses_are_used(app, client, monkeypatch):
+    "No aligner downloaded: the recording is synced by its pauses instead (the job here fails on the fake audio, which is fine)."
     monkeypatch.setattr("ocarina.tts.models.is_installed", lambda model: False)
     with app.app_context():
         book_id = make_dutch_book("Zonder model").id
     r = _upload(client, book_id)
     assert r.status_code == 201
-    assert r.json["sync"]["state"] == "model_missing" and "not downloaded" in r.json["sync"]["error"]
-    assert not client.get(f"{BOOKS}/{book_id}/sentences").json["hasTimings"]
+    assert r.json["sync"]["state"] == "started" and r.json["sync"]["job"]["method"] == "pauses"
 
 
 def _save(client, **fields):

@@ -29,6 +29,9 @@ from ocarina.tts.book_audio import (
 from ocarina.tts.cache import SentenceCache
 from ocarina.tts import voices
 from ocarina.tts.supervisor import Supervisor
+from ocarina.tts.system_voice import SystemSupervisor
+from ocarina import pronounce
+from ocarina.tts import system_voice
 
 bp = Blueprint("ocarina_audio", __name__, url_prefix="/ocarina/api")
 
@@ -46,7 +49,10 @@ def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None, voice
     """
     cfg = app.env_config
     engine = app.config.get("OCARINA_TTS_ENGINE", model["engine"])
-    supervisor = Supervisor(engine, repo=model["repositories"][0]["id"])
+    if model_files.is_builtin(model) and "OCARINA_TTS_ENGINE" not in app.config:
+        supervisor = SystemSupervisor()  # the Mac voice: no worker, nothing to load
+    else:
+        supervisor = Supervisor(engine, repo=model["repositories"][0]["id"] if model["repositories"] else None)
     cache = SentenceCache(paths.cache(cfg.datapath, "tts"))
 
     def progress(done, total):
@@ -65,7 +71,7 @@ def _run_job(app, job, check, book_id, model, voice, pause, ref_text=None, voice
             )
             same = audio_versions.find_same_generated(book, model["id"], voice_id, pause)
             existing = [v["label"] for v in audio_versions.list_versions(book, cfg.useraudiopath)]
-            voice_name = next((v["name"] for v in voices.list_voices(cfg.datapath) if v["id"] == voice_id), voice_id)
+            voice_name = voice_id[4:] if str(voice_id).startswith("mac:") else next((v["name"] for v in voices.list_voices(cfg.datapath) if v["id"] == voice_id), voice_id)
             label = f"{model['name']} · {voice_name}"
             if any(e == label or e.startswith(label + " · pause") for e in existing if not same or e != label):
                 label += f" · pause {pause:.1f} s"
@@ -106,9 +112,14 @@ def start_audio(book_id):
         return _unsupported(book), 400
     preferred = saved.get(f"model.{code}")
     failing = model_check.failing_ids(cfg.datapath)
-    model = model_files.choose_model(body.get("model"), preferred, failing)
+    model = model_files.choose_model(body.get("model"), preferred, failing, code, neural_only=not _uses_real_engine(current_app))  # the tests fake the neural engine
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
+    mac_name = None
+    if model_files.is_builtin(model):
+        mac_name = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"))
+        if mac_name is None:
+            return jsonify({"error": pronounce.NO_MAC_VOICE, "code": "no_mac_voice"}), 409
     if model["id"] in failing:
         problem = (model_check.result_for(cfg.datapath, model) or {}).get("error", "it failed its test")
         return jsonify({"error": f"{model['name']} does not work here: {problem} Test it again in Settings.", "code": "model_failed"}), 409
@@ -125,20 +136,26 @@ def start_audio(book_id):
             ),
             409,
         )
-    voice_id = body.get("voice") or saved.get(f"voice.{code}") or voices.default_voice_id(code)
-    voice = voices.path_of(cfg.datapath, voice_id)
-    if voice is None:
-        if body.get("voice"):
-            return jsonify({"error": "Voice not found"}), 400
-        voice_id = voices.default_voice_id(code)  # the chosen voice was deleted: use the default
+    if mac_name:
+        voice_id = f"mac:{mac_name}"
+        voice = system_voice.marker(paths.cache(cfg.datapath, "tts"), mac_name)
+    else:
+        voice_id = body.get("voice") or saved.get(f"voice.{code}") or voices.default_voice_id(code)
+        if str(voice_id).startswith("mac:"):
+            return jsonify({"error": "A Mac voice goes with the Mac voice model only", "code": "bad_voice"}), 400
         voice = voices.path_of(cfg.datapath, voice_id)
+        if voice is None:
+            if body.get("voice"):
+                return jsonify({"error": "Voice not found"}), 400
+            voice_id = voices.default_voice_id(code)  # the chosen voice was deleted: use the default
+            voice = voices.path_of(cfg.datapath, voice_id)
     if jobs.active(kind="audio", book_id=book_id) or jobs.active(kind="sync", book_id=book_id):
         return (
             jsonify({"error": "Audio for this book is already queued or running", "code": "already_queued"}),
             409,
         )
     pause = float(body.get("pause", 0.5))
-    ref_text = voices.transcript_of(cfg.datapath, voice_id)
+    ref_text = None if mac_name else voices.transcript_of(cfg.datapath, voice_id)
     job = jobs.submit(
         "audio",
         lambda job, check: _run_job(app, job, check, book_id, model, voice, pause, ref_text, voice_id),
@@ -186,8 +203,9 @@ def audio_options(book_id):
     datapath = current_app.env_config.datapath
     saved = prefs.load(prefs.path_for(datapath))
     failing = model_check.failing_ids(datapath)
-    default_model = model_files.choose_model(None, saved.get(f"model.{code}"), failing)
+    default_model = model_files.choose_model(None, saved.get(f"model.{code}"), failing, code, neural_only=not _uses_real_engine(current_app))
     voice_list = voices.list_voices(datapath)
+    mac = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"))
     voice_id = saved.get(f"voice.{code}") or voices.default_voice_id(code)
     default_voice = next((v for v in voice_list if v["id"] == voices.LEGACY_IDS.get(voice_id, voice_id)), voice_list[0])
     return jsonify(
@@ -204,9 +222,10 @@ def audio_options(book_id):
                     "problem": (model_check.result_for(datapath, m) or {}).get("error") if m["id"] in failing else None,
                 }
                 for m in model_files.speech_models()
-                if code in m.get("languages", [])
+                if model_files.covers(m, code)
             ],
-            "voices": [{"id": v["id"], "name": v["name"], "builtin": v["builtin"]} for v in voice_list],
+            "voices": [{"id": v["id"], "name": v["name"], "builtin": v["builtin"]} for v in voice_list]
+            + ([{"id": f"mac:{mac}", "name": mac.split(" (")[0], "builtin": True, "model": "mac-voice"}] if mac else []),
         }
     )
 

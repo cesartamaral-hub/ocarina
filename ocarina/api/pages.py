@@ -12,6 +12,7 @@ from lute.db import db
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
 from lute.read.service import Service as ReadService
+from ocarina import status_log
 from ocarina.api.common import ZWS
 
 bp = Blueprint("ocarina_pages", __name__, url_prefix="/ocarina/api")
@@ -78,7 +79,11 @@ def finish_page(book_id, page):
     book = BookRepository(db.session).find(book_id)
     if book is None or not 1 <= page <= book.page_count:
         return jsonify({"error": "No such page"}), 404
-    ReadService(db.session).mark_page_read(book_id, page, bool(body.get("restAsKnown")))
+    if body.get("restAsKnown"):
+        with status_log.skipping(db.session):  # words marked known here were not learned: they do not count as progress
+            ReadService(db.session).mark_page_read(book_id, page, True)
+    else:
+        ReadService(db.session).mark_page_read(book_id, page, False)
     return jsonify({"ok": True})
 
 

@@ -104,14 +104,15 @@ def test_the_space_check_counts_the_margin():
     assert models.short_of_space(model, 1000 + models.SPACE_MARGIN, queued=500) == 500
 
 
-def test_only_the_voice_and_translation_models_are_starters(client):
+def test_only_the_translation_model_is_a_starter(client):
+    "The Mac voice reads books with nothing to download, so the voice model (Chatterbox) is an optional upgrade."
     listed = client.get("/ocarina/api/tts/models").json
-    assert {(m["kind"], m["id"]) for m in listed if m.get("starter")} == {
-        ("speech", "chatterbox-multilingual-v3-mlx"),
-        ("text", "qwen3-4b-instruct-mlx"),
-    }
+    assert {(m["kind"], m["id"]) for m in listed if m.get("starter")} == {("text", "qwen3-4b-instruct-mlx")}
     optional = {m["kind"] for m in listed if m.get("badge") == "Recommended" and not m.get("starter")}
-    assert optional == {"aligner", "transcriber"}
+    assert optional == {"speech", "aligner", "transcriber"}
+    mac = next(m for m in listed if m["id"] == "mac-voice")
+    assert mac["installed"] and mac["builtin"] and mac["sizeBytes"] == 0 and mac.get("badge") == "Built in"
+
 
 
 def test_a_failed_download_is_reported_until_the_next_try(client, monkeypatch):
@@ -134,3 +135,19 @@ def test_a_failed_download_is_reported_until_the_next_try(client, monkeypatch):
     assert listed[model["id"]]["downloadError"]
     others = [m for i, m in listed.items() if i != model["id"]]
     assert all(m["downloadError"] is None for m in others)
+
+
+def test_the_connection_check_says_why_downloads_are_not_possible(client, monkeypatch):
+    import requests  # pylint: disable=import-outside-toplevel
+
+    monkeypatch.setattr("ocarina.api.tts_models.offline.is_on", lambda: True)
+    assert client.get("/ocarina/api/tts/models/connection").json == {"online": False, "reason": "offline_mode"}
+    monkeypatch.setattr("ocarina.api.tts_models.offline.is_on", lambda: False)
+
+    def down(*_a, **_k):
+        raise requests.exceptions.ConnectionError("no route")
+
+    monkeypatch.setattr("ocarina.api.tts_models.requests.head", down)
+    assert client.get("/ocarina/api/tts/models/connection").json == {"online": False, "reason": "no_connection"}
+    monkeypatch.setattr("ocarina.api.tts_models.requests.head", lambda *a, **k: object())
+    assert client.get("/ocarina/api/tts/models/connection").json == {"online": True}

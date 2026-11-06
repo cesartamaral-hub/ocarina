@@ -91,27 +91,44 @@ def transcriber_model():
     return next((m for m in load_catalog() if kind_of(m) == "transcriber"), None)
 
 
+def is_builtin(model):
+    "The Mac voice: part of macOS, so nothing to download, and its languages are the ones the Mac has a voice for."
+    return model.get("engine") == "system"
+
+
+def covers(model, code):
+    "Whether the model can speak the language (a two-letter code); the Mac voice, when this Mac has a voice for it."
+    if is_builtin(model):
+        from ocarina import pronounce  # pylint: disable=import-outside-toplevel
+
+        return bool(pronounce.mac_voices(code))
+    return code in model.get("languages", [])
+
+
 def speech_models():
     "The models that can voice a book."
     return [m for m in load_catalog() if kind_of(m) == "speech"]
 
 
-def choose_model(requested_id=None, preferred_id=None, failing=()):
+def choose_model(requested_id=None, preferred_id=None, failing=(), code=None, neural_only=False):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """
-    The model to voice a book with: the one asked for, else the user's choice
-    for the book's language, else the first installed one, else the first in the catalog.
-    Only speech models count; None if the one asked for is unknown or not a speech model. Models in failing
-    (their last check failed) are not chosen by themselves.
+    The model to voice a book with: the one asked for, else the user's choice for the language, else the first downloaded
+    model that speaks it, else the Mac voice (which needs nothing). With `code` only models that cover the language are
+    considered. `neural_only` leaves the Mac voice out (voice previews of a clip need a model that takes one). None if the one
+    asked for is unknown or not a speech model; models in `failing` (their last check failed) are not chosen by themselves.
     """
     if requested_id:
         asked = find_model(requested_id)
         return asked if asked and kind_of(asked) == "speech" else None  # the caller reports it
-    preferred = find_model(preferred_id) if preferred_id else None
-    if preferred and kind_of(preferred) == "speech" and preferred["id"] not in failing:
-        return preferred
-    catalog = speech_models()
+    catalog = [m for m in speech_models() if not (neural_only and is_builtin(m))]
     working = [m for m in catalog if m["id"] not in failing]
-    return next((m for m in working if is_installed(m)), (working or catalog)[0])
+    fits = [m for m in working if covers(m, code)] if code else working
+    preferred = find_model(preferred_id) if preferred_id else None
+    if preferred and kind_of(preferred) == "speech" and preferred["id"] not in failing and preferred in catalog and (not code or covers(preferred, code)):
+        return preferred
+    neural = [m for m in fits if not is_builtin(m) and is_installed(m)]
+    builtin = [m for m in fits if is_builtin(m)]
+    return next(iter(neural or builtin or fits or working or catalog))
 
 
 SPACE_MARGIN = 2 * 1024**3  # kept free on top of a download, for the library, caches and the system
@@ -149,8 +166,8 @@ def _repo_installed(repo):
 
 
 def is_installed(model):
-    "True if every file of the model is present with the expected size."
-    return all(_repo_installed(r) for r in model["repositories"])
+    "True if every file of the model is present with the expected size (the Mac voice is always there)."
+    return is_builtin(model) or all(_repo_installed(r) for r in model["repositories"])
 
 
 def _progress_class(state, on_progress):

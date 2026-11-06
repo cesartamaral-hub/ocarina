@@ -107,7 +107,7 @@ def preview():
     text = (body.get("text") or "").strip() or voices.SAMPLE_TEXT[language]
     if len(text) > MAX_PREVIEW_TEXT:
         return jsonify({"error": f"The sample is at most {MAX_PREVIEW_TEXT} characters"}), 400
-    model = model_files.choose_model(body.get("model"), saved.get(f"model.{language}"))
+    model = model_files.choose_model(body.get("model"), saved.get(f"model.{language}"), (), language, neural_only=True)
     if model is None:
         return jsonify({"error": "Unknown model"}), 400
     # pylint: disable=protected-access

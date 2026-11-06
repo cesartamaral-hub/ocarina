@@ -4,7 +4,7 @@
     {
       "id": "chatterbox-multilingual-v3-mlx",
       "name": "Chatterbox Multilingual v3 (MLX)",
-      "description": "Default. Faster than real time on Apple Silicon; clones the reference voice.",
+      "description": "A more natural voice for your books, and the voice of your own clip. A large download; the Mac voice reads books without it.",
       "engine": "mlx-chatterbox",
       "repositories": [
         {
@@ -47,7 +47,6 @@
         "fr": "B+"
       },
       "speed": 3,
-      "starter": true,
       "badge": "Recommended"
     },
     {
@@ -349,6 +348,18 @@
       },
       "speed": 3,
       "badge": "Recommended"
+    },
+    {
+      "id": "mac-voice",
+      "name": "Mac voice (built in)",
+      "description": "The voice built into macOS: nothing to download, works offline, reads books in any language your Mac has a voice for. Add Premium or Enhanced voices in System Settings for a more natural sound.",
+      "engine": "system",
+      "kind": "speech",
+      "builtin": true,
+      "repositories": [],
+      "license": "macOS",
+      "languages": [],
+      "badge": "Built in"
     }
   ]
 }

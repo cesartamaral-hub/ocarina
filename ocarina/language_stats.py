@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import text as sql
 
 from lute.stats.service import get_chart_data, get_reading_streak, get_table_data
-from ocarina import book_index
+from ocarina import book_index, status_log
 
 KNOWN, LEARNING, IGNORED = (4, 5, 99), (1, 2, 3), 98
 
@@ -120,10 +120,11 @@ def _coverage(books):
     }
 
 
-def summary(session, audio_dir):
+def summary(session, audio_dir, prior=()):
     "Everything the Reading page shows: a summary and one entry per language that has books or reading."
     terms, growth, reading = _terms(session), _growth(session), _streaks_and_dates(session)
     books = _books(session, audio_dir)
+    learned, learned_series = status_log.learned_counts(session, prior), status_log.learned_growth(session, prior)
     counts = {row["name"]: row["counts"] for row in get_table_data(session)}
     charts = get_chart_data(session)
     languages = []
@@ -149,6 +150,8 @@ def summary(session, audio_dir):
                 "firstRead": first,
                 "lastRead": last,
                 "growth": growth.get(language_id, []),
+                "learned": learned.get(language_id, 0),
+                "learnedGrowth": learned_series.get(language_id, []),
                 "chart": charts.get(name, []),
             }
         )

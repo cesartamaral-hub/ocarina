@@ -40,7 +40,7 @@ def test_the_route_lists_the_library_or_the_names_asked(client, app):
     assert [r["language"] for r in rows] == ["Italian", "Dutch"]
 
 
-def test_a_book_in_a_language_no_voice_model_covers_cannot_be_voiced(app, client):
+def _italian_book(app):
     from lute.db import db  # pylint: disable=import-outside-toplevel
     from tests.ocarina.helpers import make_dutch_book  # pylint: disable=import-outside-toplevel
 
@@ -48,12 +48,27 @@ def test_a_book_in_a_language_no_voice_model_covers_cannot_be_voiced(app, client
         book = make_dutch_book()
         book.language.name = "Italian"
         db.session.commit()
-        book_id = book.id
+        return book.id
+
+
+def test_a_book_in_a_language_no_voice_covers_cannot_be_voiced(app, client, monkeypatch):
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [])  # this Mac has no Italian voice either
+    book_id = _italian_book(app)
     options = client.get(f"/ocarina/api/books/{book_id}/audio/options")
     assert options.status_code == 400 and options.json["code"] == "unsupported_language"
     assert "Italian" in options.json["error"] and "Mac voice" in options.json["error"]
     started = client.post(f"/ocarina/api/books/{book_id}/audio", json={})
     assert started.status_code == 400 and started.json["code"] == "unsupported_language"  # not voiced with another language's model
+
+
+def test_a_book_is_read_by_the_mac_voice_when_no_model_covers_the_language(app, client, monkeypatch):
+    monkeypatch.setattr(pronounce, "mac_voices", lambda code: [{"name": "Alice (Italian (Italy))", "novelty": False}])
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None: "Alice (Italian (Italy))")
+    book_id = _italian_book(app)
+    options = client.get(f"/ocarina/api/books/{book_id}/audio/options").json
+    assert options["defaultModel"] == "mac-voice"
+    assert [m["id"] for m in options["models"]] == ["mac-voice"]
+    assert {"id": "mac:Alice (Italian (Italy))", "name": "Alice", "builtin": True, "model": "mac-voice"} in options["voices"]
 
 
 def test_a_language_a_model_lists_can_be_voiced(monkeypatch):
@@ -65,3 +80,22 @@ def test_a_language_a_model_lists_can_be_voiced(monkeypatch):
     assert not book_audio.tts_lang.__defaults__  # the function takes just the language
     monkeypatch.setattr(models, "speech_models", lambda: [{"languages": ["nl", "it"]}])
     assert book_audio.tts_lang(Lang()) == "it"
+
+
+def test_command_output_is_read_as_utf8_whatever_the_process_locale(monkeypatch):
+    "The packaged app starts Python in ASCII mode: voice names like Amélie must not break reading `say -v ?`."
+    seen = {}
+
+    class Done:
+        stdout = "Amélie    fr_CA    # Bonjour!\n"
+
+    def run(cmd, **kwargs):
+        seen.update(kwargs)
+        return Done()
+
+    monkeypatch.setattr(pronounce.tools, "find", lambda name: "/usr/bin/say")
+    monkeypatch.setattr(pronounce.subprocess, "run", run)
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access
+    assert [v["name"] for v in pronounce.mac_voices("fr")] == ["Amélie"]
+    assert seen["encoding"] == "utf-8" and seen["errors"] == "replace"
+    monkeypatch.setitem(pronounce._voice_cache, "at", 0.0)  # pylint: disable=protected-access

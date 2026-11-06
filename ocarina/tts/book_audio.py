@@ -137,6 +137,6 @@ def tts_lang(language):
         "nederlands": "nl",
     }
     code = names.get(language.name.strip().lower()) or translate.code_for(language.name)
-    if code is None or not any(code in m.get("languages", []) for m in models.speech_models()):
+    if code is None or not any(models.covers(m, code) for m in models.speech_models()):
         raise ValueError(f"No TTS language code for '{language.name}'.")
     return code

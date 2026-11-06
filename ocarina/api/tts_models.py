@@ -2,6 +2,7 @@
 JSON API for the voice models.
 
     GET    /ocarina/api/tts/models                catalog with install status
+    GET    /ocarina/api/tts/models/connection     whether models can be downloaded now (online, or why not)
     GET    /ocarina/api/tts/models/space          free disk space, the margin kept free, and the bytes of downloads still to come
     POST   /ocarina/api/tts/models/<id>/download  download a model (a job)
     POST   /ocarina/api/tts/models/<id>/import    copy a model's files from a folder (a job)
@@ -13,6 +14,7 @@ JSON API for the voice models.
     POST   /ocarina/api/tts/models/<id>/check     try an installed model once (a job); the result is in the model list
 """
 
+import requests
 from flask import Blueprint, current_app, jsonify, request
 
 from ocarina import model_check, offline
@@ -76,6 +78,18 @@ def _download_error(model_id, installed):
     "Why the last download of this model failed, while it is still not installed; None otherwise."
     last = None if installed else jobs.last_finished(kind="download", model_id=model_id)
     return last.get("error") if last and last["state"] == "error" else None
+
+
+@bp.route("/tts/models/connection", methods=["GET"])
+def connection():
+    "Whether models can be downloaded now: Work offline is off and the model host answers (any answer counts)."
+    if offline.is_on():
+        return jsonify({"online": False, "reason": "offline_mode"})
+    try:
+        requests.head("https://huggingface.co", timeout=3, allow_redirects=True)
+    except requests.exceptions.RequestException:
+        return jsonify({"online": False, "reason": "no_connection"})
+    return jsonify({"online": True})
 
 
 def _queued_bytes():
@@ -203,6 +217,8 @@ def check_model(model_id):
     model = model_files.find_model(model_id)
     if model is None:
         return jsonify({"error": "Unknown model"}), 404
+    if model_files.is_builtin(model):
+        return jsonify({"error": "The Mac voice is part of macOS and needs no test"}), 400
     engine = current_app.config.get("OCARINA_TTS_ENGINE")
     if engine is None and not model_files.is_installed(model):
         return jsonify({"error": "Download the model first"}), 409
@@ -224,6 +240,8 @@ def delete_model(model_id):
     model = model_files.find_model(model_id)
     if model is None:
         return jsonify({"error": "Unknown model"}), 404
+    if model_files.is_builtin(model):
+        return jsonify({"error": "The Mac voice is part of macOS and cannot be deleted"}), 400
     if jobs.active():
         return jsonify({"error": "Wait for the running jobs to finish, or cancel them"}), 409
     model_files.delete(model)

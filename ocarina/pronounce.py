@@ -123,7 +123,7 @@ warm_voice = _WarmVoice()
 
 def _voice_model(code, saved, fake=None):
     "The installed speech model that covers the language (the user's choice first); Unavailable says why when there is none."
-    covering = [m for m in model_files.speech_models() if code in m.get("languages", [])]
+    covering = [m for m in model_files.speech_models() if code in m.get("languages", []) and not model_files.is_builtin(m)]
     if not covering:
         raise Unavailable("The AI voice models do not cover this language yet.")
     preferred = next((m for m in covering if m["id"] == saved.get(f"model.{code}")), None)
@@ -269,7 +269,7 @@ def _installed_voices():
     if not say:
         return []
     try:
-        listing = subprocess.run([say, "-v", "?"], capture_output=True, text=True, timeout=10, check=True).stdout
+        listing = subprocess.run([say, "-v", "?"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10, check=True).stdout  # the app starts Python in ASCII mode
     except (OSError, subprocess.SubprocessError):
         return []
     voices_found = []
