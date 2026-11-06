@@ -52,6 +52,10 @@ export type Model = {
 
 export const getModels = () => fetch(`${API}/tts/models`).then((r) => json<Model[]>(r))
 
+export type DiskSpace = { freeBytes: number; marginBytes: number; queuedBytes: number }
+
+export const getDiskSpace = () => fetch(`${API}/tts/models/space`).then((r) => json<DiskSpace>(r))
+
 export const downloadModel = (id: string) =>
   fetch(`${API}/tts/models/${id}/download`, { method: 'POST' }).then((r) => json<Job>(r))
 

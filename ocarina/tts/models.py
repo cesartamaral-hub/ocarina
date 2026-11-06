@@ -114,6 +114,19 @@ def choose_model(requested_id=None, preferred_id=None, failing=()):
     return next((m for m in working if is_installed(m)), (working or catalog)[0])
 
 
+SPACE_MARGIN = 2 * 1024**3  # kept free on top of a download, for the library, caches and the system
+
+
+def free_bytes(path):
+    "Free space on the disk that holds path (the data folder), in bytes."
+    return shutil.disk_usage(path).free
+
+
+def short_of_space(model, free, queued=0):
+    "How many bytes are missing to download the model (with the margin, after those already queued); 0 when it fits."
+    return max(0, total_bytes(model) + queued + SPACE_MARGIN - free)
+
+
 def total_bytes(model):
     "Download size of all files of a model."
     return sum(sum(r["files"].values()) for r in model["repositories"])

@@ -132,3 +132,15 @@ Order: quick ones first (1 to 5), then the focus mode (6), the selected-text red
 
 ## Vocabulary page (2026-11-05, done except the packaged-app check)
 The Terms page became Vocabulary: statuses 1-5 and well known, chips with counts, sentence each word was saved from (kept from now on; found in the books for older words), word panel on the right, arrow keys and S/Enter. See architecture.md.
+
+## Round 6: first run (2026-11-06, planned, not started)
+Order: 1, then 2 and 3 together, then 4 with 5, then 6, then 7, then 8. One commit each.
+
+1. **Disk space (done, not yet committed; Welcome not checked in the browser).** The backend reports free space on the data folder; Welcome shows it next to the download size, warns and disables the button when the chosen models plus about 2 GB do not fit. `POST /tts/models/<id>/download` checks too, so Settings → Models is covered.
+2. **Models say what they are for.** Every catalog entry gets a plain "what it's for" line and a Recommended or Optional tag: Chatterbox (read books aloud), Qwen3 4B (translate sentences offline), forced aligner (make your own recordings follow the text), Whisper (turn YouTube videos without captions into text). Same text in Welcome and Settings → Models, with size and languages covered.
+3. **Welcome groups the models.** "Recommended to start" (voice, translation) ticked; "Only if you need it" (aligner, Whisper) unticked. Installed models stay visible as installed. Wording says reading works at once and audio, translation and sync turn on as each model finishes; per-model state shown in Welcome.
+4. **Failed downloads.** A plain-words notice with Retry (check that Hugging Face resumes partial files). Not hidden once Welcome closes.
+5. **"Finish setting up" card** on the empty Books screen while a recommended model is missing; brings the models step back after skipping it.
+6. **Offline at first run.** Test the connection when the models step opens and say so up front; link "import from a folder".
+7. **Language selection.** Short list of the most studied languages as compact chips (English, Spanish, French, German, Italian, Japanese, Korean, Chinese, Portuguese, Russian, plus Dutch and Polish), "More languages…" opens a search over the rest of Lute's 65 (check the exact names). Chosen languages are pills at the top with an ×, and an "Add languages" button next to them; picking moves a language up. Keyboard: Enter picks the first match, Backspace removes the last pill. Sample-stories checkbox stays.
+8. **Verify** on a clean account: no `~/.cache/huggingface`, no Homebrew, Wi-Fi off midway, nearly full disk. Backend tests for the free-space reply and the failed-download state.

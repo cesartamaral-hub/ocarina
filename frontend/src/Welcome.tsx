@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { addPredefinedLanguages, downloadModel, getLanguageTemplate, getModels, type Model } from './api'
+import { addPredefinedLanguages, downloadModel, getDiskSpace, getLanguageTemplate, getModels, type DiskSpace, type Model } from './api'
 import { formatBytes } from './format'
 import { useOffline } from './offline'
 
@@ -13,12 +13,14 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   const [models, setModels] = useState<Model[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [space, setSpace] = useState<DiskSpace | null>(null)
   const [picked, setPicked] = useState<string[] | null>(null) // the starter models ticked (all of them until you change it)
   const offline = useOffline()
 
   useEffect(() => {
     getLanguageTemplate().then((t) => setAvailable(t.predefined), (e) => setError(e.message))
     getModels().then(setModels, () => undefined)
+    getDiskSpace().then(setSpace, () => undefined)
   }, [])
 
   const toggle = (name: string) => setChosen((cur) => (cur.includes(name) ? cur.filter((n) => n !== name) : [...cur, name]))
@@ -40,6 +42,8 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
   const starters = models.filter((m) => m.badge === 'Recommended' && !m.installed)
   const ticked = picked ?? starters.map((m) => m.id)
   const total = starters.filter((m) => ticked.includes(m.id)).reduce((n, m) => n + m.sizeBytes, 0)
+
+  const missing = space ? Math.max(0, total + space.queuedBytes + space.marginBytes - space.freeBytes) : 0 // bytes short, with the margin the app keeps free
 
   async function getModelsNow() {
     setError('')
@@ -80,11 +84,17 @@ export function Welcome({ onFinish }: { onFinish: () => void }) {
             ))}
           </ul>
         )}
+        {space && <p className="muted">{formatBytes(space.freeBytes)} free on this Mac.</p>}
+        {missing > 0 && (
+          <p className="error">
+            Not enough free space: about {formatBytes(missing)} more is needed (Ocarina keeps {formatBytes(space!.marginBytes)} free). Untick a model or free some space.
+          </p>
+        )}
         {offline && <p className="muted">Work offline is on, so nothing can be downloaded now (Settings → General).</p>}
         {error && <p className="error">{error}</p>}
         <p>
           {starters.length > 0 && (
-            <button disabled={busy || offline || ticked.length === 0} onClick={getModelsNow}>
+            <button disabled={busy || offline || ticked.length === 0 || missing > 0} onClick={getModelsNow}>
               {ticked.length === 0 ? 'Choose a model' : `Download ${formatBytes(total)} and start reading`}
             </button>
           )}{' '}

@@ -84,3 +84,21 @@ def test_a_process_that_dies_is_reported(monkeypatch, tmp_path):
     run_script(monkeypatch, tmp_path, DIES)
     with pytest.raises(RuntimeError, match="stopped unexpectedly"):
         models.download({"repositories": []}, None, lambda: None)
+
+
+def test_a_download_that_does_not_fit_is_refused(client, monkeypatch):
+    model = models.load_catalog()[0]
+    monkeypatch.setattr(models, "is_installed", lambda m: False)
+    monkeypatch.setattr(models, "free_bytes", lambda path: models.total_bytes(model) + models.SPACE_MARGIN - 1000)
+    reply = client.post(f"/ocarina/api/tts/models/{model['id']}/download")
+    assert reply.status_code == 409
+    assert reply.json["code"] == "no_space" and reply.json["missingBytes"] == 1000
+    space = client.get("/ocarina/api/tts/models/space").json
+    assert space["marginBytes"] == models.SPACE_MARGIN and space["queuedBytes"] == 0
+
+
+def test_the_space_check_counts_the_margin():
+    model = {"repositories": [{"files": {"a": 1000}}]}
+    assert models.short_of_space(model, 1000 + models.SPACE_MARGIN) == 0
+    assert models.short_of_space(model, 1000 + models.SPACE_MARGIN - 1) == 1
+    assert models.short_of_space(model, 1000 + models.SPACE_MARGIN, queued=500) == 500

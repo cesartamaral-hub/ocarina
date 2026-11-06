@@ -2,6 +2,7 @@
 JSON API for the voice models.
 
     GET    /ocarina/api/tts/models                catalog with install status
+    GET    /ocarina/api/tts/models/space          free disk space, the margin kept free, and the bytes of downloads still to come
     POST   /ocarina/api/tts/models/<id>/download  download a model (a job)
     POST   /ocarina/api/tts/models/<id>/import    copy a model's files from a folder (a job)
     DELETE /ocarina/api/tts/models/<id>           delete a model's files
@@ -70,6 +71,18 @@ def models():
     )
 
 
+def _queued_bytes():
+    "Bytes the downloads that are running or waiting still have to fetch."
+    return sum(max(0, j.get("total", 0) - j.get("done", 0)) for j in jobs.active(kind="download"))
+
+
+@bp.route("/tts/models/space", methods=["GET"])
+def space():
+    "Free space where the models are kept, so a screen can warn before a download that would not fit."
+    datapath = current_app.env_config.datapath
+    return jsonify({"freeBytes": model_files.free_bytes(datapath), "marginBytes": model_files.SPACE_MARGIN, "queuedBytes": _queued_bytes()})
+
+
 @bp.route("/tts/models/<model_id>/download", methods=["POST"])
 def download_model(model_id):
     "Start downloading a model; returns the job."
@@ -83,6 +96,10 @@ def download_model(model_id):
     if jobs.active(kind="download", model_id=model_id):
         return jsonify({"error": "This model is already being installed"}), 409
     datapath = current_app.env_config.datapath
+    missing = model_files.short_of_space(model, model_files.free_bytes(datapath), _queued_bytes())
+    if missing:
+        gb = f"{missing / 1e9:.1f} GB"
+        return jsonify({"error": f"There is not enough free space on this Mac for {model['name']}: about {gb} more is needed (the app also keeps 2 GB free). Free some space and try again.", "code": "no_space", "missingBytes": missing}), 409
     engine = current_app.config.get("OCARINA_TTS_ENGINE")  # the tests use a fake engine; None otherwise
     job = jobs.submit(
         "download",
