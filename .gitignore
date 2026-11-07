@@ -154,3 +154,4 @@ ocarina/dictionaries/builtin/*.sqlite
 desktop/vendor/
 .venv-build2/
 .mlx14/
+ocarina/_dev_build.py

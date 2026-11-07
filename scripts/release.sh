@@ -29,7 +29,7 @@ sed -i '' "s/^VERSION = \".*\"/VERSION = \"$VERSION\"/" ocarina/version.py
 source .venv/bin/activate
 pytest tests/ocarina -q
 (cd frontend && npx tsc -b && npm run lint && npm test && npm run build)
-./desktop/build.sh
+OCARINA_RELEASE=1 ./desktop/build.sh
 ./desktop/make_dmg.sh
 cd desktop/dist
 shasum -a 256 Ocarina.dmg | awk '{print $1"  Ocarina.dmg"}' > Ocarina.dmg.sha256

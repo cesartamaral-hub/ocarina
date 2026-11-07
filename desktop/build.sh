@@ -13,6 +13,9 @@ $PY ../scripts/build_wikdict.py  # the dictionaries that come with the app (WikD
 FW=$(cd "$($PY -c 'import sys; print(sys.base_prefix)')" && pwd)
 export TCL_LIBRARY="$FW/lib/tcl8.6" TK_LIBRARY="$FW/lib/tk8.6"
 rm -rf build dist
+# A build that scripts/release.sh did not start is a dev build: it carries the commit, and the app says so next to its version.
+trap 'rm -f ../ocarina/_dev_build.py' EXIT
+[ -n "$OCARINA_RELEASE" ] || echo "COMMIT = \"$(git rev-parse --short HEAD)\"" > ../ocarina/_dev_build.py
 $PY setup.py py2app
 # mlx is a namespace package (no __init__.py), which py2app cannot discover:
 # copy it, with its native libraries and Metal shaders, into the bundle by hand.

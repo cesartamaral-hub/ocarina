@@ -2,6 +2,7 @@ import { API, json, send } from './client'
 
 export type UpdateStatus = {
   current: string
+  dev: string // the commit of a dev build; '' for a release
   enabled: boolean
   offline: boolean
   canInstall: boolean

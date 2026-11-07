@@ -18,7 +18,7 @@ import time
 from flask import Blueprint, current_app, jsonify, request
 
 from ocarina import offline, prefs, updater
-from ocarina.version import VERSION
+from ocarina.version import DEV_BUILD, VERSION
 
 bp = Blueprint("ocarina_update", __name__, url_prefix="/ocarina/api")
 
@@ -39,6 +39,7 @@ def status():
     enabled = saved.get(updater.PREF_CHECK, True) is not False
     body = {
         "current": VERSION,
+        "dev": DEV_BUILD,
         "enabled": enabled,
         "offline": offline.is_on(),
         "canInstall": updater.can_install(),

@@ -11,6 +11,7 @@ export function VersionFooter() {
   return (
     <footer className="version-footer">
       <span>Ocarina {status.current}</span>
+      {status.dev && <span title="Built from the latest code, not a release">· dev {status.dev}</span>}
       {available && status.latest && (
         <>
           <span aria-hidden="true">·</span>

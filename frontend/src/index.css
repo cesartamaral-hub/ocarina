@@ -953,7 +953,7 @@ h2 .speak { margin-left: 6px; }
 .learned-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 .learned-before { margin-top: 4px; font-size: 0.8rem; }
 .books + .set-group { margin-top: 24px; }
-.version-footer { display: flex; align-items: baseline; gap: 6px; margin-top: 40px; padding: 12px 0 4px; font-size: 0.75rem; color: var(--muted); }
+.version-footer { position: fixed; right: 12px; bottom: 6px; z-index: 5; display: flex; align-items: baseline; gap: 6px; font-size: 0.75rem; color: var(--muted); }
 .version-footer .link-button { font-size: inherit; color: var(--accent); }
 .nav-alert { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 0.7rem; font-weight: 700; line-height: 1; vertical-align: 1px; }
 .set-input.wide { width: 100%; }
@@ -963,7 +963,6 @@ h2 .speak { margin-left: 6px; }
 .welcome-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
 .welcome-notes p { margin: 6px 0; font-size: 0.9rem; }
 .setup-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 36px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 0.85rem; }
-.setup-line + .version-footer { margin-top: 14px; }
 .setup-text { font-weight: 500; }
 .setup-actions { display: flex; gap: 6px; margin-left: auto; }
 .setup-error { flex-basis: 100%; }
