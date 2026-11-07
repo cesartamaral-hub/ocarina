@@ -34,6 +34,8 @@ setup(
                 "lxml",
                 "yt_dlp",
                 "youtube_transcript_api",
+                "num2words",
+                "docopt",
             ],
             "includes": ["sqlite3", "yaml"],
             "excludes": ["mlx", "tkinter", "_tkinter"],  # copied by hand in build.sh, see there
