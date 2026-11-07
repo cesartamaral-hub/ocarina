@@ -67,8 +67,6 @@ a:hover { text-decoration: underline; }
 .top { position: sticky; top: 0; z-index: 40; height: var(--header-h); box-sizing: border-box; padding: 0 24px; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 22px; }
 .brand { font-weight: 600; color: var(--fg); letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 8px; }
 .brand:hover { text-decoration: none; }
-.brand-box { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
-.version-tag { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
 .logo { height: 22px; width: auto; fill: var(--accent); }
 /* Page widths: narrow for forms and settings, medium for lists, full for the reader. */
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
@@ -180,15 +178,15 @@ button.st.on { border-color: var(--fg); }
 
 /* Reader extras */
 /* The player: a bar across the reading column that stays in view. One row when there is room, a hint line under it. */
-.reader-audio { flex: none; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin: 0; padding: 8px var(--main-pad); background: var(--bg); border-bottom: 1px solid var(--line); }
-.reader-audio audio { flex: 1 1 300px; min-width: 0; height: 36px; }
+.reader-audio { flex: none; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; padding: 6px var(--main-pad); background: var(--bg); border-top: 1px solid var(--line); }
+.reader-audio audio { flex: 1 1 260px; min-width: 0; height: 32px; }
 .reader-audio .controls { display: contents; }
-.reader-audio .controls > label { flex-direction: row; align-items: center; gap: 8px; white-space: nowrap; }
-.reader-audio .controls input[type='range'] { width: 100px; }
-.reader-audio .audio-versions { margin: 0; flex: 0 1 auto; }
-.reader-audio .key-hint, .reader-audio .note { margin: 0; font-size: 0.78rem; }
-.reader-audio .key-hint { order: 20; }
-.reader-audio .note { order: 21; }
+.reader-audio .speed-chip { min-width: 3.4em; font-variant-numeric: tabular-nums; }
+.reader-audio .note { flex-basis: 100%; margin: 0; font-size: 0.78rem; }
+.audio-options-popover { display: grid; gap: 10px; padding: 12px 14px; font-size: 0.9rem; }
+.audio-options-popover .audio-versions { margin: 0; }
+.audio-options-popover .audio-versions select { max-width: 100%; text-overflow: ellipsis; }
+.audio-options-popover .audio-versions label.inline { flex-wrap: wrap; }
 
 .title-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .panel.static { position: static; }
@@ -205,7 +203,7 @@ header.top nav, .tabs { display: flex; gap: 4px; align-self: stretch; }
 .top .tab { display: inline-flex; align-items: center; gap: 6px; align-self: stretch; padding: 0 10px; color: var(--muted, var(--fg)); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .top .tab:hover { color: var(--fg); text-decoration: none; }
 .top .tab[aria-current='page'] { color: var(--fg); border-bottom-color: var(--accent); }
-@media (max-width: 560px) { .top { padding: 0 12px; gap: 10px; } .top .brand { font-size: 0; gap: 0; } .top .version-tag { display: none; } .top .tab { padding: 0 6px; } .top .settings-tab { font-size: 0; gap: 0; } }
+@media (max-width: 560px) { .top { padding: 0 12px; gap: 10px; } .top .brand { font-size: 0; gap: 0; } .top .tab { padding: 0 6px; } .top .settings-tab { font-size: 0; gap: 0; } }
 .filters .controls { align-items: end; }
 .filters label.inline { flex-direction: row; align-items: center; gap: 6px; padding-bottom: 6px; }
 .bulk { position: sticky; top: 8px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
@@ -626,7 +624,8 @@ body:has(.reader) { overflow: hidden; }
 .focus-reveal:hover, .focus-reveal:focus-visible { opacity: 1; background: var(--panel); }
 .focus-mode .reader-hint { display: none; }
 /* The player stays, without the version picker and the hints. */
-.focus-mode .reader-audio { border-bottom: 0; padding-top: 10px; padding-bottom: 4px; justify-content: center; }
+.focus-mode .reader-audio { border-top: 0; padding-top: 4px; padding-bottom: 8px; justify-content: center; }
+.reader-audio:has(.video-frame) { border-top: 0; border-bottom: 1px solid var(--line); }
 .focus-mode .reader-audio .audio-versions, .focus-mode .reader-audio .key-hint, .focus-mode .reader-audio .note { display: none; }
 /* The page bar shrinks to a quiet pill at the bottom. */
 .focus-mode .page-bar { container-type: normal; position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 15; display: flex; align-items: center; gap: 10px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--bg) 94%, transparent); opacity: 0.4; transition: opacity 0.2s ease; }
@@ -955,6 +954,9 @@ h2 .speak { margin-left: 6px; }
 .learned-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 .learned-before { margin-top: 4px; font-size: 0.8rem; }
 .books + .set-group { margin-top: 24px; }
+.version-footer { display: flex; align-items: baseline; gap: 6px; margin-top: 40px; padding: 12px 0 4px; font-size: 0.75rem; color: var(--muted); }
+.version-footer .link-button { font-size: inherit; color: var(--accent); }
+.setup-line + .version-footer { margin-top: 14px; }
 .nav-alert { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 0.7rem; font-weight: 700; line-height: 1; vertical-align: 1px; }
 .set-input.wide { width: 100%; }
 .set-row .set-control:has(> .set-input.wide) { flex: 1 1 0; min-width: 0; }

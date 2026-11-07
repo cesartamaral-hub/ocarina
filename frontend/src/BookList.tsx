@@ -4,6 +4,7 @@ import { BookRow } from './BookRow'
 import { LearnedBar } from './LearnedBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
+import { VersionFooter } from './VersionFooter'
 import { SetupLine } from './SetupLine'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
@@ -199,6 +200,7 @@ export function BookList() {
         </section>
       ))}
       {!archived && <SetupLine />}
+      <VersionFooter />
     </>
   )
 }

@@ -19,3 +19,14 @@ describe('placePopover', () => {
     expect(placePopover({ left: 10, right: 40, bottom: 650 }, 300, 'start', view).maxHeight).toBe(160)
   })
 })
+
+describe('opening upward', () => {
+  it('opens above a button at the bottom of the window, and below one at the top', () => {
+    const view = { width: 800, height: 600 }
+    const low = placePopover({ left: 400, right: 420, top: 520, bottom: 550 }, 260, 'end', view)
+    expect(low.top).toBeUndefined()
+    expect(low.bottom).toBe(600 - 520 + 6)
+    const high = placePopover({ left: 400, right: 420, top: 40, bottom: 70 }, 260, 'end', view)
+    expect(high.top).toBe(76)
+  })
+})

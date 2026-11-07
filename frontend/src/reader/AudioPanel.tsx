@@ -1,10 +1,12 @@
 import { AudioBar } from '../AudioBar'
 import { AudioVersions } from '../AudioVersions'
+import { Popover } from '../Popover'
 import { VideoBar } from '../VideoBar'
+import { useAnchoredPopover } from '../useAnchoredPopover'
 import type { useAudioFollow } from './useAudioFollow'
 
-// The player above the text. It spans the reading column, stays in view while you read, and its controls wrap
-// onto more rows only when the column is narrow.
+// The player below the text: one slim row (play bar, speed, the page's sentences), with the rarely used things (follow across pages,
+// which audio version) behind "⋯". A recording's name is not shown unless there is more than one to pick from.
 export function AudioPanel({
   bookId,
   language,
@@ -24,37 +26,40 @@ export function AudioPanel({
   follow: boolean
   onFollowChange: (follow: boolean) => void
 }) {
-  return (
-    <section className="reader-audio" aria-label="Audio">
-      {videoId ? (
-        <VideoBar videoId={videoId} language={language} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
-          {audio.firstStart !== undefined && (
-            <button className="secondary" onClick={() => audio.playAt(audio.firstStart!)}>
-              ▶ Play this page
-            </button>
-          )}
+  const { anchor, placement, toggle, close } = useAnchoredPopover(260, 'end')
+  const controls = (
+    <>
+      {audio.firstStart !== undefined && (
+        <button className="quiet small" onClick={() => audio.playAt(audio.firstStart!)} title="Play this page from its first sentence">
+          ▶ This page
+        </button>
+      )}
+      <button ref={anchor} className="quiet small icon" aria-label="More audio options" aria-haspopup="dialog" aria-expanded={placement !== null} title="More audio options" onClick={() => toggle()}>
+        ⋯
+      </button>
+      {placement && (
+        <Popover anchor={anchor} placement={placement} onClose={close} label="Audio options" className="audio-options-popover">
           {audio.timings && (
             <label className="inline">
               <input type="checkbox" checked={follow} onChange={(e) => onFollowChange(e.target.checked)} /> Follow across pages
             </label>
           )}
+          {!videoId && <AudioVersions bookId={bookId} refreshKey={0} compact onChanged={onVersionChanged} />}
+          <a href={`#/book/${bookId}/audio`}>All audio options</a>
+        </Popover>
+      )}
+    </>
+  )
+  return (
+    <section className="reader-audio" aria-label="Audio">
+      {videoId ? (
+        <VideoBar videoId={videoId} language={language} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
+          {controls}
         </VideoBar>
       ) : (
-        <>
-          <AudioVersions bookId={bookId} refreshKey={0} compact onChanged={onVersionChanged} />
-          <AudioBar bookId={bookId} language={language} version={audioVersion} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
-        {audio.firstStart !== undefined && (
-          <button className="secondary" onClick={() => audio.playAt(audio.firstStart!)}>
-            ▶ Play this page
-          </button>
-        )}
-        {audio.timings && (
-          <label className="inline">
-            <input type="checkbox" checked={follow} onChange={(e) => onFollowChange(e.target.checked)} /> Follow across pages
-          </label>
-        )}
-          </AudioBar>
-        </>
+        <AudioBar compact bookId={bookId} language={language} version={audioVersion} audioRef={audio.audioRef} onTime={audio.onAudioTime}>
+          {controls}
+        </AudioBar>
       )}
       {audio.timings && !audio.aligned && (
         <p className="muted note">The page text no longer matches the generated audio, so sentences won't follow it.</p>

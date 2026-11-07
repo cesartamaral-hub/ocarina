@@ -542,6 +542,21 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       .join('')
       .trim()
 
+  const hasPlayer = Boolean(audio.audioInfo?.hasAudio || audio.audioInfo?.video)
+  const videoOnly = hasPlayer && !audio.audioInfo?.hasAudio // a video keeps its place above the text: it needs the room
+  const panel = hasPlayer && (
+    <AudioPanel
+      bookId={bookId}
+      language={page.language.name}
+      audioVersion={audioVersion}
+      onVersionChanged={() => setAudioVersion((v) => v + 1)}
+      audio={audio}
+      videoId={audio.audioInfo?.hasAudio ? undefined : audio.audioInfo?.video?.videoId}
+      follow={follow}
+      onFollowChange={setFollow}
+    />
+  )
+
   return (
     <>
       <ReaderLayout
@@ -566,18 +581,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
         }}
         main={
           <>
-            {(audio.audioInfo?.hasAudio || audio.audioInfo?.video) && (
-              <AudioPanel
-                bookId={bookId}
-                language={page.language.name}
-                audioVersion={audioVersion}
-                onVersionChanged={() => setAudioVersion((v) => v + 1)}
-                audio={audio}
-                videoId={audio.audioInfo?.hasAudio ? undefined : audio.audioInfo?.video?.videoId}
-                follow={follow}
-                onFollowChange={setFollow}
-              />
-            )}
+            {videoOnly && panel}
             <div className="reader-scroll" ref={scroller}>
               <ReaderToolbar
                 bookId={bookId}
@@ -762,6 +766,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                 )}
               </div>
             </div>
+            {!videoOnly && panel}
             {focus && (
               <button
                 className="focus-reveal"

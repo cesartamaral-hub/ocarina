@@ -14,6 +14,7 @@ export function AudioBar({
   version,
   audioRef,
   onTime,
+  compact = false,
   children,
 }: {
   bookId: number
@@ -21,6 +22,7 @@ export function AudioBar({
   version: number
   audioRef: RefObject<Playable | null>
   onTime?: (seconds: number) => void
+  compact?: boolean // the reader's slim bar: the speed is one button with the usual speeds, and no key hints
   children?: ReactNode
 }) {
   const [speed, setSpeed] = useState(() => clampSpeed(getPref<number>(`speed.${language}`, 1)))
@@ -53,18 +55,24 @@ export function AudioBar({
         }}
       />
       <div className="controls">
-        <div className="speed-control">
-          <label>
-            Speed {speedLabel(speed)}
-            <input type="range" min={SPEED.min} max={SPEED.max} step={SPEED.step} value={speed} aria-valuetext={speedLabel(speed)} onChange={(e) => choose(Number(e.target.value))} />
-          </label>
-          <SpeedMenu speed={speed} onChange={choose} />
-        </div>
+        {compact ? (
+          <SpeedMenu speed={speed} onChange={choose} labelled />
+        ) : (
+          <div className="speed-control">
+            <label>
+              Speed {speedLabel(speed)}
+              <input type="range" min={SPEED.min} max={SPEED.max} step={SPEED.step} value={speed} aria-valuetext={speedLabel(speed)} onChange={(e) => choose(Number(e.target.value))} />
+            </label>
+            <SpeedMenu speed={speed} onChange={choose} />
+          </div>
+        )}
         {children}
       </div>
-      <p className="muted key-hint">
-        <kbd>{keyLabel(keyOf('skipBack'))}</kbd> back · <kbd>{keyLabel(keyOf('playPause'))}</kbd> play or pause · <kbd>{keyLabel(keyOf('skipForward'))}</kbd> forward
-      </p>
+      {!compact && (
+        <p className="muted key-hint">
+          <kbd>{keyLabel(keyOf('skipBack'))}</kbd> back · <kbd>{keyLabel(keyOf('playPause'))}</kbd> play or pause · <kbd>{keyLabel(keyOf('skipForward'))}</kbd> forward
+        </p>
+      )}
     </>
   )
 }

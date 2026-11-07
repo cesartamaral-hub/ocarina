@@ -39,7 +39,7 @@ export function Popover({
       className={`popover ${className}`}
       role={role}
       aria-label={label}
-      style={{ top: placement.top, left: placement.left, width: placement.width, maxHeight: placement.maxHeight }}
+      style={{ top: placement.top, bottom: placement.bottom, left: placement.left, width: placement.width, maxHeight: placement.maxHeight }}
     >
       {children}
     </div>,
