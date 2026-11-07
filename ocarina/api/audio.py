@@ -15,7 +15,7 @@ from flask import Blueprint, current_app, jsonify, request
 from lute.book.service import Service
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import audio_versions, model_check, paths, prefs
+from ocarina import audio_versions, estimate, model_check, paths, prefs
 from ocarina.api import audio_versions as audio_versions_api
 from ocarina.api import jobs
 from ocarina.api.common import ALLOWED_AUDIO_EXTENSIONS
@@ -219,6 +219,7 @@ def audio_options(book_id):
                     "name": m["name"],
                     "installed": model_files.is_installed(m),
                     "custom": bool(m.get("custom")),
+                    "secondsPerSecondOfAudio": estimate.seconds_per_audio_second(datapath, m),
                     "problem": (model_check.result_for(datapath, m) or {}).get("error") if m["id"] in failing else None,
                 }
                 for m in model_files.speech_models()

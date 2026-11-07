@@ -7,9 +7,9 @@ const options: AudioOptions = {
   defaultModel: 'mac-voice',
   defaultVoice: 'mac:Xander',
   models: [
-    { id: 'mac-voice', name: 'Mac voice', installed: true, custom: false },
-    { id: 'chatterbox', name: 'Chatterbox', installed: true, custom: false },
-    { id: 'audio8', name: 'Audio8', installed: false, custom: false },
+    { id: 'mac-voice', name: 'Mac voice', installed: true, custom: false, secondsPerSecondOfAudio: 1 },
+    { id: 'chatterbox', name: 'Chatterbox', installed: true, custom: false, secondsPerSecondOfAudio: 1 },
+    { id: 'audio8', name: 'Audio8', installed: false, custom: false, secondsPerSecondOfAudio: 1 },
   ],
   voices: [
     { id: 'mac:Xander', name: 'Xander', builtin: true, model: 'mac-voice' },

@@ -1,5 +1,7 @@
 import { NoLocalModelNotice } from '../NoLocalModelNotice'
 import { isActive } from '../api'
+import { sentencesToTranslate } from '../estimate'
+import { useJobTimeLeft } from '../useJobTimeLeft'
 import { MODES, type TranslationMode } from './translationView'
 import { TranslateSplit } from './TranslateSplit'
 import type { useBookTranslation } from './useBookTranslation'
@@ -23,6 +25,7 @@ export function TranslationPanel({
   pageHasTranslation: boolean
 }) {
   const d = tr.data
+  const left = useJobTimeLeft(tr.job)
   if (!d) return <p className="muted">Loading…</p>
   const label: Record<TranslationMode, string> = { original: 'Original', both: 'Side by side', translation: `${d.targetName} only` }
   const pageChars = d.remainingByPage[String(page)] ?? 0
@@ -61,7 +64,7 @@ export function TranslationPanel({
       ) : running && tr.job ? (
         <div className="tp-running">
           <span className="muted">
-            {tr.job.state === 'queued' ? 'Waiting…' : `Translating · ${n(tr.job.done)} / ${tr.job.total || '…'}`}
+            {tr.job.state === 'queued' ? 'Waiting…' : `Translating · ${n(tr.job.done)} / ${tr.job.total || '…'}${left && ` · ${left}`}`}
           </span>
           <button className="secondary small" onClick={tr.cancel}>
             Cancel
@@ -76,10 +79,11 @@ export function TranslationPanel({
                 methods={d.methods}
                 primary
                 disabled={pageChars === 0}
+                sentences={sentencesToTranslate(d.sentences, page)}
                 title={pageChars === 0 ? 'Every sentence of this page is translated' : undefined}
                 onRun={(method) => tr.start('page', page, method)}
               />
-              <TranslateSplit label="Translate the whole material" methods={d.methods} primary={false} disabled={d.remainingChars === 0} onRun={(method) => tr.start('book', undefined, method)} />
+              <TranslateSplit label="Translate the whole material" methods={d.methods} primary={false} disabled={d.remainingChars === 0} sentences={sentencesToTranslate(d.sentences)} onRun={(method) => tr.start('book', undefined, method)} />
             </>
           ) : (
             <TranslateSplit
@@ -87,6 +91,7 @@ export function TranslationPanel({
               methods={d.methods}
               primary
               disabled={d.remainingChars === 0}
+              sentences={sentencesToTranslate(d.sentences)}
               title={d.remainingChars === 0 ? 'Every sentence is translated' : undefined}
               onRun={(method) => tr.start('book', undefined, method)}
             />
@@ -102,6 +107,7 @@ export function TranslationPanel({
               methods={d.methods}
               primary={false}
               disabled={!pageHasTranslation}
+              sentences={sentencesToTranslate(d.sentences, page, true)}
               title={
                 pageHasTranslation
                   ? "Replace this page's translation with a new one"
@@ -122,6 +128,7 @@ export function TranslationPanel({
             methods={d.methods}
             primary={false}
             disabled={false}
+            sentences={sentencesToTranslate(d.sentences, undefined, true)}
             title="Replace every translation with a new one"
             onRun={(method) => {
               if (

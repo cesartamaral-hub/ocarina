@@ -13,7 +13,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.repositories import BookRepository
-from ocarina import book_translation, keystore, offline, translate
+from ocarina import book_translation, estimate, keystore, offline, translate
 from ocarina.api import jobs
 from ocarina.api import translate as translate_api
 from ocarina.tts import models as model_files
@@ -42,6 +42,7 @@ def _methods(settings):
                 "available": ready,
                 "reason": None if ready else "Not downloaded yet (Settings)",
                 "isDefault": settings["provider"] == "local" and settings.get("localModel") == m["id"],
+                "secondsPerSentence": estimate.seconds_per_sentence(current_app.env_config.datapath, m),
             }
         )
     has_key = keystore.get(current_app.env_config.datapath, "deepl") is not None
@@ -55,6 +56,7 @@ def _methods(settings):
                 "available": ready,
                 "reason": None if ready else ("Work offline is on" if offline.is_on() else "Needs your API key (Translation settings)"),
                 "isDefault": settings["provider"] == key,
+                "secondsPerSentence": estimate.ONLINE_SECONDS_PER_SENTENCE,
             }
         )
     return methods

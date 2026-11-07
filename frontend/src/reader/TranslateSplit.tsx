@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Popover } from '../Popover'
 import { useAnchoredPopover } from '../useAnchoredPopover'
 import type { TranslationMethod } from '../api'
+import { formatEstimate, translationSeconds } from '../estimate'
 
 // A button that translates with the default method, and an arrow that lists the other ways for this one time.
 export function TranslateSplit({
@@ -10,6 +11,7 @@ export function TranslateSplit({
   primary,
   disabled,
   title,
+  sentences,
   onRun,
 }: {
   label: string
@@ -17,15 +19,18 @@ export function TranslateSplit({
   primary: boolean
   disabled: boolean
   title?: string
+  sentences?: number // how many it would translate, for the time shown
   onRun: (method?: { provider: string; model: string | null }) => void
 }) {
   const { anchor, placement, toggle, close } = useAnchoredPopover(310, 'end')
   const [chosen, setChosen] = useState<string | null>(null)
   const picked = methods.find((m) => `${m.provider}:${m.model}` === chosen && m.available)
+  const time = sentences ? formatEstimate(translationSeconds(sentences, picked ?? methods.find((m) => m.isDefault))) : ''
   return (
     <span className="split translate-split">
       <button className={primary ? undefined : 'secondary'} disabled={disabled} title={picked ? `${label} with ${picked.name}` : title} onClick={() => onRun(picked && { provider: picked.provider, model: picked.model })}>
         {label}
+        {time && !disabled && <small className="method-picked"> · {time}</small>}
         {picked && <small className="method-picked"> · {picked.name.replace(/\s*\(.*\)\s*$/, '')}</small>}
       </button>
       <button

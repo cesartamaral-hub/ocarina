@@ -106,7 +106,7 @@ export type AudioOptions = {
   language: string
   defaultModel: string
   defaultVoice: string
-  models: { id: string; name: string; installed: boolean; custom: boolean; problem?: string | null }[]
+  models: { id: string; name: string; installed: boolean; custom: boolean; secondsPerSecondOfAudio: number; problem?: string | null }[]
   voices: { id: string; name: string; builtin: boolean; model?: string }[] // a voice with a model belongs to that model only (the Mac voice)
 }
 

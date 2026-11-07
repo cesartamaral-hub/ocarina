@@ -9,6 +9,7 @@ export type TranslationMethod = {
   available: boolean
   reason: string | null
   isDefault: boolean
+  secondsPerSentence: number // how long one sentence takes this way (an estimate)
 }
 
 export type TranslatedSentence = {

@@ -21,6 +21,8 @@ import {
 import { AudioOptionsMenu, type AudioChoice } from './AudioOptionsMenu'
 import { AudioVersions } from './AudioVersions'
 import { notify } from './notices'
+import { audioSeconds, formatEstimate } from './estimate'
+import { useJobTimeLeft } from './useJobTimeLeft'
 import { useWindowTitle } from './desktop'
 import { useNowPlaying } from './nowPlaying'
 import { usePlaybackKeys } from './playbackKeys'
@@ -33,6 +35,7 @@ const voiceShown = (o: AudioOptions, modelId: string, voiceId: string) =>
 
 // What is happening in the background for this book, always in the same place under the page title.
 function JobStrip({ job, onCancel, needsAligner, needsModel }: { job: Job | null; onCancel: () => void; needsAligner: boolean; needsModel: boolean }) {
+  const left = useJobTimeLeft(job)
   const running = isActive(job)
   const what = job?.kind === 'sync' ? 'Syncing with the text' : 'Making audio'
   return (
@@ -46,7 +49,7 @@ function JobStrip({ job, onCancel, needsAligner, needsModel }: { job: Job | null
             <>
               <progress value={job.done} max={job.total || 1} />
               <span className="muted">
-                {job.done} / {job.total || '…'} sentences
+                {job.done} / {job.total || '…'} sentences{left && ` · ${left}`}
               </span>
             </>
           )}
@@ -240,6 +243,8 @@ export function AudioPage({ bookId }: { bookId: number }) {
   if (!book) return <p className="muted">Loading…</p>
 
   const running = isActive(job)
+  const perAudioSecond = options?.models.find((m) => m.id === (choice.model || options.defaultModel))?.secondsPerSecondOfAudio
+  const guess = book && perAudioSecond ? formatEstimate(audioSeconds(book.sentences.reduce((n, x) => n + x.text.length, 0), perAudioSecond)) : ''
   const read = `#/book/${book.id}/read/${book.currentPage}`
   return (
     <>
@@ -340,6 +345,7 @@ export function AudioPage({ bookId }: { bookId: number }) {
             <button disabled={running || optionsError !== ''} onClick={generate}>
               Generate audio
             </button>
+            {guess && <span className="muted">{guess}</span>}
           </div>
           </>
         )}
