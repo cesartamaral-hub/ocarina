@@ -14,6 +14,8 @@ import {
   type Job,
 } from './api'
 import { formatBytes } from './format'
+import { getPref, setPref } from './api'
+import { AUTO_WIKTIONARY } from './reader/autoLookup'
 import { notify } from './notices'
 import { TransferProgress } from './TransferProgress'
 
@@ -33,6 +35,7 @@ export function Dictionaries() {
   const [sameLanguage, setSameLanguage] = useState(false) // the dictionary being added explains words in their own language
   const files = useRef<HTMLInputElement>(null)
   const [chosen, setChosen] = useState<File[]>([])
+  const [autoWiktionary, setAutoWiktionary] = useState(() => getPref(AUTO_WIKTIONARY, true))
 
   const load = useCallback(() => getDictionaries().then(setData, (e) => setError(e.message)), [])
   useEffect(() => {
@@ -112,6 +115,23 @@ export function Dictionaries() {
         internet. Wiktionary over the internet is only asked when none of them has the word.
       </p>
       {error && <p className="error">{error}</p>}
+
+      <label className="inline auto-wiktionary">
+        <input
+          type="checkbox"
+          checked={autoWiktionary}
+          disabled={offline}
+          onChange={(e) => {
+            setAutoWiktionary(e.target.checked)
+            setPref(AUTO_WIKTIONARY, e.target.checked)
+          }}
+        />{' '}
+        Look words up on Wiktionary automatically
+      </label>
+      <p className="muted">
+        When you open a word, Ocarina also asks Wiktionary for it, without a click. The word is sent over the internet.
+        Off, it waits for “Also look it up on Wiktionary”.{offline && ' Work offline is on, so nothing is sent now.'}
+      </p>
 
       <h2>Installed dictionaries</h2>
       <div className="model-list dict-list">

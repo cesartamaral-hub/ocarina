@@ -17,6 +17,7 @@ export function ReaderToolbar({
   focus,
   onToggleFocus,
   onLeave,
+  readAloud,
   translation,
   translationOn,
   tpAnchor,
@@ -35,6 +36,15 @@ export function ReaderToolbar({
   focus: boolean
   onToggleFocus: () => void
   onLeave: () => void // the pointer left the toolbar (focus mode hides it again)
+  readAloud: {
+    state: 'idle' | 'reading' | 'paused'
+    rate: number
+    onRate: (rate: number) => void
+    onRead: () => void
+    onPause: () => void
+    onResume: () => void
+    onStop: () => void
+  }
   translation: ReactNode // the content of the Translation popover
   translationOn: boolean // a translation is being shown
   tpAnchor: RefObject<HTMLButtonElement | null> // the Translation popover is opened here and by the T key (see Reader)
@@ -54,7 +64,45 @@ export function ReaderToolbar({
         {title}
       </span>
       <span className="spacer" />
-      <button ref={tpAnchor} className="quiet" aria-pressed={translationOn} aria-expanded={tpPlacement !== null} aria-haspopup="dialog" onClick={() => tpToggle()} title="A translated version of the text">
+      {readAloud.state === 'idle' ? (
+        <button className="quiet" onClick={readAloud.onRead} title="Read this page aloud with your Mac's voice">
+          ▶ Read aloud
+        </button>
+      ) : (
+        <>
+          <button
+            className="quiet"
+            aria-pressed={readAloud.state === 'reading'}
+            onClick={readAloud.state === 'reading' ? readAloud.onPause : readAloud.onResume}
+          >
+            {readAloud.state === 'reading' ? '⏸ Pause' : '▶ Resume'}
+          </button>
+          <button className="quiet" onClick={readAloud.onStop} title="Stop reading aloud">
+            ■ Stop
+          </button>
+          <select
+            className="quiet"
+            aria-label="Reading speed"
+            value={readAloud.rate}
+            onChange={(e) => readAloud.onRate(Number(e.target.value))}
+          >
+            {[0.75, 1, 1.25, 1.5, 2].map((r) => (
+              <option key={r} value={r}>
+                {r}×
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+      <button
+        ref={tpAnchor}
+        className="quiet"
+        aria-pressed={translationOn}
+        aria-expanded={tpPlacement !== null}
+        aria-haspopup="dialog"
+        onClick={() => tpToggle()}
+        title="A translated version of the text"
+      >
         Translation
       </button>
       {tpPlacement && (
@@ -68,7 +116,21 @@ export function ReaderToolbar({
       <button className="quiet" aria-pressed={highlights} onClick={onToggleHighlights} title={`Colour the words by how well you know them (${keyLabel(keyOf('highlights'))})`}>
         Highlights
       </button>
-      <button ref={anchor} className="quiet aa-button" aria-expanded={placement !== null} aria-haspopup="dialog" onClick={() => toggle()} title="Text appearance">
+      <a
+        className="button quiet focus-hide"
+        href={`#/book/${bookId}/audio`}
+        title="Make audio for this book, or add your own recording"
+      >
+        Audio
+      </a>
+      <button
+        ref={anchor}
+        className="quiet aa-button"
+        aria-expanded={placement !== null}
+        aria-haspopup="dialog"
+        onClick={() => toggle()}
+        title="Text appearance"
+      >
         Aa
       </button>
       {placement && (
@@ -80,9 +142,8 @@ export function ReaderToolbar({
         {focus ? 'Leave focus' : 'Focus'}
       </button>
       <MoreMenu
-        title="More: audio, edit text, keyboard shortcuts"
+        title="More: edit text, keyboard shortcuts"
         items={[
-          { label: 'Audio…', href: `#/book/${bookId}/audio` },
           { label: 'Edit text', onChoose: onEdit },
           { label: 'Keyboard shortcuts', onChoose: onHelp },
         ]}

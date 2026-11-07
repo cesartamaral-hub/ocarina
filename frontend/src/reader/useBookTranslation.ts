@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cancelJob, getActiveJobs, getBookTranslation, getJob, isActive, removeBookTranslation, startBookTranslation, type BookTranslation, type Job } from '../api'
+import {
+  cancelJob,
+  getActiveJobs,
+  getBookTranslation,
+  getJob,
+  isActive,
+  removeBookTranslation,
+  startBookTranslation,
+  type BookTranslation,
+  type Job,
+} from '../api'
 
 // The book's translation and the job making it. While a job runs the sentences that are done appear in the text as they finish.
 export function useBookTranslation(bookId: number, onDone?: (data: BookTranslation) => void) {
@@ -41,10 +51,15 @@ export function useBookTranslation(bookId: number, onDone?: (data: BookTranslati
   }, [jobId, refresh])
 
   const start = useCallback(
-    async (scope: 'page' | 'book', page?: number, method?: { provider: string; model: string | null }) => {
+    async (
+      scope: 'page' | 'book',
+      page?: number,
+      method?: { provider: string; model: string | null },
+      redo = false,
+    ) => {
       setError('')
       try {
-        setJob(await startBookTranslation(bookId, scope, page, method))
+        setJob(await startBookTranslation(bookId, scope, page, method, redo))
       } catch (e) {
         setError((e as Error).message)
       }
@@ -65,5 +80,5 @@ export function useBookTranslation(bookId: number, onDone?: (data: BookTranslati
     }
   }, [bookId, refresh])
 
-  return { data, job, running: isActive(job), error, start, cancel, remove }
+  return { data, refresh, job, running: isActive(job), error, start, cancel, remove }
 }

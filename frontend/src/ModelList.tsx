@@ -84,6 +84,22 @@ function Row({ m, a }: { m: Model; a: ModelActions }) {
             <span>{languageCount(m, nameOf)}</span>
             {m.installed && m.check?.ok && <span className="mr-ok">Works here</span>}
             {note && <span className="mr-warn">{note}</span>}
+            {m.fit === 'tight' && (
+              <span
+                className="mr-warn"
+                title="It works, but it will use a good part of this Mac's memory while it runs"
+              >
+                Tight on this Mac's memory
+              </span>
+            )}
+            {m.fit === 'too big' && (
+              <span
+                className="mr-warn"
+                title="This Mac does not have the memory to run it comfortably: it will be slow and other apps will suffer"
+              >
+                Too big for this Mac
+              </span>
+            )}
           </div>
           {downloadError && <div className="error mr-error">The download failed: {downloadError} Press Download to try again.</div>}
         </div>

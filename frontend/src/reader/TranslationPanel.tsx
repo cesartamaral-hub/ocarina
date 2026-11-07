@@ -49,7 +49,8 @@ export function TranslationPanel({
         <strong>
           {n(d.done)} of {n(d.total)}
         </strong>{' '}
-        sentences translated{d.stale > 0 && <span className="muted"> · {n(d.stale)} changed since</span>}
+        sentences translated
+        {d.stale > 0 && <span className="muted"> · {n(d.stale)} changed since</span>}
       </p>
       <progress value={d.done} max={Math.max(d.total, 1)} aria-label="Sentences translated" />
 
@@ -90,6 +91,47 @@ export function TranslationPanel({
               onRun={(method) => tr.start('book', undefined, method)}
             />
           )}
+        </div>
+      )}
+      {!running && d.done > 0 && (
+        <div className="tp-actions tp-again">
+          <span className="muted">Translate again</span>
+          {pageCount > 1 && (
+            <TranslateSplit
+              label="This page"
+              methods={d.methods}
+              primary={false}
+              disabled={!pageHasTranslation}
+              title={
+                pageHasTranslation
+                  ? "Replace this page's translation with a new one"
+                  : 'This page has no translation yet'
+              }
+              onRun={(method) => {
+                if (
+                  window.confirm(
+                    'Translate this page again? The new translation replaces the current one (sentences you worded yourself are kept).',
+                  )
+                )
+                  tr.start('page', page, method, true)
+              }}
+            />
+          )}
+          <TranslateSplit
+            label={pageCount > 1 ? 'The whole material' : 'This material'}
+            methods={d.methods}
+            primary={false}
+            disabled={false}
+            title="Replace every translation with a new one"
+            onRun={(method) => {
+              if (
+                window.confirm(
+                  `Translate ${pageCount > 1 ? `all ${pageCount} pages` : 'this material'} again? The new translation replaces the current one (sentences you worded yourself are kept). The old one stays until each sentence is done.`,
+                )
+              )
+                tr.start('book', undefined, method, true)
+            }}
+          />
         </div>
       )}
       {tr.job?.state === 'error' && <p className="error tp-note">{tr.job.error}</p>}

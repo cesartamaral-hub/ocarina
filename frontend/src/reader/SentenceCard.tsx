@@ -9,10 +9,25 @@ const PLAY = <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
 const COPY = (
   <>
     <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M3.5 10.5v-7a1.5 1.5 0 0 1 1.5-1.5h7" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <path
+      d="M3.5 10.5v-7a1.5 1.5 0 0 1 1.5-1.5h7"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
   </>
 )
-const OPEN = <path d="M6 3H3v10h10v-3M9 3h4v4M13 3L7.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+const OPEN = (
+  <path
+    d="M6 3H3v10h10v-3M9 3h4v4M13 3L7.5 8.5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
+)
 
 function Tool({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -63,7 +78,10 @@ export function SentenceCard({
   const [busy, setBusy] = useState(false)
   const [provider, setProvider] = useState('')
   useEffect(() => {
-    getTranslateSettings().then((s) => setProvider(s.provider), () => undefined)
+    getTranslateSettings().then(
+      (s) => setProvider(s.provider),
+      () => undefined,
+    )
   }, [])
 
   async function run() {
@@ -79,7 +97,9 @@ export function SentenceCard({
     }
   }
 
-  const needsSettings = error && ['no_key', 'no_model', 'no_local_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
+  const needsSettings =
+    error &&
+    ['no_key', 'no_model', 'no_local_model', 'bad_key', 'quota', 'unsupported_language'].includes(error.code ?? '')
   const shown = result?.translation ?? stored
   return (
     <section className="sentence-card" aria-label={cardLabel(kind, text)}>
@@ -115,9 +135,13 @@ export function SentenceCard({
             <p className="sc-translated">{shown}</p>
             <p className="sc-meta muted">
               {result
-                ? `${targetName(result.target)} · ${serviceName(result.provider)}${result.cached ? ' · saved locally' : ''}`
+                ? `${targetName(result.target)} · ${serviceName(result.provider)}${result.cached ? ' · saved locally' : ''}${result.fallbackFrom ? ` · ${serviceName(result.fallbackFrom)} was not available` : ''}`
                 : 'From the translation of this book'}
-              <span className="sc-note" title="Machine translation: it may be wrong" aria-label="Machine translation: it may be wrong">
+              <span
+                className="sc-note"
+                title="Machine translation: it may be wrong"
+                aria-label="Machine translation: it may be wrong"
+              >
                 {' '}
                 ⓘ
               </span>
@@ -134,7 +158,12 @@ export function SentenceCard({
         {error && (
           <p className="sc-error">
             {error.message}{' '}
-            {needsSettings && (error.code === 'no_local_model' ? <a href="#/settings/models">Open Models</a> : <a href="#/settings/translation">Open translation settings</a>)}
+            {needsSettings &&
+              (error.code === 'no_local_model' ? (
+                <a href="#/settings/models">Open Models</a>
+              ) : (
+                <a href="#/settings/translation">Open translation settings</a>
+              ))}
             {onOpenInBrowser && (
               <>
                 {needsSettings ? ' · ' : ''}

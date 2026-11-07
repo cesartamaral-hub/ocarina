@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useOffline } from '../offline'
-import { getDefinition, openExternal, type Definition as DefinitionData, type DefinitionEntry, type DictionarySource } from '../api'
+import { AUTO_WIKTIONARY, shouldLookUpOnline } from './autoLookup'
+import {
+  getDefinition,
+  getPref,
+  openExternal,
+  type Definition as DefinitionData,
+  type DefinitionEntry,
+  type DictionarySource,
+} from '../api'
 
 const renderEntries = (entries: DefinitionEntry[], onUse: (meaning: string) => void, limit = 6) =>
   entries.map((entry, i) => (
@@ -20,7 +28,7 @@ const renderEntries = (entries: DefinitionEntry[], onUse: (meaning: string) => v
     </div>
   ))
 
-type State = { text: string; data: DefinitionData | null; error: string; offline: boolean }
+type State = { text: string; data: DefinitionData | null; error: string; offline: boolean; asked: string } // asked: the word Wiktionary was asked about with this answer
 
 const sourceLine = (source: DictionarySource | undefined) =>
   source ? `${source.name}${source.license ? ` · ${source.license}` : ''}${source.offline ? ' · local' : ''}` : 'Wiktionary'
@@ -37,7 +45,7 @@ export function Definition({
   onUse: (meaning: string) => void
   onError: (message: string) => void
 }) {
-  const [state, setState] = useState<State>({ text: '', data: null, error: '', offline: false })
+  const [state, setState] = useState<State>({ text: '', data: null, error: '', offline: false, asked: '' })
   const [tries, setTries] = useState(0)
   const offline = useOffline()
   const [online, setOnline] = useState('') // the word for which Wiktionary was also asked
@@ -45,14 +53,31 @@ export function Definition({
   useEffect(() => {
     const stale = new AbortController() // an answer for a word you already moved away from is ignored
     getDefinition(languageId, text, false, online === text).then(
-      (data) => !stale.signal.aborted && setState({ text, data, error: '', offline: false }),
-      (e) => !stale.signal.aborted && setState({ text, data: null, error: e.message, offline: e.code === 'offline' }),
+      (data) => !stale.signal.aborted && setState({ text, data, error: '', offline: false, asked: online }),
+      (e) =>
+        !stale.signal.aborted &&
+        setState({ text, data: null, error: e.message, offline: e.code === 'offline', asked: online }),
     )
     return () => stale.abort()
   }, [languageId, text, tries, online])
 
   const loading = state.text !== text
   const { data } = state
+
+  // Wiktionary is asked by itself once a dictionary on this Mac has answered (after a moment, so moving across words sends nothing).
+  const auto = shouldLookUpOnline({ offline, enabled: getPref(AUTO_WIKTIONARY, true), text })
+  const askable =
+    !loading &&
+    !!data?.found &&
+    !!data.source?.offline &&
+    !data.others?.some((o) => o.source.id === 'wiktionary') &&
+    online !== text
+  useEffect(() => {
+    if (!auto || !askable) return
+    const timer = setTimeout(() => setOnline(text), 400)
+    return () => clearTimeout(timer)
+  }, [auto, askable, text])
+  const asking = online === text && state.asked !== text && !!data?.found
   return (
     <section className="definition" aria-label={`Definition of ${text}`} aria-busy={loading}>
       {loading ? (
@@ -111,11 +136,16 @@ export function Definition({
               <p className="muted def-source">{sourceLine(other.source)}</p>
             </details>
           ))}
-          {!offline && data.source?.offline && !data.others?.some((o) => o.source.id === 'wiktionary') && online !== text && (
-            <button className="link-button def-online" onClick={() => setOnline(text)}>
-              Also look it up on Wiktionary
-            </button>
-          )}
+          {asking && <p className="muted def-asking">Looking up on Wiktionary…</p>}
+          {!offline &&
+            !asking &&
+            data.source?.offline &&
+            !data.others?.some((o) => o.source.id === 'wiktionary') &&
+            online !== text && (
+              <button className="link-button def-online" onClick={() => setOnline(text)}>
+                Also look it up on Wiktionary
+              </button>
+            )}
         </>
       ) : (
         <p className="muted">{offline ? `No entry for “${text}” in the local dictionaries. You can add more under Settings → Dictionaries, or turn Work offline off to ask Wiktionary.` : `No entry for “${text}” in your dictionaries or Wiktionary. Try a dictionary below, or look up the words one by one.`}</p>

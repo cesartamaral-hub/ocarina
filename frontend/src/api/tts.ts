@@ -43,6 +43,7 @@ export type Model = {
   custom?: boolean
   check?: ModelCheck | null
   sizeBytes: number
+  fit?: 'ok' | 'tight' | 'too big' // how the model sits in this Mac's memory while it works
   downloadJob: string | null
   downloadError?: string | null // why the last download failed (until the model is installed or a new download starts)
   speed?: number // 1 to 4, before it has been tried here
@@ -78,15 +79,18 @@ export const importModel = (id: string, folder: string) =>
 // Native folder dialog; only exists inside the desktop app (the dev browser has none).
 type Bridge = { pick_folder: () => Promise<string | null> }
 export const canPickFolder = () => Boolean((window as { pywebview?: { api?: Bridge } }).pywebview?.api)
-export const pickFolder = () =>
-  (window as unknown as { pywebview: { api: Bridge } }).pywebview.api.pick_folder()
+export const pickFolder = () => (window as unknown as { pywebview: { api: Bridge } }).pywebview.api.pick_folder()
 
 export const getActiveJobs = () => fetch(`${API}/jobs`).then((r) => json<Job[]>(r))
 
 export const cancelJob = (id: string) => fetch(`${API}/jobs/${id}/cancel`, { method: 'POST' }).then((r) => json<Job>(r))
 
 // A recording added to a material is synced with its text at once: the job, or why there is none.
-export type SyncStart = { state: 'started'; job: Job } | { state: 'model_missing'; error: string; model?: string } | { state: 'busy'; error: string } | null
+export type SyncStart =
+  | { state: 'started'; job: Job }
+  | { state: 'model_missing'; error: string; model?: string }
+  | { state: 'busy'; error: string }
+  | null
 
 export const uploadAudio = (bookId: number, file: File) => {
   const form = new FormData()
@@ -106,7 +110,8 @@ export type AudioOptions = {
   voices: { id: string; name: string; builtin: boolean; model?: string }[] // a voice with a model belongs to that model only (the Mac voice)
 }
 
-export const getAudioOptions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/options`).then((r) => json<AudioOptions>(r))
+export const getAudioOptions = (bookId: number) =>
+  fetch(`${API}/books/${bookId}/audio/options`).then((r) => json<AudioOptions>(r))
 
 export type AudioVersion = {
   id: number
@@ -125,7 +130,8 @@ export type AudioVersion = {
   missing: boolean
 }
 
-export const getAudioVersions = (bookId: number) => fetch(`${API}/books/${bookId}/audio/versions`).then((r) => json<AudioVersion[]>(r))
+export const getAudioVersions = (bookId: number) =>
+  fetch(`${API}/books/${bookId}/audio/versions`).then((r) => json<AudioVersion[]>(r))
 
 export const selectAudioVersion = (bookId: number, id: number) =>
   fetch(`${API}/books/${bookId}/audio/versions/${id}/select`, { method: 'PUT' }).then((r) => json<AudioVersion[]>(r))
@@ -163,7 +169,9 @@ export const setSyncAnchor = (bookId: number, versionId: number, sentence: numbe
 export const syncFromSubtitles = (bookId: number, versionId: number, file: File) => {
   const form = new FormData()
   form.append('file', file)
-  return fetch(`${API}/books/${bookId}/audio/versions/${versionId}/subtitles`, { method: 'POST', body: form }).then((r) => json<AudioVersion[]>(r))
+  return fetch(`${API}/books/${bookId}/audio/versions/${versionId}/subtitles`, { method: 'POST', body: form }).then(
+    (r) => json<AudioVersion[]>(r),
+  )
 }
 
 export type Voice = { id: string; name: string; builtin: boolean; seconds: number; transcript: string }

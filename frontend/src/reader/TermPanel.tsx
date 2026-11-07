@@ -16,6 +16,7 @@ import {
 import { notify } from '../notices'
 import { statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { Definition } from './Definition'
+import { Expression } from './Expression'
 import { dictUrl } from './dictUrl'
 import { SentenceCard } from './SentenceCard'
 import { SpeakButton } from './SpeakButton'
@@ -195,6 +196,17 @@ export function TermPanel({
           onError={onError}
         />
       ) : null}
+
+      {term.displayText.trim().split(/\s+/).length > 1 && (
+        <Expression
+          languageId={language.id}
+          text={term.displayText}
+          sentence={sentenceText}
+          onUse={(meaning) =>
+            edit({ translation: term.translation.trim() ? `${term.translation.trim()}; ${meaning}` : meaning })
+          }
+        />
+      )}
 
       {sentenceText && (
         <SentenceCard

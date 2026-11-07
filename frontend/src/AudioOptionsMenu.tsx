@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AudioOptions } from './api'
+import { audioMenuItems, type MenuItem } from './audioMenuItems'
 import { useEscape } from './escape'
 
 export type AudioChoice = { model: string; voice: string } // '' = what the language's settings say
 
-type Item = { group: 'model' | 'voice'; id: string; label: string; note?: string; disabled?: boolean }
+type Item = MenuItem
 
 // "⋯" menu next to Generate audio: pick another model or voice for this one generation, without touching
 // the language's settings. The choice is shown in plain text by the caller; the menu only changes it.
@@ -27,14 +28,8 @@ export function AudioOptionsMenu({
 
   const modelId = choice.model || options.defaultModel
   const voiceId = choice.voice || options.defaultVoice
-  const installed = options.models.filter((m) => m.installed && !m.problem)
   const missing = options.models.filter((m) => !m.installed || m.problem)
-  const items: Item[] = [
-    ...installed.map((m): Item => ({ group: 'model', id: m.id, label: m.name, note: m.id === options.defaultModel ? 'language default' : undefined })),
-    ...options.voices
-      .filter((v) => (v.model ? v.model === modelId : modelId !== 'mac-voice')) // a Mac voice goes with the Mac voice, clips with the other models
-      .map((v): Item => ({ group: 'voice', id: v.id, label: v.name, note: v.id === options.defaultVoice ? 'language default' : undefined })),
-  ]
+  const { models: modelItems, voices: voiceItems } = audioMenuItems(options, modelId)
   const checked = (it: Item) => (it.group === 'model' ? it.id === modelId : it.id === voiceId)
 
   const close = (returnFocus: boolean) => {
@@ -47,7 +42,9 @@ export function AudioOptionsMenu({
   // Focus the chosen model when the menu opens, so the arrow keys start from something meaningful.
   useEffect(() => {
     if (!open) return
-    const target = menu.current?.querySelector<HTMLElement>('[aria-checked="true"]') ?? menu.current?.querySelector<HTMLElement>('[role^="menuitem"]')
+    const target =
+      menu.current?.querySelector<HTMLElement>('[aria-checked="true"]') ??
+      menu.current?.querySelector<HTMLElement>('[role^="menuitem"]')
     target?.focus()
   }, [open])
 
@@ -62,7 +59,9 @@ export function AudioOptionsMenu({
   }, [open])
 
   function onMenuKey(e: React.KeyboardEvent) {
-    const els = [...(menu.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])') ?? [])]
+    const els = [
+      ...(menu.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled="true"])') ?? []),
+    ]
     const at = els.indexOf(document.activeElement as HTMLElement)
     const go = (i: number) => {
       e.preventDefault()
@@ -77,7 +76,11 @@ export function AudioOptionsMenu({
 
   function pick(it: Item) {
     const isDefault = it.id === (it.group === 'model' ? options.defaultModel : options.defaultVoice)
-    onChange(it.group === 'model' ? { model: isDefault ? '' : it.id, voice: '' } : { ...choice, voice: isDefault ? '' : it.id }) // another model starts from its own voice
+    onChange(
+      it.group === 'model'
+        ? { model: isDefault ? '' : it.id, voice: '' }
+        : { ...choice, voice: isDefault ? '' : it.id },
+    ) // another model starts from its own voice
     close(true)
   }
 
@@ -105,7 +108,11 @@ export function AudioOptionsMenu({
     <div className="menu-wrap">
       <button
         ref={trigger}
-        className={label ? `secondary small${overridden ? ' active' : ''}` : `secondary icon-button${overridden ? ' active' : ''}`}
+        className={
+          label
+            ? `secondary small${overridden ? ' active' : ''}`
+            : `secondary icon-button${overridden ? ' active' : ''}`
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Model and voice for this audio"
@@ -127,7 +134,11 @@ export function AudioOptionsMenu({
             <div id="menu-model" className="menu-heading">
               Model
             </div>
-            {installed.length === 0 ? <p className="muted menu-empty">No model is downloaded yet.</p> : installed.map((m) => row(items.find((i) => i.group === 'model' && i.id === m.id)!))}
+            {modelItems.length === 0 ? (
+              <p className="muted menu-empty">No model is downloaded yet.</p>
+            ) : (
+              modelItems.map(row)
+            )}
             {missing.map((m) => (
               <div key={m.id} role="menuitem" aria-disabled="true" className="menu-item disabled" tabIndex={-1}>
                 <span className="menu-check" aria-hidden="true" />
@@ -142,18 +153,29 @@ export function AudioOptionsMenu({
             <div id="menu-voice" className="menu-heading">
               Voice
             </div>
-            {options.voices.map((v) => row(items.find((i) => i.group === 'voice' && i.id === v.id)!))}
+            {voiceItems.map(row)}
           </div>
           <div className="menu-footer">
             <p className="muted">Applies to this audio only.</p>
-            <a role="menuitem" tabIndex={-1} className="menu-item link" href="#/settings/models" onClick={() => setOpen(false)}>
+            <a
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item link"
+              href="#/settings/models"
+              onClick={() => setOpen(false)}
+            >
               Change the defaults in Settings
             </a>
             {overridden && (
-              <button role="menuitem" tabIndex={-1} className="menu-item link" onClick={() => {
+              <button
+                role="menuitem"
+                tabIndex={-1}
+                className="menu-item link"
+                onClick={() => {
                   onChange({ model: '', voice: '' })
                   close(true)
-                }}>
+                }}
+              >
                 Back to the defaults
               </button>
             )}

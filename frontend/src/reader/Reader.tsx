@@ -6,10 +6,11 @@ import {
   finishPage,
   getPage,
   getBook,
-  getPageText,
+  getBookText,
+  changeBook,
   getPref,
   openExternal,
-  putPageText,
+  putBookText,
   setPref,
   type BookStats,
   type BookTranslation,
@@ -35,7 +36,7 @@ import { pageVocabulary, type NewWord } from './vocabulary'
 import { useMediaQuery } from '../useMediaQuery'
 import { useWindowTitle } from '../desktop'
 import { useNowPlaying } from '../nowPlaying'
-import { isDirty } from './editing'
+import { isDirty, joinPages, splitPages } from './editing'
 import { classify } from './selection'
 import { KeyHelp } from './KeyHelp'
 import { ReaderLayout } from './ReaderLayout'
@@ -44,7 +45,10 @@ import { actionFor, statusForKey, statusKeyLabel } from '../shortcutKeys'
 import { pauseThisWhileSaying, say, stopSaying } from '../pronouncer'
 import { STATUS_BUTTONS, statusName } from './statuses'
 import { TermPanel, type Target } from './TermPanel'
+import { NumberPanel } from './NumberPanel'
+import { isNumberText } from './numberText'
 import { useAudioFollow } from './useAudioFollow'
+import { useReadAloud } from './useReadAloud'
 import { useHoverCard } from './useHoverCard'
 import { keyTarget, whoGetsTheKey } from './keyTarget'
 
@@ -53,6 +57,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [error, setError] = useState('')
   const [help, setHelp] = useState(false)
   const [selected, setSelected] = useState<Target | null>(null)
+  const [numberPick, setNumberPick] = useState<{ text: string; sentence: number } | null>(null) // a number in digits that was clicked
   const scroller = useRef<HTMLDivElement>(null)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   // Words picked with Cmd-click, by lowercase text (a word you never opened has no term yet).
@@ -61,6 +66,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [reloadKey, setReloadKey] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
   const [original, setOriginal] = useState('')
+  const [editTitle, setEditTitle] = useState('')
   const [saving, setSaving] = useState(false)
   const [follow, setFollow] = useState(true)
   const [highlights, setHighlights] = useState(() => getPref('highlights', true))
@@ -75,6 +81,20 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   const [audioVersion, setAudioVersion] = useState(0) // bumped when another audio version is picked
   const audio = useAudioFollow(bookId, page, follow, audioVersion)
   usePlaybackKeys(audio.audioRef, audio.starts)
+  const [readRate, setReadRate] = useState(() => getPref('readaloud.rate', 1))
+  const changeReadRate = useCallback((rate: number) => {
+    setReadRate(rate)
+    setPref('readaloud.rate', rate)
+  }, [])
+  const pauseBookAudio = useCallback(() => audio.audioRef.current?.pause(), [audio.audioRef])
+  const readAloud = useReadAloud(page, bookId, readRate, pauseBookAudio)
+  const marked = audio.playing ?? readAloud.sentence // the sentence being played or read aloud
+  useEffect(() => {
+    if (readAloud.sentence !== null)
+      document
+        .querySelector(`[data-sent="${readAloud.sentence}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [readAloud.sentence])
   useEffect(() => {
     pauseThisWhileSaying(audio.audioRef)
     return () => {
@@ -83,7 +103,12 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
   }, [audio.audioRef])
   useWindowTitle(page?.title ?? 'Ocarina')
-  useNowPlaying(audio.audioRef, page && (audio.audioInfo?.hasAudio || audio.audioInfo?.video) ? { title: page.title, artist: page.language.name, starts: audio.starts } : null)
+  useNowPlaying(
+    audio.audioRef,
+    page && (audio.audioInfo?.hasAudio || audio.audioInfo?.video)
+      ? { title: page.title, artist: page.language.name, starts: audio.starts }
+      : null,
+  )
 
   useEffect(() => {
     const run = { alive: true }
@@ -124,8 +149,13 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   // A translated version of the text, shown beside it or instead of it.
   const afterTranslation = useRef<(data: BookTranslation) => void>(() => undefined)
   const tr = useBookTranslation(bookId, (data) => afterTranslation.current(data))
-  const [chosenMode, setChosenMode] = useState<TranslationMode>(() => getPref<TranslationMode>('reader.translationMode', 'original'))
-  const pageTr = useMemo(() => (page && tr.data ? pageTranslations(page.paragraphs, tr.data.sentences, page.page) : new Map()), [page, tr.data])
+  const [chosenMode, setChosenMode] = useState<TranslationMode>(() =>
+    getPref<TranslationMode>('reader.translationMode', 'original'),
+  )
+  const pageTr = useMemo(
+    () => (page && tr.data ? pageTranslations(page.paragraphs, tr.data.sentences, page.page) : new Map()),
+    [page, tr.data],
+  )
   const shown = effectiveMode(chosenMode, pageTr.size > 0)
   const chooseMode = useCallback((m: TranslationMode) => {
     setChosenMode(m)
@@ -183,13 +213,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
 
   // Same term, anywhere on the page, gets the new status at once.
   const applyStatus = useCallback((termId: number, status: number) => {
-    setPage((p) =>
-      p && {
-        ...p,
-        paragraphs: p.paragraphs.map((para) =>
-          para.map((sent) => sent.map((it) => (it.termId === termId ? { ...it, status } : it))),
-        ),
-      },
+    setPage(
+      (p) =>
+        p && {
+          ...p,
+          paragraphs: p.paragraphs.map((para) =>
+            para.map((sent) => sent.map((it) => (it.termId === termId ? { ...it, status } : it))),
+          ),
+        },
     )
   }, [])
   const termChanged = useCallback((termId: number) => hoverCard.forget(termId), [hoverCard])
@@ -242,7 +273,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   }
 
   function clickWord(mods: { meta: boolean; shift: boolean; alt: boolean }, it: Item) {
-    if (!it.isWord) return
+    if (!it.isWord) {
+      if (isNumberText(it.text) && !mods.meta && !mods.shift && !mods.alt) {
+        setSelected(null)
+        setNumberPick({ text: it.text.trim(), sentence: it.sentence })
+      }
+      return
+    }
+    setNumberPick(null)
     if (mods.meta) {
       const key = it.text.toLowerCase()
       setMulti((m) => {
@@ -264,7 +302,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
 
   // A double click on a word plays its sentence, from just before it begins.
   function playFromWord(it: Item) {
-    if (it.isWord) audio.playSentence(it.sentence)
+    if (!it.isWord) return
+    if (audio.timings) audio.playSentence(it.sentence)
+    else void readAloud.read(it.sentence)
   }
 
   // Our own mouse handling instead of the browser's text selection and click events, which behave differently
@@ -298,12 +338,14 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
 
   // Esc: leave the editor (asking first if there are changes), else clear the selection, else go back (see escape.ts).
   const cancelEditing = () => {
-    if (editing === null || !isDirty(editing, original) || window.confirm('Discard your changes to this text?')) setEditing(null)
+    if (editing === null || !isDirty(editing, original) || window.confirm('Discard your changes to this text?'))
+      setEditing(null)
   }
   useEscape(editing !== null, cancelEditing)
   useLeaveGuard(editing !== null && isDirty(editing, original), 'Discard your changes to this text?')
-  useEscape(editing === null && (selected !== null || multi.size > 0 || help), () => {
+  useEscape(editing === null && (selected !== null || numberPick !== null || multi.size > 0 || help), () => {
     setSelected(null)
+    setNumberPick(null)
     setMulti(new Set())
     setHelp(false)
   })
@@ -315,7 +357,21 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return
       const action = actionFor(e)?.id
       // A key the app acts on is marked as handled: otherwise the web view hands it to macOS, which beeps.
-      if (action && ['clear', 'help', 'toggleVocab', 'focus', 'cycleTranslation', 'highlights', 'prevPage', 'nextPage', 'speak'].includes(action)) e.preventDefault()
+      if (
+        action &&
+        [
+          'clear',
+          'help',
+          'toggleVocab',
+          'focus',
+          'cycleTranslation',
+          'highlights',
+          'prevPage',
+          'nextPage',
+          'speak',
+        ].includes(action)
+      )
+        e.preventDefault()
       if (action === 'clear') {
         setSelected(null)
         setMulti(new Set())
@@ -341,7 +397,19 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [bookId, pageNumber, page, toggleHighlights, toggleVocab, toggleFocus, chooseMode, chosenMode, pageTr, tpToggle, selected])
+  }, [
+    bookId,
+    pageNumber,
+    page,
+    toggleHighlights,
+    toggleVocab,
+    toggleFocus,
+    chooseMode,
+    chosenMode,
+    pageTr,
+    tpToggle,
+    selected,
+  ])
 
   // A status key or the speak key goes to the word under the pointer (Settings → Keyboard shortcuts says in which order with the selected word).
   // This listener runs first and keeps the key from the others when it has acted.
@@ -352,7 +420,18 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey || multi.size > 0 || editing !== null || !page) return
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        multi.size > 0 ||
+        editing !== null ||
+        !page
+      )
+        return
       const status = statusForKey(e)
       const speak = actionFor(e)?.id === 'speak'
       if (status === undefined && !speak) return
@@ -413,8 +492,7 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     try {
       await finishPage(page.bookId, page.page, restAsKnown)
       notify(restAsKnown ? 'Page finished, the rest marked as known' : 'Page finished')
-      window.location.hash =
-        page.page < page.pageCount ? `#/book/${bookId}/read/${page.page + 1}` : `#/book/${bookId}`
+      window.location.hash = page.page < page.pageCount ? `#/book/${bookId}/read/${page.page + 1}` : `#/book/${bookId}`
     } catch (e) {
       setError((e as Error).message)
     }
@@ -423,9 +501,10 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
   async function startEditing() {
     if (!page) return
     try {
-      const text = (await getPageText(bookId, page.page)).text
+      const text = joinPages((await getBookText(bookId)).pages)
       setOriginal(text)
       setEditing(text)
+      setEditTitle(page.title)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -434,11 +513,15 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
     if (!page || editing === null) return
     setSaving(true)
     try {
-      await putPageText(bookId, page.page, editing)
+      const pages = splitPages(editing)
+      if (isDirty(editing, original)) await putBookText(bookId, pages)
+      if (editTitle.trim() !== page.title) await changeBook(bookId, { title: editTitle.trim() })
       notify('Text saved')
       setEditing(null)
       setSelected(null)
       hoverCard.forgetAll()
+      tr.refresh()
+      if (page.page > pages.length) window.location.hash = `#/book/${bookId}/read/${Math.max(pages.length, 1)}`
       setReloadKey((k) => k + 1)
     } catch (e) {
       setError((e as Error).message)
@@ -474,7 +557,9 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
             onClose={() => (narrow ? setVocabNarrow(false) : toggleVocab())}
           />
         }
-        selectionKey={selected ? (selected.termId !== null ? `term:${selected.termId}` : `text:${selected.text}`) : null}
+        selectionKey={
+          selected ? (selected.termId !== null ? `term:${selected.termId}` : `text:${selected.text}`) : null
+        }
         onCloseDrawer={() => {
           setSelected(null)
           setMulti(new Set())
@@ -494,138 +579,198 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
               />
             )}
             <div className="reader-scroll" ref={scroller}>
-            <ReaderToolbar
-              bookId={bookId}
-              title={page.title}
-              highlights={highlights}
-              onToggleHighlights={toggleHighlights}
-              vocabOpen={vocabOpen}
-              onToggleVocab={toggleVocab}
-              focus={focus}
-              onToggleFocus={toggleFocus}
-              onLeave={() => setPeek(false)}
-              translationOn={shown !== 'original'}
-              tpAnchor={tpAnchor}
-              tpPlacement={tpPlacement}
-              tpToggle={tpToggle}
-              tpClose={tpClose}
-              translation={<TranslationPanel tr={tr} mode={shown} onMode={chooseMode} page={page.page} pageCount={page.pageCount} pageHasTranslation={pageTr.size > 0} />}
-              onEdit={startEditing}
-              onHelp={() => setHelp(true)}
-            />
-            <div className={`reader-column${shown === 'both' ? ' parallel' : ''}`}>
-              {editing === null && (
-                <TranslationModes mode={shown} hasTranslation={pageTr.size > 0} targetName={tr.data?.targetName ?? 'Translation'} onMode={chooseMode} onMake={tpToggle} />
-              )}
-              {help && <KeyHelp onClose={() => setHelp(false)} />}
-              {error && <p className="error">{error}</p>}
-              {editing !== null ? (
-          <TextEditor
-            value={editing}
-            original={original}
-            onChange={setEditing}
-            onSave={saveEditing}
-            onCancel={cancelEditing}
-            language={languageCode(page.language.name)}
-            rightToLeft={page.language.rightToLeft}
-            page={page.page}
-            pageCount={page.pageCount}
-            audioWarning={audio.timings !== null}
-            saving={saving}
-          />
-        ) : (
-          <>
-            <article className={highlights ? '' : 'plain'} dir={page.language.rightToLeft ? 'rtl' : 'ltr'} lang={languageCode(page.language.name)} onMouseDown={onMouseDown}>
-              {page.paragraphs
-                .filter((para) => para.length > 0) // blank lines come as empty paragraphs
-                .map((para, pi) => {
-                  const original = (
-                    <p key="o">
-                      {para.map((sent, si) => (
-                        <span
-                          key={si}
-                          data-sent={sent[0]?.sentence}
-                          className={`sentence${sent[0]?.sentence === audio.playing ? ' playing' : ''}${selected?.sentence === sent[0]?.sentence ? ' active' : ''}${shown === 'both' && sent[0]?.sentence === pair ? ' pair' : ''}`}
-                          onMouseEnter={shown === 'both' ? () => setPair(sent[0]?.sentence ?? null) : undefined}
-                          onMouseLeave={shown === 'both' ? () => setPair(null) : undefined}
-                        >
-                          {sent.map((it) =>
-                            it.isWord ? (
-                              <span
-                                key={it.index}
-                                data-i={it.index}
-                                className={`w s${it.status}${
-                                  selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
-                                }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
-                                  ((dragSpan ?? selected?.span) && it.index >= (dragSpan ?? selected!.span!)[0] && it.index <= (dragSpan ?? selected!.span!)[1]) ? ' in-span' : ''
-                                }`}
-                                onMouseEnter={(e) => {
-                                  hovered.current = { text: it.text }
-                                  hoverCard.start(it, e.currentTarget, page.language.id)
-                                }}
-                                onMouseLeave={() => {
-                                  hovered.current = null
-                                  hoverCard.end()
-                                }}
-                              >
-                                {it.display}
-                              </span>
-                            ) : (
-                              <span key={it.index} data-i={it.index}>
-                                {it.display}
-                              </span>
-                            ),
-                          )}
-                        </span>
-                      ))}
+              <ReaderToolbar
+                bookId={bookId}
+                title={page.title}
+                highlights={highlights}
+                onToggleHighlights={toggleHighlights}
+                vocabOpen={vocabOpen}
+                onToggleVocab={toggleVocab}
+                focus={focus}
+                onToggleFocus={toggleFocus}
+                onLeave={() => setPeek(false)}
+                readAloud={{
+                  state: readAloud.state,
+                  rate: readRate,
+                  onRate: changeReadRate,
+                  onRead: () => void readAloud.read(),
+                  onPause: readAloud.pause,
+                  onResume: readAloud.resume,
+                  onStop: readAloud.stop,
+                }}
+                translationOn={shown !== 'original'}
+                tpAnchor={tpAnchor}
+                tpPlacement={tpPlacement}
+                tpToggle={tpToggle}
+                tpClose={tpClose}
+                translation={
+                  <TranslationPanel
+                    tr={tr}
+                    mode={shown}
+                    onMode={chooseMode}
+                    page={page.page}
+                    pageCount={page.pageCount}
+                    pageHasTranslation={pageTr.size > 0}
+                  />
+                }
+                onEdit={startEditing}
+                onHelp={() => setHelp(true)}
+              />
+              <div className={`reader-column${shown === 'both' ? ' parallel' : ''}`}>
+                {editing === null && (
+                  <TranslationModes
+                    mode={shown}
+                    hasTranslation={pageTr.size > 0}
+                    targetName={tr.data?.targetName ?? 'Translation'}
+                    onMode={chooseMode}
+                    onMake={tpToggle}
+                  />
+                )}
+                {help && <KeyHelp onClose={() => setHelp(false)} />}
+                {error && <p className="error">{error}</p>}
+                {editing !== null ? (
+                  <TextEditor
+                    value={editing}
+                    original={original}
+                    onChange={setEditing}
+                    onSave={saveEditing}
+                    onCancel={cancelEditing}
+                    language={languageCode(page.language.name)}
+                    rightToLeft={page.language.rightToLeft}
+                    title={editTitle}
+                    originalTitle={page.title}
+                    onTitle={setEditTitle}
+                    startPage={page.page}
+                    audioWarning={audio.timings !== null}
+                    translationWarning={(tr.data?.done ?? 0) > 0}
+                    saving={saving}
+                  />
+                ) : (
+                  <>
+                    <article
+                      className={highlights ? '' : 'plain'}
+                      dir={page.language.rightToLeft ? 'rtl' : 'ltr'}
+                      lang={languageCode(page.language.name)}
+                      onMouseDown={onMouseDown}
+                    >
+                      {page.paragraphs
+                        .filter((para) => para.length > 0) // blank lines come as empty paragraphs
+                        .map((para, pi) => {
+                          const original = (
+                            <p key="o">
+                              {para.map((sent, si) => (
+                                <span
+                                  key={si}
+                                  data-sent={sent[0]?.sentence}
+                                  className={`sentence${sent[0]?.sentence === marked ? ' playing' : ''}${selected?.sentence === sent[0]?.sentence ? ' active' : ''}${shown === 'both' && sent[0]?.sentence === pair ? ' pair' : ''}`}
+                                  onMouseEnter={shown === 'both' ? () => setPair(sent[0]?.sentence ?? null) : undefined}
+                                  onMouseLeave={shown === 'both' ? () => setPair(null) : undefined}
+                                >
+                                  {sent.map((it) =>
+                                    it.isWord ? (
+                                      <span
+                                        key={it.index}
+                                        data-i={it.index}
+                                        className={`w s${it.status}${
+                                          selected?.termId !== null && selected?.termId === it.termId ? ' sel' : ''
+                                        }${multi.has(it.text.toLowerCase()) ? ' multi' : ''}${
+                                          (dragSpan ?? selected?.span) &&
+                                          it.index >= (dragSpan ?? selected!.span!)[0] &&
+                                          it.index <= (dragSpan ?? selected!.span!)[1]
+                                            ? ' in-span'
+                                            : ''
+                                        }`}
+                                        onMouseEnter={(e) => {
+                                          hovered.current = { text: it.text }
+                                          hoverCard.start(it, e.currentTarget, page.language.id)
+                                        }}
+                                        onMouseLeave={() => {
+                                          hovered.current = null
+                                          hoverCard.end()
+                                        }}
+                                      >
+                                        {it.display}
+                                      </span>
+                                    ) : (
+                                      <span
+                                        key={it.index}
+                                        data-i={it.index}
+                                        className={isNumberText(it.text) ? 'num' : undefined}
+                                      >
+                                        {it.display}
+                                      </span>
+                                    ),
+                                  )}
+                                </span>
+                              ))}
+                            </p>
+                          )
+                          if (shown === 'original')
+                            return (
+                              <div key={pi} className="para">
+                                {original}
+                              </div>
+                            )
+                          // The translation of this paragraph: the same sentence numbers, so the sentence being read aloud is marked here too.
+                          const translated = (
+                            <p key="t" className="tr" lang={tr.data?.target} dir="ltr">
+                              {para.map((sent, si) => {
+                                const id = sent[0]?.sentence
+                                const t = pageTr.get(id)
+                                const hasWord = sent.some((i) => i.isWord)
+                                if (!hasWord) return null
+                                return (
+                                  <span
+                                    key={si}
+                                    data-sent={id}
+                                    className={`sentence tr-sentence${id === marked ? ' playing' : ''}${selected?.sentence === id ? ' active' : ''}${id === pair ? ' pair' : ''}${t?.stale ? ' tr-stale' : ''}${t ? '' : ' tr-pending'}`}
+                                    onMouseEnter={() => setPair(id)}
+                                    onMouseLeave={() => setPair(null)}
+                                    onClick={() => selectSentence(id)}
+                                    title={
+                                      t?.stale
+                                        ? 'The sentence was edited after this was translated'
+                                        : 'Click to select this sentence'
+                                    }
+                                  >
+                                    {t ? t.text : shown === 'both' ? '…' : sent.map((i) => i.display).join('')}{' '}
+                                  </span>
+                                )
+                              })}
+                            </p>
+                          )
+                          return shown === 'both' ? (
+                            <div key={pi} className="para-pair">
+                              {original}
+                              {translated}
+                            </div>
+                          ) : (
+                            <div key={pi} className="para">
+                              {translated}
+                            </div>
+                          )
+                        })}
+                    </article>
+                    <p className="muted reader-hint">
+                      Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their
+                      status together; ⌥-click selects a sentence.
+                      {audio.timings
+                        ? ' Double-click a word to play its sentence.'
+                        : ' Double-click a word to read its sentence aloud.'}
                     </p>
-                  )
-                  if (shown === 'original') return <div key={pi} className="para">{original}</div>
-                  // The translation of this paragraph: the same sentence numbers, so the sentence being read aloud is marked here too.
-                  const translated = (
-                    <p key="t" className="tr" lang={tr.data?.target} dir="ltr">
-                      {para.map((sent, si) => {
-                        const id = sent[0]?.sentence
-                        const t = pageTr.get(id)
-                        const hasWord = sent.some((i) => i.isWord)
-                        if (!hasWord) return null
-                        return (
-                          <span
-                            key={si}
-                            data-sent={id}
-                            className={`sentence tr-sentence${id === audio.playing ? ' playing' : ''}${selected?.sentence === id ? ' active' : ''}${id === pair ? ' pair' : ''}${t?.stale ? ' tr-stale' : ''}${t ? '' : ' tr-pending'}`}
-                            onMouseEnter={() => setPair(id)}
-                            onMouseLeave={() => setPair(null)}
-                            onClick={() => selectSentence(id)}
-                            title={t?.stale ? 'The sentence was edited after this was translated' : 'Click to select this sentence'}
-                          >
-                            {t ? t.text : shown === 'both' ? '…' : sent.map((i) => i.display).join('')}{' '}
-                          </span>
-                        )
-                      })}
-                    </p>
-                  )
-                  return shown === 'both' ? (
-                    <div key={pi} className="para-pair">
-                      {original}
-                      {translated}
-                    </div>
-                  ) : (
-                    <div key={pi} className="para">
-                      {translated}
-                    </div>
-                  )
-                })}
-            </article>
-            <p className="muted reader-hint">
-              Arrow keys turn pages. Drag over words to make a phrase or select text; ⌘-click words to set their status together; ⌥-click selects a sentence.{audio.timings ? ' Double-click a word to play its sentence.' : ''}
-            </p>
-          </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
             </div>
             {focus && (
-              <button className="focus-reveal" aria-label="Show the controls" title="Controls" onMouseEnter={() => setPeek(true)} onFocus={() => setPeek(true)} onClick={() => setPeek(true)}>
+              <button
+                className="focus-reveal"
+                aria-label="Show the controls"
+                title="Controls"
+                onMouseEnter={() => setPeek(true)}
+                onFocus={() => setPeek(true)}
+                onClick={() => setPeek(true)}
+              >
                 ⋯
               </button>
             )}
@@ -637,7 +782,12 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                   </strong>
                   <span className="bulk-statuses">
                     {STATUS_BUTTONS.map((b) => (
-                      <button key={b.status} title={`${b.title} (${statusKeyLabel(b.status)})`} className={`st s${b.status}`} onClick={() => applyMulti(b.status)}>
+                      <button
+                        key={b.status}
+                        title={`${b.title} (${statusKeyLabel(b.status)})`}
+                        className={`st s${b.status}`}
+                        onClick={() => applyMulti(b.status)}
+                      >
                         {b.label}
                       </button>
                     ))}
@@ -648,67 +798,97 @@ export function Reader({ bookId, pageNumber }: { bookId: number; pageNumber: num
                   </button>
                 </div>
               )}
-            {editing === null && (
-              <nav className="page-bar" aria-label="Pages">
-                <button className="secondary" disabled={page.page <= 1} onClick={() => (window.location.hash = `#/book/${bookId}/read/${page.page - 1}`)}>
-                  ← Previous
-                </button>
-                <span className="page-count muted">
-                  Page {page.page} of {page.pageCount}
-                </span>
-                <span className="page-actions">
-                  <button className="secondary" onClick={() => finish(true)} title="Unknown words become well known">
-                    <span className="long">Finish, rest as known</span>
-                    <span className="short">Rest as known</span>
+              {editing === null && (
+                <nav className="page-bar" aria-label="Pages">
+                  <button
+                    className="secondary"
+                    disabled={page.page <= 1}
+                    onClick={() => (window.location.hash = `#/book/${bookId}/read/${page.page - 1}`)}
+                  >
+                    ← Previous
                   </button>
-                  <button onClick={() => finish(false)}>{page.page < page.pageCount ? 'Finish page →' : 'Finish book'}</button>
-                </span>
-              </nav>
-            )}
+                  <span className="page-count muted">
+                    Page {page.page} of {page.pageCount}
+                  </span>
+                  <span className="page-actions">
+                    <button className="secondary" onClick={() => finish(true)} title="Unknown words become well known">
+                      <span className="long">Finish, rest as known</span>
+                      <span className="short">Rest as known</span>
+                    </button>
+                    <button onClick={() => finish(false)}>
+                      {page.page < page.pageCount ? 'Finish page →' : 'Finish book'}
+                    </button>
+                  </span>
+                </nav>
+              )}
             </div>
           </>
         }
         side={
           selected?.kind === 'text' ? (
-          <section className="text-selection" key={`text:${selected.text}`}>
-            <SentenceCard
-              kind={isWholeSentence(flat, selected.sentence, selected.span) ? 'sentence' : 'text'}
-              languageId={page.language.id}
-              text={selected.text}
-              stored={isWholeSentence(flat, selected.sentence, selected.span) ? pageTr.get(selected.sentence)?.text : undefined}
+            <section className="text-selection" key={`text:${selected.text}`}>
+              <SentenceCard
+                kind={isWholeSentence(flat, selected.sentence, selected.span) ? 'sentence' : 'text'}
+                languageId={page.language.id}
+                text={selected.text}
+                stored={
+                  isWholeSentence(flat, selected.sentence, selected.span)
+                    ? pageTr.get(selected.sentence)?.text
+                    : undefined
+                }
+                playStart={audio.startOf(selected.sentence)}
+                onPlay={audio.playAt}
+                onOpenInBrowser={
+                  page.language.sentenceDictionaries[0]
+                    ? () =>
+                        openExternal(dictUrl(page.language.sentenceDictionaries[0], selected.text)).catch((e) =>
+                          setError(e.message),
+                        )
+                    : undefined
+                }
+              />
+              <section className="sc-learn" aria-labelledby="learn-phrase">
+                <h3 id="learn-phrase">Learn it as a phrase</h3>
+                <p className="muted">
+                  Makes these words one item to learn, with its own status and meaning. It suits short expressions best.
+                </p>
+                <button
+                  className="secondary"
+                  onClick={() => setSelected({ termId: null, text: selected.text, sentence: selected.sentence })}
+                >
+                  Save as a phrase
+                </button>
+              </section>
+            </section>
+          ) : selected ? (
+            <TermPanel
+              key={selected.termId ?? `new:${selected.text}`}
+              language={page.language}
+              where={{ bookId: page.bookId, page: page.page }}
+              target={selected}
+              sentenceText={sentenceText(selected.sentence)}
+              storedTranslation={pageTr.get(selected.sentence)?.text}
               playStart={audio.startOf(selected.sentence)}
               onPlay={audio.playAt}
-              onOpenInBrowser={
-                page.language.sentenceDictionaries[0] ? () => openExternal(dictUrl(page.language.sentenceDictionaries[0], selected.text)).catch((e) => setError(e.message)) : undefined
-              }
+              keysEnabled={multi.size === 0}
+              onStatus={applyStatus}
+              onChanged={termChanged}
+              onCreated={termCreated}
+              onError={setError}
             />
-            <section className="sc-learn" aria-labelledby="learn-phrase">
-              <h3 id="learn-phrase">Learn it as a phrase</h3>
-              <p className="muted">Makes these words one item to learn, with its own status and meaning. It suits short expressions best.</p>
-              <button className="secondary" onClick={() => setSelected({ termId: null, text: selected.text, sentence: selected.sentence })}>
-                Save as a phrase
-              </button>
-            </section>
-          </section>
-        ) : selected ? (
-          <TermPanel
-            key={selected.termId ?? `new:${selected.text}`}
-            language={page.language}
-            where={{ bookId: page.bookId, page: page.page }}
-            target={selected}
-            sentenceText={sentenceText(selected.sentence)}
-            storedTranslation={pageTr.get(selected.sentence)?.text}
-            playStart={audio.startOf(selected.sentence)}
-            onPlay={audio.playAt}
-            keysEnabled={multi.size === 0}
-            onStatus={applyStatus}
-            onChanged={termChanged}
-            onCreated={termCreated}
-            onError={setError}
-          />
-        ) : (
-          <p className="muted">Click a word. Then press 1–5, w (well known) or i (ignore).</p>
-        )
+          ) : numberPick ? (
+            <NumberPanel
+              key={numberPick.text}
+              languageId={page.language.id}
+              text={numberPick.text}
+              onLookUp={(word) => {
+                setNumberPick(null)
+                setSelected({ termId: null, text: word, sentence: numberPick.sentence })
+              }}
+            />
+          ) : (
+            <p className="muted">Click a word. Then press 1–5, w (well known) or i (ignore).</p>
+          )
         }
       />
 

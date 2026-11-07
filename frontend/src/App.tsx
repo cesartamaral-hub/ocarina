@@ -11,6 +11,7 @@ import { AudioPage } from './AudioPage'
 import { BookRedirect } from './BookRedirect'
 import { NewBook } from './NewBook'
 import { Reader } from './reader/Reader'
+import { ErrorBoundary } from './ErrorBoundary'
 import { SettingsShell } from './SettingsShell'
 import { legacyRedirect, parseSettings } from './settingsRoutes'
 import { Stats } from './Stats'
@@ -56,6 +57,9 @@ export default function App() {
   const reading = (bookId !== null && readPage !== null) || vocabulary || settings !== null // the reader, the vocabulary and settings use the whole window
   const onHome = bookId === null && !(settings || newBook || vocabulary || stats || raw.startsWith('#/settings'))
   const medium = onHome || stats
+  // Which tab of the top bar is the current one: the book pages, the new-book form and the home page are all "Books".
+  const here =
+    raw.startsWith('#/settings') || settings ? 'settings' : stats ? 'stats' : vocabulary ? 'vocabulary' : 'books'
   const [ready, setReady] = useState(false)
   // Older addresses (and plain "#/settings") go to their section.
   useEffect(() => {
@@ -94,32 +98,54 @@ export default function App() {
           <Logo />
           Ocarina
         </a>
-        <JobChip />
-        <nav>
-          <a href="#/vocabulary">Vocabulary</a>
-          <a href="#/stats">Reading</a>
-          <a href="#/settings">Settings</a>
+        <nav className="tabs" aria-label="Main">
+          {[
+            ['books', '#/', 'Books'],
+            ['vocabulary', '#/vocabulary', 'Vocabulary'],
+            ['stats', '#/stats', 'Reading'],
+          ].map(([id, href, label]) => (
+            <a key={id} href={href} className="tab" aria-current={here === id ? 'page' : undefined}>
+              {label}
+            </a>
+          ))}
         </nav>
+        <span className="top-spacer" />
+        <JobChip />
+        <a href="#/settings" className="tab settings-tab" aria-current={here === 'settings' ? 'page' : undefined}>
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M6.7 1.5h2.6l.4 1.7 1.2.5 1.5-.9 1.8 1.8-.9 1.5.5 1.2 1.7.4v2.6l-1.7.4-.5 1.2.9 1.5-1.8 1.8-1.5-.9-1.2.5-.4 1.7H6.7l-.4-1.7-1.2-.5-1.5.9-1.8-1.8.9-1.5-.5-1.2-1.7-.4V6.7l1.7-.4.5-1.2-.9-1.5 1.8-1.8 1.5.9 1.2-.5z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
+            <circle cx="8" cy="8" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+          Settings
+        </a>
       </header>
       <UpdateDialog />
       <main className={reading ? 'w-full' : medium ? 'w-medium' : undefined}>
-        {!ready ? null : settings ? (
-          <SettingsShell section={settings.section} rest={settings.rest} />
-        ) : stats ? (
-          <Stats />
-        ) : vocabulary ? (
-          <Vocabulary />
-        ) : newBook ? (
-          <NewBook />
-        ) : bookId !== null && readPage !== null ? (
-          <Reader key={bookId} bookId={bookId} pageNumber={readPage} />
-        ) : bookId !== null && audioPage ? (
-          <AudioPage key={bookId} bookId={bookId} />
-        ) : bookId === null ? (
-          <BookList />
-        ) : (
-          <BookRedirect key={bookId} bookId={bookId} />
-        )}
+        <ErrorBoundary resetKey={raw}>
+          {!ready ? null : settings ? (
+            <SettingsShell section={settings.section} rest={settings.rest} />
+          ) : stats ? (
+            <Stats />
+          ) : vocabulary ? (
+            <Vocabulary />
+          ) : newBook ? (
+            <NewBook />
+          ) : bookId !== null && readPage !== null ? (
+            <Reader key={bookId} bookId={bookId} pageNumber={readPage} />
+          ) : bookId !== null && audioPage ? (
+            <AudioPage key={bookId} bookId={bookId} />
+          ) : bookId === null ? (
+            <BookList />
+          ) : (
+            <BookRedirect key={bookId} bookId={bookId} />
+          )}
+        </ErrorBoundary>
       </main>
       <NoticeList />
     </>
