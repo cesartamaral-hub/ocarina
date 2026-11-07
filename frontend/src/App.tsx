@@ -6,6 +6,7 @@ import { mayFollow } from './leaveGuard'
 import { JobChip } from './JobChip'
 import { NoticeList } from './NoticeList'
 import { UpdateDialog } from './UpdateDialog'
+import { VersionTag } from './VersionTag'
 import { BookList } from './BookList'
 import { AudioPage } from './AudioPage'
 import { BookRedirect } from './BookRedirect'
@@ -94,10 +95,13 @@ export default function App() {
   return (
     <>
       <header className="top">
-        <a href="#/" className="brand">
-          <Logo />
-          Ocarina
-        </a>
+        <div className="brand-box">
+          <a href="#/" className="brand">
+            <Logo />
+            Ocarina
+          </a>
+          <VersionTag />
+        </div>
         <nav className="tabs" aria-label="Main">
           {[
             ['books', '#/', 'Books'],

@@ -5,7 +5,6 @@ import { LearnedBar } from './LearnedBar'
 import { sortBooks, SORTS, type SortKey } from './bookStats'
 import { Welcome } from './Welcome'
 import { SetupLine } from './SetupLine'
-import { VersionFooter } from './VersionFooter'
 
 function EditForm({ book, onDone }: { book: Book; onDone: (changed: boolean) => void }) {
   const [title, setTitle] = useState(book.title)
@@ -200,7 +199,6 @@ export function BookList() {
         </section>
       ))}
       {!archived && <SetupLine />}
-      <VersionFooter />
     </>
   )
 }

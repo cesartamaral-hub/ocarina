@@ -67,6 +67,8 @@ a:hover { text-decoration: underline; }
 .top { position: sticky; top: 0; z-index: 40; height: var(--header-h); box-sizing: border-box; padding: 0 24px; background: var(--bg); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 22px; }
 .brand { font-weight: 600; color: var(--fg); letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 8px; }
 .brand:hover { text-decoration: none; }
+.brand-box { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+.version-tag { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
 .logo { height: 22px; width: auto; fill: var(--accent); }
 /* Page widths: narrow for forms and settings, medium for lists, full for the reader. */
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
@@ -203,7 +205,7 @@ header.top nav, .tabs { display: flex; gap: 4px; align-self: stretch; }
 .top .tab { display: inline-flex; align-items: center; gap: 6px; align-self: stretch; padding: 0 10px; color: var(--muted, var(--fg)); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .top .tab:hover { color: var(--fg); text-decoration: none; }
 .top .tab[aria-current='page'] { color: var(--fg); border-bottom-color: var(--accent); }
-@media (max-width: 560px) { .top { padding: 0 12px; gap: 10px; } .top .brand { font-size: 0; gap: 0; } .top .tab { padding: 0 6px; } .top .settings-tab { font-size: 0; gap: 0; } }
+@media (max-width: 560px) { .top { padding: 0 12px; gap: 10px; } .top .brand { font-size: 0; gap: 0; } .top .version-tag { display: none; } .top .tab { padding: 0 6px; } .top .settings-tab { font-size: 0; gap: 0; } }
 .filters .controls { align-items: end; }
 .filters label.inline { flex-direction: row; align-items: center; gap: 6px; padding-bottom: 6px; }
 .bulk { position: sticky; top: 8px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
@@ -953,8 +955,6 @@ h2 .speak { margin-left: 6px; }
 .learned-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 .learned-before { margin-top: 4px; font-size: 0.8rem; }
 .books + .set-group { margin-top: 24px; }
-.version-footer { position: fixed; right: 12px; bottom: 6px; z-index: 5; display: flex; align-items: baseline; gap: 6px; font-size: 0.75rem; color: var(--muted); }
-.version-footer .link-button { font-size: inherit; color: var(--accent); }
 .nav-alert { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: 0.7rem; font-weight: 700; line-height: 1; vertical-align: 1px; }
 .set-input.wide { width: 100%; }
 .set-row .set-control:has(> .set-input.wide) { flex: 1 1 0; min-width: 0; }
