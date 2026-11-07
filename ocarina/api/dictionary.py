@@ -1,6 +1,8 @@
 """
 JSON API for word definitions (Wiktionary, cached; see ocarina/dictionary.py).
 
+    GET /ocarina/api/dictionary/parts?languageId=<id>&text=<several words>
+    {parts: [{text, words, source, entries}]}: what the dictionaries on this Mac know inside a selection (runs of two or more words, then single words)
     GET /ocarina/api/dictionary/define?languageId=<id>&text=<word>[&cacheOnly=true][&online=true]
 
 Answers {found, word, entries: [{partOfSpeech, definitions: [{text, examples, lemma?}]}], lemmas: [{word, entries}],
@@ -15,7 +17,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from lute.db import db
 from lute.models.language import Language
-from ocarina import dictionary
+from ocarina import dictionary, expressions, translate
 
 bp = Blueprint("ocarina_dictionary", __name__, url_prefix="/ocarina/api")
 
@@ -43,3 +45,14 @@ def define():
         return jsonify({"found": False, "cacheMiss": True})
     result.pop("fetched", None)
     return jsonify(result)
+
+
+@bp.route("/dictionary/parts", methods=["GET"])
+def parts():
+    "What the dictionaries on this Mac say about the runs of words inside a selection."
+    language = db.session.get(Language, int(request.args["languageId"])) if request.args.get("languageId", "").isdigit() else None
+    if language is None:
+        return jsonify({"error": "Unknown language"}), 404
+    code = translate.code_for(language.name)
+    found = expressions.parts(current_app.env_config.datapath, code, request.args.get("text", "")) if code else []
+    return jsonify({"parts": found})

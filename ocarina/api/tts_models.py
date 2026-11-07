@@ -17,7 +17,7 @@ JSON API for the voice models.
 import requests
 from flask import Blueprint, current_app, jsonify, request
 
-from ocarina import model_check, offline
+from ocarina import hardware, model_check, offline
 from ocarina.api import jobs
 from ocarina.tts import models as model_files
 
@@ -80,6 +80,7 @@ def models():
                 "check": model_check.result_for(datapath, m),
                 "installed": model_files.is_installed(m),
                 "sizeBytes": model_files.total_bytes(m),
+                "fit": hardware.fit(model_files.total_bytes(m)),
                 "downloadError": _download_error(m["id"], model_files.is_installed(m)),
                 "downloadJob": next((j["id"] for j in active if j["model_id"] == m["id"]), None),
             }

@@ -28,7 +28,7 @@ import time
 
 import requests
 
-from ocarina import offline, paths, prefs, tools
+from ocarina import numbers, offline, paths, prefs, tools
 from ocarina.tts import models as model_files
 from ocarina.tts import voices
 from ocarina.tts.service import voice_digest
@@ -359,7 +359,7 @@ def say(cfg, app_config, text, code, source, saved, busy=False, locale=None):  #
     (path, source used, note). `source` is the one asked for; when it cannot be used the system voice answers instead, and the note says
     why. Raises Unavailable only when even the system voice cannot.
     """
-    text = re.sub(r"\s+", " ", text).strip()
+    text = numbers.spoken(re.sub(r"\s+", " ", text).strip(), code)  # digits are said as words
     if not text:
         raise Unavailable("Nothing to say.")
     if len(text) > MAX_TEXT:

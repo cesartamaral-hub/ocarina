@@ -9,8 +9,9 @@ import os
 import subprocess
 import sys
 import threading
+import weakref
 
-from ocarina import tools
+from ocarina import hardware, tools
 
 
 TOOL_DIRS = ("/opt/homebrew/bin", "/usr/local/bin")  # where Homebrew puts ffmpeg; an app opened from the Dock does not have them on its PATH
@@ -41,6 +42,9 @@ def worker_command_and_env(module="ocarina.tts.worker", offline=True):
     }
     if offline:
         env["HF_HUB_OFFLINE"] = "1"
+    cache_mb = hardware.mlx_cache_mb()
+    if cache_mb:
+        env["OCARINA_MLX_CACHE_MB"] = str(cache_mb)  # see worker.limit_mlx_cache
     if getattr(sys, "frozen", False):
         lib = os.path.join(os.environ["RESOURCEPATH"], "lib")
         env["PYTHONPATH"] = os.pathsep.join(
@@ -57,6 +61,24 @@ class TtsError(Exception):
     "The worker reported an error or could not be used."
 
 
+_started = weakref.WeakSet()  # supervisors that have started a worker (the app has a few: voices, the translation model, transcription)
+
+
+def release_idle(keep):
+    "Stop the workers of the other supervisors that are not in the middle of a request, so their models give memory back. Returns how many."
+    stopped = 0
+    for other in list(_started):
+        if other is keep or not other._alive():  # pylint: disable=protected-access
+            continue
+        if other._lock.acquire(blocking=False):  # pylint: disable=protected-access
+            try:
+                other._kill()  # pylint: disable=protected-access
+                stopped += 1
+            finally:
+                other._lock.release()  # pylint: disable=protected-access
+    return stopped
+
+
 class Supervisor:
     "One worker, one loaded engine, one request at a time."
 
@@ -69,6 +91,9 @@ class Supervisor:
         self._lock = threading.Lock()
 
     def _start(self):
+        if hardware.one_at_a_time():
+            release_idle(self)  # a Mac with 8 or 16 GB keeps one model in memory, not two
+        _started.add(self)
         command, env = worker_command_and_env()
         self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env

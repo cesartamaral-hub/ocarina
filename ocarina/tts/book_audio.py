@@ -16,6 +16,7 @@ from datetime import datetime
 
 import soundfile as sf
 
+from ocarina import numbers
 from ocarina.tts.service import synthesize_text_sentences
 from ocarina.tts.stitch import stitch
 
@@ -97,7 +98,7 @@ def generate_book_audio(  # pylint: disable=too-many-arguments,too-many-position
         supervisor,
         cache,
         model_id,
-        [s["text"] for s in sentences],
+        [numbers.spoken(s["text"], lang) for s in sentences],  # digits are voiced as words; the timings keep the written text
         lang,
         voice,
         lambda i, total: on_progress and on_progress(i + 1, total),

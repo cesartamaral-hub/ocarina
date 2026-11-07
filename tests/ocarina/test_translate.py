@@ -41,13 +41,14 @@ def net(app, monkeypatch):
                 os.remove(name)
 
     clean()
-    state = {"calls": [], "mymemory": mymemory_ok(), "deepl": Reply(200, {"translations": [{"text": "Why did we let them go?"}]}), "down": False}
+    state = {"calls": [], "google": Reply(200, [[["Why did we let them go?", "Waarom hebben we ze eigenlijk laten gaan?"]]]), "mymemory": mymemory_ok(), "deepl": Reply(200, {"translations": [{"text": "Why did we let them go?"}]}), "down": False}
 
     def fake_get(url, headers=None, timeout=None, params=None):  # pylint: disable=unused-argument
-        state["calls"].append(("mymemory", params))
+        which = "google" if "googleapis" in url else "mymemory"
+        state["calls"].append((which, params))
         if state["down"]:
             raise requests.exceptions.ConnectionError("offline")
-        return state["mymemory"]
+        return state[which]
 
     def fake_post(url, headers=None, json=None, timeout=None):  # pylint: disable=unused-argument,redefined-outer-name
         state["calls"].append(("deepl", url, headers["Authorization"], json))
@@ -55,6 +56,7 @@ def net(app, monkeypatch):
             raise requests.exceptions.ConnectionError("offline")
         return state["deepl"]
 
+    prefs.update(prefs.path_for(datapath), {"translate.provider": "mymemory"})  # most tests are about MyMemory; the default has its own test
     monkeypatch.setattr(translate.model_files, "is_installed", lambda m: False)  # the real cache of this Mac must not matter
     monkeypatch.setattr(translate.requests, "get", fake_get)
     monkeypatch.setattr(translate.requests, "post", fake_post)
@@ -71,11 +73,12 @@ def _ask(client, app, text="Waarom hebben we ze eigenlijk laten gaan?"):
     return client.post(URL, json={"languageId": _dutch(app), "text": text})
 
 
-def test_default_settings_and_choices(client):
-    "Out of the box: MyMemory, into English, no key."
+def test_default_settings_and_choices(app, client):
+    "Out of the box: Google, into English, no key."
+    prefs.update(prefs.path_for(app.env_config.datapath), {"translate.provider": None})
     s = client.get(f"{URL}/settings").json
-    assert (s["provider"], s["target"], s["hasDeeplKey"], s["email"]) == ("mymemory", "en", False, "")
-    assert [p["id"] for p in s["providers"]] == ["local", "mymemory", "deepl"] and "en" in [t["code"] for t in s["targets"]]
+    assert (s["provider"], s["target"], s["hasDeeplKey"], s["email"]) == ("google", "en", False, "")
+    assert [p["id"] for p in s["providers"]] == ["google", "local", "mymemory", "deepl"] and "en" in [t["code"] for t in s["targets"]]
     assert s["localModel"]["id"] == "qwen3-4b-instruct-mlx" and s["localModel"]["installed"] is False
 
 
@@ -205,11 +208,11 @@ def test_the_local_model_must_be_downloaded_first(app, client):
     assert r.status_code == 400 and r.json["code"] == "no_model" and "Download" in r.json["error"]
 
 
-def test_local_becomes_the_default_once_it_is_downloaded(client, monkeypatch):
-    "Before the model is installed the default is MyMemory; after, the model on this Mac, unless you chose."
-    assert client.get(f"{URL}/settings").json["provider"] == "mymemory"
+def test_google_stays_the_default_even_with_a_model_downloaded_and_your_choice_wins(app, client, monkeypatch):
+    "Not chosen yet: Google, also when a model is on this Mac; what you chose is kept; Work offline means the model."
+    prefs.update(prefs.path_for(app.env_config.datapath), {"translate.provider": None})
     monkeypatch.setattr(translate.model_files, "is_installed", lambda m: True)
-    assert client.get(f"{URL}/settings").json["provider"] == "local"
+    assert client.get(f"{URL}/settings").json["provider"] == "google"
     client.put(f"{URL}/settings", json={"provider": "deepl"})
     assert client.get(f"{URL}/settings").json["provider"] == "deepl"
 
@@ -353,3 +356,47 @@ def test_try_it_uses_your_sentence_or_a_sample(app, client, net):
     assert net["calls"][-1][1]["q"] == "Ik fiets naar mijn werk."
     sample = client.post(URL + "/test", json={"languageId": _dutch(app)}).json
     assert sample["text"] == translate.SAMPLES["nl"]
+
+
+def test_google_translates_without_a_key_and_the_second_time_comes_from_the_cache(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    first = _ask(client, app)
+    assert first.json["translation"] == "Why did we let them go?" and first.json["provider"] == "google"
+    assert net["calls"][0][1] == {"client": "gtx", "sl": "nl", "tl": "en", "dt": "t", "q": "Waarom hebben we ze eigenlijk laten gaan?"}
+    assert _ask(client, app).json["cached"] is True and len(net["calls"]) == 1
+
+
+def test_a_sentence_in_several_parts_is_joined(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    net["google"] = Reply(200, [[["Why did we ", "Waarom hebben we "], ["let them go?", "ze laten gaan?"]]])
+    assert _ask(client, app, "Waarom hebben we ze laten gaan?").json["translation"] == "Why did we let them go?"
+
+
+def test_when_google_fails_another_method_answers_and_says_so(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    net["google"] = Reply(429, None)
+    r = _ask(client, app, "Een andere zin.")
+    assert r.status_code == 200 and r.json["provider"] == "mymemory"  # no model on this Mac in this test: MyMemory takes over
+    assert r.json["fallbackFrom"] == "google" and "slow down" in r.json["fallbackReason"]
+
+
+def test_when_nothing_answers_the_google_error_is_the_one_shown(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    net["down"] = True
+    r = _ask(client, app, "Nog een zin.")
+    assert r.status_code == 502 and r.json["code"] == "offline"
+
+
+def test_a_selection_is_read_in_its_sentence_through_google_by_carrying_it_in_quotes(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    net["google"] = Reply(200, [[["\u201cEven if\u201d it rains, I go outside.", "x"]]])
+    r = client.post(f"{URL}/gloss", json={"languageId": _dutch(app), "text": "zelfs al", "sentence": "Zelfs al regent het, ik ga naar buiten."})
+    assert r.json["translation"] == "Even if" and r.json["inContext"] is True and r.json["sentenceTranslation"] == "Even if it rains, I go outside."
+    assert net["calls"][0][1]["q"] == "\u00abZelfs al\u00bb regent het, ik ga naar buiten."
+
+
+def test_when_the_quotes_do_not_survive_the_selection_alone_is_translated(app, client, net):
+    client.put(f"{URL}/settings", json={"provider": "google"})
+    net["google"] = Reply(200, [[["Even if it rains, I go out.", "x"]]])
+    r = client.post(f"{URL}/gloss", json={"languageId": _dutch(app), "text": "regent het", "sentence": "Zelfs al regent het, ik ga weg."})
+    assert r.json["inContext"] is False and len(net["calls"]) == 2  # the marked sentence, then the selection alone

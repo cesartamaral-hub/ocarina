@@ -89,17 +89,18 @@ def provider_label(settings, models):
     return translate.PROVIDERS[settings["provider"]]["name"]
 
 
-def translate_book(book, datapath, settings, lang, scope, page, label, check, on_progress, engine=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+def translate_book(book, datapath, settings, lang, scope, page, label, check, on_progress, engine=None, redo=False):  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     """
-    Translate the sentences that have no (current) translation: of one page, or of the whole book. Each is saved as soon as it is
-    done, so cancelling or an error keeps what was finished. Returns how many sentences were translated.
+    Translate the sentences that have no (current) translation: of one page, or of the whole book. With `redo` every sentence is translated
+    again, except the ones you worded yourself. Each is saved as soon as it is done (replacing the old one), so cancelling or an error keeps
+    what was finished and a sentence that fails keeps its old translation. Returns how many sentences were translated.
     """
     saved = _rows(book.id, lang)
     todo = [
         s
         for s in sentences_of(book)
         if (scope == "book" or s["page"] == page)
-        and not ((row := saved.get((s["page"], s["index"]))) and (row.BtSource == source_hash(s["text"]) or row.BtProvider == "manual"))
+        and not ((row := saved.get((s["page"], s["index"]))) and ((row.BtSource == source_hash(s["text"]) and not redo) or row.BtProvider == "manual"))
     ]
     done, failed = 0, 0
     for i, s in enumerate(todo):

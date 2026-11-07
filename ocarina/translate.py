@@ -20,8 +20,13 @@ from ocarina.tts import models as model_files
 TIMEOUT = 10
 USER_AGENT = "Ocarina/1.0 (personal language-learning app)"
 LOCAL_MODEL = "qwen3-4b-instruct-mlx"
-MAX_CHARS = {"mymemory": 500, "deepl": 2000, "local": 1000}
+MAX_CHARS = {"google": 2000, "mymemory": 500, "deepl": 2000, "local": 1000}
 PROVIDERS = {
+    "google": {
+        "name": "Google Translate",
+        "needsKey": False,
+        "description": "Fast, free, no account. The text is sent to Google. It uses an unofficial address that Google can change or limit; when it fails, Ocarina uses another method for that sentence.",
+    },
     "local": {
         "name": "Local model",
         "needsKey": False,
@@ -76,6 +81,7 @@ CODES = {
     "hebrew": "he", "hindi": "hi", "thai": "th", "vietnamese": "vi", "indonesian": "id", "afrikaans": "af", "latvian": "lv",
     "lithuanian": "lt", "estonian": "et", "albanian": "sq", "icelandic": "is", "irish": "ga", "welsh": "cy", "basque": "eu",
 }
+GOOGLE_CODES = {"nb": "no", "pt-BR": "pt"}  # Google's codes where they differ from ours
 DEEPL_TARGETS = {"en": "EN-GB", "pt-PT": "PT-PT", "pt-BR": "PT-BR"}
 
 
@@ -158,6 +164,23 @@ def _mymemory(text, source, target, email):
     return answer
 
 
+def _google(text, source, target):
+    "Google Translate through the address its own web page uses (no key). Unofficial: it can change or limit without notice."
+    params = {"client": "gtx", "sl": GOOGLE_CODES.get(source, source), "tl": GOOGLE_CODES.get(target, target), "dt": "t", "q": text}
+    response = _get("https://translate.googleapis.com/translate_a/single", params=params)
+    if response.status_code == 429:
+        raise TranslateError("Google asked Ocarina to slow down. Try again in a little while.", "quota")
+    if response.status_code != 200:
+        raise TranslateError(f"Google could not translate this (error {response.status_code}).", "failed")
+    try:
+        answer = "".join(part[0] for part in response.json()[0] if part and part[0]).strip()
+    except (ValueError, KeyError, IndexError, TypeError) as e:
+        raise TranslateError("Google sent an answer that could not be read.", "failed") from e
+    if not answer:
+        raise TranslateError("Google gave no translation.", "failed")
+    return answer
+
+
 def _deepl(text, source, target, key):
     host = "api-free.deepl.com" if key.endswith(":fx") else "api.deepl.com"
     try:
@@ -208,7 +231,7 @@ def _local(text, source_name, source, target, engine, model_id=None):  # pylint:
     return answer
 
 
-def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
+def _translate_once(datapath, settings, language_name, text, use_cache=True, local_engine=None):
     """
     Translate a sentence from a Lute language into the target language. settings: {provider, target, email, localModel}.
     Returns {translation, provider, source, target, cached}. Raises TranslateError. use_cache=False always asks the service (to test a key). local_engine overrides the local model's engine (tests).
@@ -233,6 +256,8 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
         return {"translation": cached, "provider": provider, "source": source, "target": target, "cached": True}
     if provider == "local":
         answer = _local(text, dictionary.section_name(language_name), source, target, local_engine, model_id)
+    elif provider == "google":
+        answer = _google(text, source, target)
     elif provider == "deepl":
         key = keystore.get(datapath, "deepl")
         if not key:
@@ -242,3 +267,113 @@ def translate(datapath, settings, language_name, text, use_cache=True, local_eng
         answer = _mymemory(text, source, target, settings.get("email"))
     _write(path, answer)
     return {"translation": answer, "provider": provider, "source": source, "target": target, "cached": False}
+
+
+GLOSS_PROMPT = (
+    "You explain a {source} expression for a learner. Reply with only what the expression means in {target}, in a few words, "
+    "as it is used in the sentence given. No explanation, no quotation marks."
+)
+
+
+FALLBACK_FOR = ("offline", "quota", "failed")  # Google's failures that another method can cover
+
+
+def translate(datapath, settings, language_name, text, use_cache=True, local_engine=None):
+    """
+    Translate a sentence from a Lute language into the target language. settings: {provider, target, email, localModel}.
+    Returns {translation, provider, source, target, cached} (+ fallbackFrom and fallbackReason when Google failed and another method answered).
+    Raises TranslateError. use_cache=False always asks the service (to test a key). local_engine overrides the local model's engine (tests).
+    Google is the one method that is allowed to fail quietly: its sentence is then translated by a model on this Mac, else by MyMemory.
+    """
+    try:
+        return _translate_once(datapath, settings, language_name, text, use_cache, local_engine)
+    except TranslateError as first:
+        if settings["provider"] != "google" or first.code not in FALLBACK_FOR:
+            raise
+        for other in _fallbacks(settings, local_engine):
+            try:
+                result = _translate_once(datapath, {**settings, **other}, language_name, text, use_cache, local_engine)
+            except TranslateError:
+                continue
+            return {**result, "fallbackFrom": "google", "fallbackReason": str(first)}
+        raise
+
+
+def _fallbacks(settings, local_engine):
+    "The methods that take over from Google, in order: the model on this Mac, then MyMemory (online, so not while Work offline is on)."
+    out = []
+    models = model_files.text_models()
+    wanted = settings.get("localModel")
+    ready = [m for m in models if local_engine is not None or model_files.is_installed(m)]
+    if ready:
+        out.append({"provider": "local", "localModel": wanted if any(m["id"] == wanted for m in ready) else ready[0]["id"]})
+    if not offline.is_on():
+        out.append({"provider": "mymemory"})
+    return out
+
+
+QUOTED = re.compile(r"[«“\"„‘「]([^»”\"“‘」]+)[»”\"」’]")
+
+
+def _in_context_online(datapath, settings, language_name, text, sentence, use_cache, local_engine):
+    """
+    An online service only takes text, so the selection is carried inside its sentence between « » and the sentence is translated: the
+    service keeps the quotes and translates what is inside them as part of the sentence ("zelfs al" in "Zelfs al regent het" comes back as
+    "Even if"; alone it is "even already"). None when the selection is not in the sentence as written or the quotes did not survive.
+    """
+    at = re.search(re.escape(text), sentence, re.IGNORECASE)
+    if at is None:
+        return None
+    marked = f"{sentence[: at.start()]}«{sentence[at.start() : at.end()]}»{sentence[at.end() :]}"
+    try:
+        result = translate(datapath, settings, language_name, marked, use_cache, local_engine)
+    except TranslateError:
+        return None
+    quoted = QUOTED.findall(result["translation"])
+    if len(quoted) != 1 or not quoted[0].strip():
+        return None
+    return {**result, "translation": quoted[0].strip(), "inContext": True, "sentenceTranslation": QUOTED.sub(lambda m: m.group(1), result["translation"])}
+
+
+def gloss(datapath, settings, language_name, text, sentence, use_cache=True, local_engine=None):
+    """
+    What a selection of words means in its sentence, in the target language: {translation, provider, source, target, cached, inContext}.
+    The local model is given the sentence too (so "al" next to "zelfs" is read as "even if", not "already"); the online services only
+    take the selection itself. A machine's answer, shown as such. Raises TranslateError.
+    """
+    text = re.sub(r"\s+", " ", (text or "").replace("\u200b", "")).strip()
+    sentence = re.sub(r"\s+", " ", (sentence or "").replace("\u200b", "")).strip()
+    if settings["provider"] != "local" and sentence and sentence != text:
+        marked = _in_context_online(datapath, settings, language_name, text, sentence, use_cache, local_engine)
+        if marked is not None:
+            return marked
+    if settings["provider"] != "local" or not sentence or sentence == text:
+        return {**translate(datapath, settings, language_name, text, use_cache, local_engine), "inContext": False}
+    source = code_for(language_name)
+    if source is None:
+        raise TranslateError(f"Ocarina does not know the language code for {language_name} yet.", "unsupported_language")
+    if same_language(source, settings["target"]):
+        raise TranslateError(f"The text is already in {target_name(settings['target'])}. Pick another target language in Settings.", "bad_input")
+    model_id = settings.get("localModel")
+    key = f"gloss\n{sentence}\n{text}"
+    path = _cache_path(datapath, cache_provider("local", model_id), source, settings["target"], key)
+    cached = _read(path) if use_cache else None
+    if cached is not None:
+        return {"translation": cached, "provider": "local", "source": source, "target": settings["target"], "cached": True, "inContext": True}
+    model = model_files.find_model(model_id or LOCAL_MODEL)
+    if model is None or model_files.kind_of(model) != "text":
+        raise TranslateError("That translation model is not in the list any more. Pick another in Settings.", "no_model")
+    if local_engine is None and not model_files.is_installed(model):
+        raise TranslateError(f"Download {model['name']} in Settings first.", "no_model")
+    if model.get("prompt") == "translategemma":  # no room for a question: it translates the selection alone
+        return {**translate(datapath, settings, language_name, text, use_cache, local_engine), "inContext": False}
+    system = GLOSS_PROMPT.format(source=dictionary.section_name(language_name), target=target_name(settings["target"]))
+    try:
+        answer = local_model.complete(model, system, f"Expression: {text}\nSentence: {sentence}", engine=local_engine)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise TranslateError(f"The translation model failed ({type(e).__name__}).", "failed") from e
+    answer = strip_marks(answer).strip("\"“”").strip()
+    if not answer:
+        raise TranslateError("The translation model gave no answer.", "failed")
+    _write(path, answer)
+    return {"translation": answer, "provider": "local", "source": source, "target": settings["target"], "cached": False, "inContext": True}

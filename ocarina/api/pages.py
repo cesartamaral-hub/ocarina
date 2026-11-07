@@ -4,11 +4,13 @@ JSON API for reading a book page by page.
     GET  /ocarina/api/books/<id>/pages/<n>          a page as paragraphs of text items
     POST /ocarina/api/books/<id>/pages/<n>/finish   mark the page read (optionally rest as known)
     GET  /ocarina/api/books/<id>/pages/<n>/text     raw page text   (PUT replaces it)
+    GET  /ocarina/api/books/<id>/text               the text of every page   (PUT {"pages": [...]} replaces all of it: pages are added or removed to match)
 """
 
 from flask import Blueprint, jsonify, request
 
 from lute.db import db
+from lute.models.book import Text
 from lute.models.language import Language
 from lute.models.repositories import BookRepository
 from lute.read.service import Service as ReadService
@@ -103,3 +105,30 @@ def page_text(book_id, page):
     db.session.add(text)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@bp.route("/books/<int:book_id>/text", methods=["GET", "PUT"])
+def book_text(book_id):
+    "The text of the whole book as a list of pages, or replace all of it (pages are added or removed to match; a page left empty is dropped)."
+    book = BookRepository(db.session).find(book_id)
+    if book is None:
+        return jsonify({"error": "No such book"}), 404
+    if request.method == "GET":
+        return jsonify({"pages": [t.text for t in book.texts]})
+    pages = (request.get_json(silent=True) or {}).get("pages")
+    if not isinstance(pages, list) or not all(isinstance(p, str) for p in pages):
+        return jsonify({"error": "pages must be a list of texts"}), 400
+    pages = [p for p in pages if p.strip()]
+    if not pages:
+        return jsonify({"error": "The text cannot be empty"}), 400
+    current = list(book.texts)
+    for i, new_text in enumerate(pages):
+        if i < len(current):
+            if current[i].text != new_text:
+                current[i].text = new_text
+        else:
+            db.session.add(Text(book, new_text, i + 1))
+    for extra in current[len(pages) :]:
+        book.texts.remove(extra)  # the book deletes a page that is taken out of it
+    db.session.commit()
+    return jsonify({"ok": True, "pageCount": len(pages)})

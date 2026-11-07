@@ -2,8 +2,9 @@
 JSON API for the translated version of a book (see ocarina/book_translation.py).
 
     GET    /ocarina/api/books/<id>/translation                    every sentence with its translation, and what is left
-    POST   /ocarina/api/books/<id>/translation                    {"scope": "page" | "book", "page": n, "provider", "model"}: start a job
-                                                                  (provider and model only to use another method for this run)
+    POST   /ocarina/api/books/<id>/translation                    {"scope": "page" | "book", "page": n, "provider", "model", "redo"}: start a job
+                                                                  (provider and model only to use another method for this run;
+                                                                  redo translates every sentence again, except those you worded yourself)
     PUT    /ocarina/api/books/<id>/translation/<page>/<index>     {"text": ...}: correct one sentence by hand
     DELETE /ocarina/api/books/<id>/translation                    remove the translation of the book
 """
@@ -44,7 +45,7 @@ def _methods(settings):
             }
         )
     has_key = keystore.get(current_app.env_config.datapath, "deepl") is not None
-    for key in ("mymemory", "deepl"):
+    for key in ("google", "mymemory", "deepl"):
         ready = (key != "deepl" or has_key) and not offline.is_on()
         methods.append(
             {
@@ -83,7 +84,7 @@ def get_translation(book_id):
     return jsonify({**_info(settings), **found, "running": bool(jobs.active(kind="translate", book_id=book_id))})
 
 
-def _run(app, job, check, book_id, scope, page, settings, label):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def _run(app, job, check, book_id, scope, page, settings, label, redo=False):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     def progress(done, total):
         job["done"], job["total"] = done, total
 
@@ -91,7 +92,7 @@ def _run(app, job, check, book_id, scope, page, settings, label):  # pylint: dis
         book = BookRepository(db.session).find(book_id)
         try:
             job["translated"] = book_translation.translate_book(
-                book, app.env_config.datapath, settings, settings["target"], scope, page, label, check, progress, app.config.get("OCARINA_TTS_ENGINE")
+                book, app.env_config.datapath, settings, settings["target"], scope, page, label, check, progress, app.config.get("OCARINA_TTS_ENGINE"), redo
             )
         except translate.TranslateError as e:
             raise RuntimeError(str(e)) from e  # the job shows the message as it is
@@ -143,7 +144,7 @@ def queue_translation(book, body):
     book_id = book.id
     job = jobs.submit(
         "translate",
-        lambda job, check: _run(app, job, check, book_id, scope, page, settings, label),
+        lambda job, check: _run(app, job, check, book_id, scope, page, settings, label, body.get("redo") is True),
         book_id=book_id,
         title=book.title,
     )

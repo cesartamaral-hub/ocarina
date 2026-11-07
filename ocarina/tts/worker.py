@@ -321,10 +321,24 @@ class MlxAudio8Engine:
 ENGINES = {"fake": FakeEngine, "fake-transcriber": FakeTranscriberEngine, "mlx-whisper": MlxWhisperEngine, "fake-aligner": FakeAlignerEngine, "mlx-aligner": MlxAlignerEngine, "mlx-chatterbox": MlxChatterboxEngine, "mlx-audio8": MlxAudio8Engine, "mlx-lm": MlxLmEngine}
 
 
+def limit_mlx_cache():
+    "On a Mac with little memory, MLX may keep only a little for reuse after a call (OCARINA_MLX_CACHE_MB, set by the app); nothing to do without MLX."
+    megabytes = os.environ.get("OCARINA_MLX_CACHE_MB")
+    if not megabytes:
+        return
+    try:
+        import mlx.core as mx  # pylint: disable=import-outside-toplevel
+
+        mx.set_cache_limit(int(megabytes) * 1024 * 1024)
+    except (ImportError, AttributeError, ValueError):
+        pass
+
+
 def _handle(engine, req):
     "Run one request; returns (response fields, engine)."
     op = req["op"]
     if op == "load":
+        limit_mlx_cache()
         engine = ENGINES[req["engine"]](req.get("repo"))
         return {"sample_rate": engine.sample_rate}, engine
     if op == "complete":

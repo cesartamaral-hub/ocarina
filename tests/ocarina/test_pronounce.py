@@ -251,3 +251,23 @@ def test_each_portuguese_gets_the_voice_of_its_own_locale(monkeypatch):
     from ocarina import translate  # pylint: disable=import-outside-toplevel
 
     assert translate.code_for("European Portuguese") == "pt" and translate.locale_of("Brazilian Portuguese") == "pt_BR" and translate.locale_of("Dutch") is None
+
+
+def test_live_reading_speaks_with_the_chosen_mac_voice_and_can_be_stopped(app, client, monkeypatch):
+    from ocarina import live_speech
+
+    said = []
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None, locale=None: "Xander")
+    monkeypatch.setattr(live_speech, "speak", lambda text, voice, wpm=None: said.append((text, voice, wpm)) or True)
+    stopped = []
+    monkeypatch.setattr(live_speech, "stop", lambda: stopped.append(1))
+    r = client.post("/ocarina/api/speak", json={"text": " Hallo daar. ", "languageId": dutch_id(app), "rate": 2})
+    assert r.json == {"finished": True, "voice": "Xander"} and said == [("Hallo daar.", "Xander", 350)]
+    assert client.post("/ocarina/api/speak/stop").status_code == 200 and stopped == [1]
+
+
+def test_live_reading_without_a_mac_voice_says_why(app, client, monkeypatch):
+    monkeypatch.setattr(pronounce, "mac_voice", lambda code, chosen=None, locale=None: None)
+    r = client.post("/ocarina/api/speak", json={"text": "Hallo", "languageId": dutch_id(app)})
+    assert r.status_code == 409 and r.json["code"] == "no_mac_voice"
+    assert client.post("/ocarina/api/speak", json={"text": "", "languageId": dutch_id(app)}).status_code == 400

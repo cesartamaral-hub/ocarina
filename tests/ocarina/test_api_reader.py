@@ -184,3 +184,20 @@ def test_bulk_status_by_text_creates_missing_terms(app, client):
         found = {t.text_lc: t.status for t in db.session.query(DBTerm).filter(DBTerm.text_lc.in_(["woon", "kaas"]))}
     assert found == {"woon": 3, "kaas": 3}
     assert client.post("/ocarina/api/terms/bulk-status", json={"texts": ["x"], "status": 3}).status_code == 400
+
+
+def test_the_whole_text_is_read_and_replaced_page_by_page(app, client):
+    with app.app_context():
+        book_id = make_dutch_book("Alles bewerken").id
+    url = f"/ocarina/api/books/{book_id}/text"
+    assert client.get(url).json["pages"] == ["Hallo! Mijn naam is Carla.\n\nIk woon in Nederland.", "Elke ochtend sta ik op."]
+    r = client.put(url, json={"pages": ["Een.", "Twee.", "Drie.", "  "]})  # a page left empty is dropped; a third one is added
+    assert r.json == {"ok": True, "pageCount": 3}
+    assert client.get(url).json["pages"] == ["Een.", "Twee.", "Drie."]
+    assert client.get(f"/ocarina/api/books/{book_id}/pages/3").status_code == 200
+    r = client.put(url, json={"pages": ["Alles in een."]})  # fewer pages: the rest go
+    assert client.get(url).json["pages"] == ["Alles in een."]
+    assert client.get(f"/ocarina/api/books/{book_id}/pages/2").status_code == 404
+    assert client.put(url, json={"pages": [" "]}).status_code == 400
+    assert client.put(url, json={"pages": "x"}).status_code == 400
+    assert client.get("/ocarina/api/books/9999/text").status_code == 404

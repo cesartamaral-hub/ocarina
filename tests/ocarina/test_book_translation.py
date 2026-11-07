@@ -196,3 +196,20 @@ def test_end_of_turn_marks_are_not_part_of_a_translation(app, client, tmp_path):
         book_translation.save(book_id, sentences[0]["page"], sentences[0]["index"], "en", "Old.<end_of_turn>\n<end_of_turn>", sentences[0]["text"], "local")
         assert book_translation.clean_stored() == 1
     assert _get(client, book_id)["sentences"][0]["translation"] == "Old."
+
+
+def test_translating_again_replaces_every_sentence_but_not_your_own_wording(app, client):
+    book_id = _book(app, "Opnieuw")
+    _make(client, book_id, scope="book")
+    client.put(f"{BOOKS}/{book_id}/translation/1/1", json={"text": "My name is Carla."})
+    client.put("/ocarina/api/translate/settings", json={"provider": "local", "target": "en"})
+    done = _make(client, book_id, scope="book", redo=True)
+    assert done["state"] == "done" and done["total"] == 3  # four sentences, one of them yours
+    assert _get(client, book_id)["sentences"][1]["translation"] == "My name is Carla."
+
+
+def test_translating_a_page_again_leaves_the_other_pages_alone(app, client):
+    book_id = _book(app, "Een pagina")
+    _make(client, book_id, scope="book")
+    done = _make(client, book_id, scope="page", page=2, redo=True)
+    assert done["total"] == 1

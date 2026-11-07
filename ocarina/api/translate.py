@@ -4,6 +4,7 @@ JSON API for translating a sentence (see ocarina/translate.py) and its settings.
     GET  /ocarina/api/translate/settings   provider, target language, whether a DeepL key is saved (never the key)
     PUT  /ocarina/api/translate/settings   change them; deeplKey saves a key, "" removes it
     POST /ocarina/api/translate            {languageId, text} -> {translation, provider, source, target, cached}
+    POST /ocarina/api/translate/gloss      {languageId, text, sentence}: what a selection of words means in its sentence (+ inContext: the model read the sentence)
     POST /ocarina/api/translate/test       {languageId?, text?}: a trial translation with the current settings (asks the service for real)
     POST /ocarina/api/translate/compare    {languageId, text}: the sentence translated by every model on this Mac that is
                                            installed, with how long each took
@@ -42,8 +43,8 @@ def _settings():
         installed = [m["id"] for m in model_files.text_models() if model_files.is_installed(m)]
         local = installed[0] if installed else translate.LOCAL_MODEL
     if provider not in translate.PROVIDERS:
-        # Not chosen yet: a model on this Mac once one is downloaded (private, no limits), else the free online service.
-        provider = "local" if any(model_files.is_installed(m) for m in model_files.text_models()) else "mymemory"
+        # Not chosen yet: Google (fast, free; another method covers it when it fails). Work offline switches to a model on this Mac below.
+        provider = "google"
     if offline.is_on():
         provider = "local"  # only a model on this Mac can translate while Work offline is on
     return {
@@ -144,6 +145,19 @@ def translate_sentence():
         return jsonify({"error": "Unknown language", "code": "bad_input"}), 404
     try:
         return jsonify(translate.translate(_datapath(), _settings(), language.name, body.get("text"), local_engine=_local_engine()))
+    except translate.TranslateError as e:
+        return _failure(e)
+
+
+@bp.route("/translate/gloss", methods=["POST"])
+def gloss_selection():
+    "What a selection of words means in its sentence (a machine's answer; the local model reads the sentence too)."
+    body = request.get_json(silent=True) or {}
+    language = db.session.get(Language, body["languageId"]) if isinstance(body.get("languageId"), int) else None
+    if language is None:
+        return jsonify({"error": "Unknown language", "code": "bad_input"}), 404
+    try:
+        return jsonify(translate.gloss(_datapath(), _settings(), language.name, body.get("text"), body.get("sentence"), local_engine=_local_engine()))
     except translate.TranslateError as e:
         return _failure(e)
 

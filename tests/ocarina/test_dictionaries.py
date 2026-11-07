@@ -360,3 +360,36 @@ def test_adding_a_language_asks_for_its_small_dictionary(client, monkeypatch):
     monkeypatch.setattr("ocarina.dictionaries.setup.ensure_default", lambda datapath, name: asked.append(name))
     r = client.post("/ocarina/api/languages/predefined", json={"names": ["Dutch"]})
     assert r.status_code == 201 and asked == ["Dutch"]
+
+
+def test_the_runs_of_words_in_a_selection_are_listed_longest_first():
+    from ocarina import expressions
+
+    assert expressions.runs("zelfs al") == ["zelfs al", "zelfs", "al"]
+    assert expressions.runs("Ook al is hij moe.")[:2] == ["Ook al is hij moe", "Ook al is hij"]
+    assert "ook al" in [r.lower() for r in expressions.runs("Ook al is hij moe.")]
+    assert expressions.runs("huis") == [] and expressions.runs("een twee drie vier vijf zes zeven acht negen") == []
+
+
+def test_what_the_dictionaries_know_inside_a_selection(folders, client, app):
+    make_pack(folders / "builtin", "nl", "Dutch", "nl", [("ook al", "conj", ["even though"]), ("al", "adv", ["already"]), ("zelfs", "adv", ["even"])])
+    with app.app_context():
+        language = _get_test_language("Dutch")
+        language_id = language.id
+    found = client.get(f"/ocarina/api/dictionary/parts?languageId={language_id}&text=Ook al is hij zelfs moe").json["parts"]
+    assert [p["text"] for p in found] == ["Ook al", "al", "zelfs"]  # the run first, then the single words that have an entry, in reading order
+    assert found[0]["entries"][0]["definitions"][0]["text"] == "even though" and found[0]["source"]["name"] == "Dutch"
+    whole = client.get(f"/ocarina/api/dictionary/parts?languageId={language_id}&text=zelfs al").json["parts"]
+    assert [p["text"] for p in whole] == ["zelfs", "al"]  # the whole selection is left to the ordinary lookup
+    assert client.get("/ocarina/api/dictionary/parts?languageId=9999&text=a b").status_code == 404
+
+
+def test_a_selection_is_glossed_with_its_sentence_by_the_local_model(app, client):
+    app.config["OCARINA_TTS_ENGINE"] = "fake"
+    client.put("/ocarina/api/translate/settings", json={"provider": "local", "target": "en"})
+    with app.app_context():
+        language_id = _get_test_language("Dutch").id
+    r = client.post("/ocarina/api/translate/gloss", json={"languageId": language_id, "text": "zelfs al", "sentence": "Zelfs al regent het hard, ik ga."})
+    assert r.status_code == 200 and r.json["inContext"] is True and "Zelfs al regent het hard" in r.json["translation"]
+    alone = client.post("/ocarina/api/translate/gloss", json={"languageId": language_id, "text": "zelfs al"})
+    assert alone.json["inContext"] is False  # no sentence: the selection alone

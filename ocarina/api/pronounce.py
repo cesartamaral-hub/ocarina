@@ -5,6 +5,9 @@ JSON API for hearing a word or a few words (see ocarina/pronounce.py).
     GET  /ocarina/api/pronounce/audio/<f>  the audio file
     POST /ocarina/api/pronounce/system-voices/preview  {"name"}: one Mac voice saying its sample sentence
     POST /ocarina/api/pronounce/open-voice-settings    open System Settings at Spoken Content (to add Mac voices)
+    POST /ocarina/api/speak                {"text", "languageId", "rate"?}: speak it now with the Mac voice; answers {"finished"} when it is done (false when cut short)
+    POST /ocarina/api/speak/stop           end what is being spoken
+    GET  /ocarina/api/numbers/spoken?languageId=<id>&text=<digits>  {words, kind} for a text that is one number (kind: number, year, ordinal), else {words: null}
     GET  /ocarina/api/pronounce/system-voices  the voices installed on this Mac per library language (best first) and the one in use
 """
 
@@ -15,7 +18,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 
 from lute.db import db
 from lute.models.language import Language
-from ocarina import prefs, pronounce, translate
+from ocarina import live_speech, numbers, prefs, pronounce, translate
 from ocarina.api import jobs
 from ocarina.tts.book_audio import tts_lang
 
@@ -99,3 +102,39 @@ def audio(name):
     if not os.path.isfile(path):
         return jsonify({"error": "No such audio"}), 404
     return send_file(path, mimetype=TYPES[name.rsplit(".", 1)[1]])
+
+
+@bp.route("/speak", methods=["POST"])
+def speak():
+    "Read a sentence aloud now, with the Mac voice of its language. Returns when it is finished."
+    body = request.get_json(silent=True) or {}
+    text = (body.get("text") or "").strip()
+    language = db.session.get(Language, body.get("languageId")) if isinstance(body.get("languageId"), int) else None
+    if not text or language is None:
+        return jsonify({"error": "Choose some text in a language."}), 400
+    code = _code(language)
+    saved = prefs.load(prefs.path_for(current_app.env_config.datapath))
+    voice = pronounce.mac_voice(code, saved.get(f"systemvoice.{code}"), translate.locale_of(language.name)) if code else None
+    if voice is None:
+        return jsonify({"error": pronounce.NO_MAC_VOICE, "code": "no_mac_voice"}), 409
+    rate = body.get("rate")
+    wpm = int(175 * min(max(float(rate), 0.5), 2.5)) if isinstance(rate, (int, float)) else None  # 175 is the Mac's usual pace
+    return jsonify({"finished": live_speech.speak(numbers.spoken(text, code), voice, wpm), "voice": voice})
+
+
+@bp.route("/speak/stop", methods=["POST"])
+def speak_stop():
+    "End the sentence being read aloud."
+    live_speech.stop()
+    return jsonify({"ok": True})
+
+
+@bp.route("/numbers/spoken", methods=["GET"])
+def number_words():
+    "A number written in digits, in words in the language of the book."
+    language = db.session.get(Language, int(request.args["languageId"])) if request.args.get("languageId", "").isdigit() else None
+    if language is None:
+        return jsonify({"error": "Unknown language"}), 404
+    code = _code(language)
+    found = numbers.describe(request.args.get("text", ""), code) if code else None
+    return jsonify(found or {"words": None, "kind": None})
